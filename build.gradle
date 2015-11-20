@@ -13,9 +13,14 @@ buildscript {
             name = "sonatype"
             url = "https://oss.sonatype.org/content/repositories/snapshots/"
         }
+        //maven {
+        //    name = "gradleplugins"
+        //    url = "https://plugins.gradle.org/m2/"
+        //}
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+        //classpath 'com.github.jochenberger:gradle-lein:0.0.1'
         dependencies { classpath "clojuresque:clojuresque:1.7.0" }
     }
 }
@@ -28,16 +33,22 @@ repositories {
     flatDir dirs: project.file("lib/runtime")
 }
 
+//apply plugin: "com.github.jochenberger.lein"
+
 apply plugin: 'forge'
+
+
 
 version = "1.0"
 group= "com.li.clojureacademy" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "clojureacademy"
 
 minecraft {
-    version = "1.7.2-10.12.2.1121"
-    assetDir = "eclipse/assets"
+    version = "1.7.10-10.13.4.1448-1.7.10"
+    runDir = "eclipse"
 }
+
+
 
 dependencies {
     // you may put jars on which you depend on in ./libs
@@ -54,8 +65,11 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
     compile "org.clojure:clojure:1.6.0"
+    //compile "clojure-complete:clojure-complete:0.2.3"
     compile "org.clojure:tools.logging:0.3.0"
     compile 'org.lwjgl.lwjgl:lwjgl:2.9.1'
+
+    compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
 
 }
 
