@@ -44,8 +44,28 @@ group= "com.li.clojureacademy" // http://maven.apache.org/guides/mini/guide-nami
 archivesBaseName = "clojureacademy"
 
 minecraft {
-    version = "1.7.10-10.13.4.1448-1.7.10"
+    version = "1.7.10-10.13.4.1558-1.7.10"
     runDir = "eclipse"
+}
+
+configurations {
+    shade
+    compile.extendsFrom shade
+}
+
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'dev'
+}
+
+tasks.build.dependsOn('deobfJar')
+
+jar {
+    configurations.shade.each { dep ->
+        from(project.zipTree(dep)){
+            exclude 'META-INF', 'META-INF/**'
+        }
+    }
 }
 
 
@@ -64,12 +84,14 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    compile "org.clojure:clojure:1.6.0"
+    compile "org.clojure:clojure:1.8.0"
     //compile "clojure-complete:clojure-complete:0.2.3"
     compile "org.clojure:tools.logging:0.3.0"
     compile 'org.lwjgl.lwjgl:lwjgl:2.9.1'
 
-    compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
+    compile files("forge_clj-dev.jar")
+
+    //compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
 
 }
 
