@@ -1,12 +1,12 @@
 (ns cn.li.academy.blocks
-  (:use [cn.li.api.block :only [defblockContainer]])
+  ;(:use [cn.li.api.block :only [defblockContainer]])
   (:import (net.minecraft.block BlockContainer)
            (net.minecraft.block.material Material)
            (cpw.mods.fml.relauncher SideOnly Side)
            (net.minecraft.client.renderer.texture IIconRegister)
            (net.minecraft.util IIcon)))
 
-(defn init-block [] ())
+;(defn init-block [] ())
 
 ;(defblockContainer
 ;    BlockNode

@@ -8,6 +8,8 @@
                         "advanced" {:id 2 :name "advanced" :max-energy 200000 :bandwidth 900 :range 19 :capacity 20}
                         })
 
+(defn node-type->id [type]
+  (get-in block-node-configs [type :id]))
 
 (defn get-node-config-by-id [id]
   (first (filter #(== (:id %1) id) (vals block-node-configs))))

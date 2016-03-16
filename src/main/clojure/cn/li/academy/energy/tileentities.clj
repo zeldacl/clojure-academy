@@ -6,6 +6,9 @@
   (:import (net.minecraft.inventory IInventory)
            (net.minecraft.tileentity TileEntity)))
 
+(defn get-entity-max-energy [entity]
+  (get-node-max-energy-by-id (.getBlockMetadata entity)))
+
 (defn update-charge-in [entity]
   (let [stack (.getStackInSlot entity 0)]
     (if (and stack)                                         ;todo: add support check
