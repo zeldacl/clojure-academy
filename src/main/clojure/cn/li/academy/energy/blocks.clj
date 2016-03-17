@@ -10,13 +10,13 @@
 ;(def icons (atom {}))
 (let [icons (atom {})]
   (defn register-node-block-icons [^IIconRegister reg type]
-    (let [names (map (partial str "academy:node_" type "_side_" ) (range 5))
+    (let [names (map (partial str "clojureacademy:node_" type "_side_" ) (range 5))
           register-icon (fn [iname]
                           (.registerIcon reg iname))
           temp-icons (doall (map register-icon names))
           icon-map (zipmap (range 5) temp-icons)
-          icon-top-disabled (register-icon "academy:node_top_0")
-          icon-top-enabled (register-icon "academy:node_top_1")]
+          icon-top-disabled (register-icon "clojureacademy:node_top_0")
+          icon-top-enabled (register-icon "clojureacademy:node_top_1")]
       (reset! icons icon-map)
       (reset! icons [:icon-top-disabled icon-top-disabled])
       (reset! icons [:icon-top-enabled icon-top-enabled])))
