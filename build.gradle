@@ -35,7 +35,7 @@ repositories {
 
 //apply plugin: "com.github.jochenberger.lein"
 
-apply plugin: 'forge'
+apply plugin: "forge"
 
 
 
@@ -64,12 +64,12 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    compile "org.clojure:clojure:1.6.0"
+    compile "org.clojure:clojure:1.7.0"
     //compile "clojure-complete:clojure-complete:0.2.3"
-    compile "org.clojure:tools.logging:0.3.0"
+    //compile "org.clojure:tools.logging:0.3.0"
     compile 'org.lwjgl.lwjgl:lwjgl:2.9.1'
 
-    compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
+    //compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
 
 }
 
