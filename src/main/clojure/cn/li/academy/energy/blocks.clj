@@ -1,5 +1,5 @@
 (ns cn.li.academy.energy.blocks
-  (:require [cn.li.academy.energy.tileentities :refer [new-node-entity get-entity-max-energy node-inventory-entity]]
+  (:require [cn.li.academy.energy.tileentities :refer [new-node-entity get-entity-max-energy tileentity-node]]
             [cn.li.academy.energy.hepler :refer [node-type->id]]
             [cn.li.academy.core.blocks :refer [defACblock defACblockcontainer]]
             [cn.li.academy.tab :refer [tab-clojure-academy]]
@@ -25,7 +25,7 @@
      (get @icons (if (or (= side 0) (= side 1)) :icon-top-enabled 1)))
     ([^IBlockAccess world x y z side]
      (let [tile-entity (get-tile-entity-at world x y z)
-           tile-entity-right? (instance? node-inventory-entity tile-entity)
+           tile-entity-right? (instance? tileentity-node tile-entity)
            enable (if tile-entity-right? (:enabled tile-entity) false)
            pct (if tile-entity-right? (min 4 (Math/round (double (/ (* 4 (:energy tile-entity)) (get-entity-max-energy tile-entity))))) 0)]                ;Math.min(4, Math.round((4 * node.getEnergy() / node.getMaxEnergy())));
        (if (or (== side 0) (== side 1))

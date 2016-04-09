@@ -36,7 +36,7 @@
       (assoc! entity :charging-out false))))
 
 
-(deftileinventory node-inventory-entity "wireless_node" 2
+(deftileinventory tileentity-node "wireless_node" 2
                :fields {:energy 0
                         :update-ticker 0
                         :enabled false
@@ -44,7 +44,7 @@
                         :charging-out false
                         :name "Unnamed"})
 
-(with-prefix node-inventory-entity-
+(with-prefix tileentity-node-
              (defn updateEntity [^TileEntity this]
                (when (remote? (.getWorldObj this))
                  (update-charge-in this)
@@ -52,4 +52,4 @@
 
 
 (defn new-node-entity [& args]
-  (.newInstance ^Class node-inventory-entity))
+  (.newInstance ^Class tileentity-node))
