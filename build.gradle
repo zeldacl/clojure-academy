@@ -2,10 +2,6 @@ buildscript {
     repositories {
         mavenCentral()
         maven {
-            name = "clojars"
-            url = "http://clojars.org/repo/"
-        }
-        maven {
             name = "forge"
             url = "http://files.minecraftforge.net/maven"
         }
@@ -13,31 +9,27 @@ buildscript {
             name = "sonatype"
             url = "https://oss.sonatype.org/content/repositories/snapshots/"
         }
-        //maven {
-        //    name = "gradleplugins"
-        //    url = "https://plugins.gradle.org/m2/"
-        //}
+        maven {
+            name = "clojars"
+            url = "http://clojars.org/repo/"
+        }
+        maven {
+            name = "gradle"
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
+        classpath "de.kotka.clojuresque:clojuresque:2.0.0"
         classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
-        //classpath 'com.github.jochenberger:gradle-lein:0.0.1'
-        dependencies { classpath "clojuresque:clojuresque:1.7.0" }
     }
 }
 
-apply plugin: "clojure"
-clojure.aotCompile = true
+apply plugin: "de.kotka.clojuresque.clojure"
+
 clojure.warnOnReflection = true
-
-repositories {
-    flatDir dirs: project.file("lib/runtime")
-}
-
-//apply plugin: "com.github.jochenberger.lein"
+clojure.aotCompile = true
 
 apply plugin: 'forge'
-
-
 
 version = "1.0"
 group= "com.li.clojureacademy" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
@@ -53,23 +45,6 @@ configurations {
     compile.extendsFrom shade
 }
 
-task deobfJar(type: Jar) {
-    from sourceSets.main.output
-    classifier = 'dev'
-}
-
-tasks.build.dependsOn('deobfJar')
-
-jar {
-    configurations.shade.each { dep ->
-        from(project.zipTree(dep)){
-            exclude 'META-INF', 'META-INF/**'
-        }
-    }
-}
-
-
-
 dependencies {
     // you may put jars on which you depend on in ./libs
     // or you may define them like so..
@@ -84,16 +59,24 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    compile "org.clojure:clojure:1.8.0"
-    //compile "clojure-complete:clojure-complete:0.2.3"
-    compile "org.clojure:tools.logging:0.3.0"
-    compile 'org.lwjgl.lwjgl:lwjgl:2.9.1'
-
-    compile files("forge_clj-dev.jar")
-
-    //compile files('cn/li/academy/block/tileentity/TileEntityInventory.clj')
+    shade 'org.clojure:clojure:1.9.0'
 
 }
+
+jar {
+    configurations.shade.each { dep ->
+        from(project.zipTree(dep)){
+            exclude 'META-INF', 'META-INF/**'
+        }
+    }
+}
+
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'dev'
+}
+
+tasks.build.dependsOn('deobfJar')
 
 processResources
 {
