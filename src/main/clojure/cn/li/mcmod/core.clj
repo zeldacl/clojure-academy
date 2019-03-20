@@ -6,6 +6,7 @@
 
 (defmacro defmod [mod-name version & options]
   (let [full-name mod-name
+        options-map (into {} (map vec (partition 2 options)))
         prefix (str mod-name "-")]
     `(do
        (gen-class
