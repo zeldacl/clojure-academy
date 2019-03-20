@@ -4,5 +4,10 @@
 
 
 (defmod clj-academy "0.1.0"
-  :pre-init (fn [this event])
+  :proxy {}
+  :common {
+           :pre-init (fn [this event])}
+  :client {}
+  :server {}
+
   :client-pre-init (fn [this event]))
