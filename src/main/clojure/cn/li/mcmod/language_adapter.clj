@@ -3,9 +3,9 @@
            (java.lang.reflect Method)))
 
 
-(gen-class {^static: true}
+(gen-class                                                  ;{^static: true}
   :name ClojureAdapter
-  :implements [ILanguageAdapter]
+  :implements [net.minecraftforge.fml.common.ILanguageAdapter]
   :prefix "clj-"
   ;:methods [[getNewInstance [FMLModContainer Class ClassLoader Method] Object]
   ;          [supportsStatics [] boolean]])
@@ -21,4 +21,4 @@
 (defn- clj-setProxy [this target proxyTarget proxy]
   (.set target nil proxy))
 
-(def- clj-setInternalProxies [this ])
+(defn- clj-setInternalProxies [this ])

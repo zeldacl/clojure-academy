@@ -1,13 +1,10 @@
 (ns cn.li.academy.core
   (:require
-    [cn.li.mcmod.core :refer [defmod]]))
+    [cn.li.mcmod.core :refer [defmod]]
+    [cn.li.academy.proxy :as proxy]))
 
-
-(defmod clj-academy "0.1.0"
-  :proxy {}
-  :common {
-           :pre-init (fn [this event])}
-  :client {}
-  :server {}
-
-  :client-pre-init (fn [this event]))
+(defmod clj-academy
+        :modid "clj-academy"
+        :version "0.1.0"
+        :proxy {:client proxy/client-proxy
+                :server ""})
