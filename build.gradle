@@ -1,118 +1,179 @@
 buildscript {
     repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
+//        maven { url = 'https://plugins.gradle.org/m2' }
         jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
-//        maven {
-//            name = "clojars"
-//            url = "http://clojars.org/repo"
-//        }
+        mavenCentral()
+        gradlePluginPortal()
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
-        classpath "de.kotka.clojuresque:clojuresque:2.0.0"
-//        classpath "com.netflix.nebula:nebula-clojure-plugin:6.0.2"
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath 'io.github.gradle-clojure:gradle-clojure-plugin:0.4.0'
+//        classpath group: 'io.github.gradle-clojure', name: 'gradle-clojure-plugin', version: '0.4.0', changing: true
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
-//Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+//plugins {
+//    id 'scala'
+//}
 
-apply plugin: "de.kotka.clojuresque.clojure"
-clojure.warnOnReflection = true
-clojure.aotCompile = true
+apply plugin: 'gradle-clojure.clojure'
+apply plugin: 'net.minecraftforge.gradle'
+// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+//apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
-//apply plugin: "nebula.clojure"
-//clojure.aotCompile = true
+//plugins {
+//    id 'gradle-clojure.clojure' version '0.4.0'
+//    // any additional plugins declared here
+//}
 
 
-version = "0.1.0"
-group = "cn.li.clojureacademy" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "clojureacademy"
 
-sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
-compileJava {
-    sourceCompatibility = targetCompatibility = '1.8'
-}
+version = '1.0'
+group = 'com.yourname.modid' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = 'modid'
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 
 minecraft {
-    version = "1.12.2-14.23.5.2768"
-    runDir = "run"
-    
-    // the mappings can be changed at any time, and must be in the following format.
-    // snapshot_YYYYMMDD   snapshot are built nightly.
-    // stable_#            stables are built at the discretion of the MCP team.
+    // The mappings can be changed at any time, and must be in the following format.
+    // snapshot_YYYYMMDD   Snapshot are built nightly.
+    // stable_#            Stables are built at the discretion of the MCP team.
     // Use non-default mappings at your own risk. they may not always work.
-    // simply re-run your setup task after changing the mappings to update your workspace.
-    mappings = "stable_39" // "snapshot_20180814"
+    // Simply re-run your setup task after changing the mappings to update your workspace.
+    mappings channel: 'snapshot', version: '20180921-1.13'
     // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
-}
 
-repositories {
-    jcenter()
-    maven { url 'http://clojars.org/repo' }
-}
+    // accessTransformer = file('build/resources/main/META-INF/accesstransformer.cfg')
 
-configurations {
-    shade
-    compile.extendsFrom shade
-}
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
+        client {
+            workingDirectory project.file('run')
 
-dependencies {
-    // you may put jars on which you depend on in ./libs
-    // or you may define them like so..
-    //compile "some.group:artifact:version:classifier"
-    //compile "some.group:artifact:version"
-      
-    // real examples
-    //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
-    //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
+            // Recommended logging data for a userdev environment
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
 
-    // the 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
-    //provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+            // Recommended logging level for the console
+            property 'forge.logging.console.level', 'debug'
 
-    // the deobf configurations:  'deobfCompile' and 'deobfProvided' are the same as the normal compile and provided,
-    // except that these dependencies get remapped to your current MCP mappings
-    //deobfCompile 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-    //deobfProvided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+            mods {
+                examplemod {
+                    source sourceSets.main
+                }
+            }
+        }
 
-    // for more info...
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+        server {
+            workingDirectory project.file('run')
 
-    shade 'org.clojure:clojure:1.10.0'
-    compile 'nrepl:nrepl:0.4.5'
+            // Recommended logging data for a userdev environment
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
 
-}
+            // Recommended logging level for the console
+            property 'forge.logging.console.level', 'debug'
 
-jar {
-    configurations.shade.each { dep ->
-        from(project.zipTree(dep)){
-            exclude 'META-INF', 'META-INF/**'
+            mods {
+                examplemod {
+                    source sourceSets.main
+                }
+            }
         }
     }
 }
 
-task deobfJar(type: Jar) {
-    from sourceSets.main.output
-    classifier = 'dev'
+
+//clojure {
+//    builds {
+//        // Defaults noted here are for custom builds, the convention plugin configures the builds it adds differently
+//        mybuild {
+//            sourceSet = sourceSets.mystuff // no default
+//            // Configuration of the check<Build>Clojure task
+//            reflection = 'fail' // defaults to 'silent', can also be 'warn'
+//            checkNamespaces = ['my.core', 'my.base'] // defaults to no namespaces checked
+//            checkNamespaces.add('my-core') // just add a single namespace
+//            checkAll() // checks any namespaces found in the source set
+//            // Configuration of the compile<Build>Clojure task
+//            compiler {
+//                disableLocalsClearing = true // defaults to false
+//                elideMeta = ['doc', 'file'] // defaults to empty list
+//                directLinking = true // defaults to false
+//            }
+//            aotNamespaces = ['my.core', 'my.base'] // defaults to no namespaces aoted
+//            aotNamespaces.add('my-core') // just add a single namespace
+//            aotAll() // aots any namespaces found in the source set
+//        }
+//    }
+//}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    gradlePluginPortal()
 }
 
-tasks.build.dependsOn('deobfJar')
+dependencies {
+    // Specify the version of Minecraft to use, If this is any group other then 'net.minecraft' it is assumed
+    // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
+    // The userdev artifact is a special name and will get all sorts of transformations applied to it.
+    minecraft 'net.minecraftforge:forge:1.13.2-25.0.100'
 
-processResources {
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    implementation  'org.clojure:clojure:1.10.0'
 
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
+    // You may put jars on which you depend on in ./libs or you may define them like so..
+    // compile "some.group:artifact:version:classifier"
+    // compile "some.group:artifact:version"
+
+    // Real examples
+    // compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
+    // compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
+
+    // The 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
+    // provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+
+    // These dependencies get remapped to your current MCP mappings
+    // deobf 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+
+    // For more info...
+    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
+    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+}
+
+// Example for how to get properties into the manifest for reading by the runtime..
+jar {
+    manifest {
+        attributes([
+                "Specification-Title": "examplemod",
+                "Specification-Vendor": "examplemodsareus",
+                "Specification-Version": "1", // We are version 1 of ourselves
+                "Implementation-Title": project.name,
+                "Implementation-Version": "${version}",
+                "Implementation-Vendor" :"examplemodsareus",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
     }
-        
-    // copy everything else except the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+}
+
+// Example configuration to allow publishing using the maven-publish task
+// we define a custom artifact that is sourced from the reobfJar output task
+// and then declare that to be published
+// Note you'll need to add a repository here
+def reobfFile = file("$buildDir/reobfJar/output.jar")
+def reobfArtifact = artifacts.add('default', reobfFile) {
+    type 'jar'
+    builtBy 'reobfJar'
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact reobfArtifact
+        }
+    }
+    repositories {
+        maven {
+            url "file:///${project.projectDir}/mcmodsrepo"
+        }
     }
 }

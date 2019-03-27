@@ -1,23 +1,25 @@
-.gradle
-.idea
-*.iml
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
 *.ipr
 *.iws
-.DS_Store
-CREDITS-fml.txt
-LICENSE-fml.txt
-MinecraftForge-Credits.txt
-MinecraftForge-License.txt
-README.txt
-crash-reports/
-eclipse/
-forge-1.7.10-10.13.4.1558-1.7.10-changelog.txt
-gradle/
-logs/
-forge_clj-dev.jar
+*.iml
+.idea
 
+# gradle
+build
+.gradle
 
-build/
+# other
+eclipse
+run
 
-# Ignore Gradle GUI config
-gradle-app.setting
+# Files from Forge MDK
+forge*changelog.txt
