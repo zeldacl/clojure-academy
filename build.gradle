@@ -64,7 +64,8 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                examplemod {
+                'clojure-academy' {
+//                    workingDirectory project.file('run').canonicalPath
                     source sourceSets.main
                 }
             }
@@ -80,7 +81,8 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                examplemod {
+                'clojure-academy' {
+//                    workingDirectory project.file('run').canonicalPath
                     source sourceSets.main
                 }
             }
@@ -94,6 +96,7 @@ minecraft {
 //
 clojure {
     builds {
+//        output-dir = "classes"
         // Defaults noted here are for custom builds, the convention plugin configures the builds it adds differently
         main {
 //            sourceSet = sourceSets.main // no default
@@ -103,17 +106,18 @@ clojure {
 //            checkNamespaces.add('my-core') // just add a single namespace
             checkAll() // checks any namespaces found in the source set
             // Configuration of the compile<Build>Clojure task
-//            compiler {
+            compiler {
 //                disableLocalsClearing = true // defaults to false
 //                elideMeta = ['doc', 'file'] // defaults to empty list
-//                directLinking = true // defaults to false
-//            }
+                directLinking = true // defaults to false
+            }
 //            aotNamespaces = ['my.core', 'my.base'] // defaults to no namespaces aoted
 //            aotNamespaces.add('my-core') // just add a single namespace
             aotAll() // aots any namespaces found in the source set
         }
     }
 }
+
 
 clojureRepl {
     port = 55555 // defaults to a random open port (which will be printed in the build output)
@@ -185,7 +189,7 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title": "examplemod",
+                "Specification-Title": "clojure-academy",
                 "Specification-Vendor": "examplemodsareus",
                 "Specification-Version": "1", // We are version 1 of ourselves
                 "Implementation-Title": project.name,
