@@ -1,4 +1,4 @@
-package cn.li.cn.li.mcmod;
+package cn.li.mcmod;
 
 import net.minecraftforge.common.MinecraftForge;
 import org.apache.logging.log4j.LogManager;

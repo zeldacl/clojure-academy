@@ -10,7 +10,7 @@
            (org.apache.logging.log4j LogManager)
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
            (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent)
-           (cn.li.cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)))
+           (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)))
 
 ;(defmod clj-academy
 ;        :modid "clj-academy"
@@ -22,7 +22,7 @@
 
 (gen-class
   :name ^{Mod "clojure-academy"} ClojureAcademy             ;(with-meta "ClojureAcademy" {Mod "clojure-academy"})
-  :extends cn.li.cn.li.mcmod.BaseMod
+  :extends cn.li.mcmod.BaseMod
   :methods []
   :init "init"
   :prefix "mod-"

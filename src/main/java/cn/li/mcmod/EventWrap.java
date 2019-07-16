@@ -1,4 +1,4 @@
-package cn.li.cn.li.mcmod;
+package cn.li.mcmod;
 
 //public class FMLCommonEvent {
 //}

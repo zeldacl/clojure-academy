@@ -4,7 +4,8 @@
 
 (defmacro defclass
   ([name meta]
-    (let [prefix (str name "-")
+    (let [name-ns (get meta :ns *ns*)
+          prefix (str name "-")
           gen-data {}]
       `(do
          (gen-class
