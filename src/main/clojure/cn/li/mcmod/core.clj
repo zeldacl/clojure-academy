@@ -1,28 +1,77 @@
 (ns cn.li.mcmod.core
   (:require [cn.li.mcmod.network :refer [init-networks]]
-            [cn.li.mcmod.common :refer [vec->map]])
+            [cn.li.mcmod.common :refer [vec->map]]
+            [cn.li.mcmod.utils :refer [get-fullname with-prefix]])
   ;(:import (net.minecraftforge.fml.common Mod Mod$EventHandler)
   ;         (net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent))
-  )
+  (:import (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)
+           (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
+           (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent)))
 
 
-;(defmacro defmod [mod-name version & options]
-;  (let [full-name mod-name
-;        options-map (vec->map options)
-;        mod-meta {:name ""
-;                  :modid (str mod-name)
-;                  :version (str version)
-;                  :modLanguage "clojure"
-;                  }
-;        prefix (str mod-name "-")]
-;    `(do
-;       (gen-class
-;         :name ~(with-meta full-name `{Mod {:modid ~(str mod-name) :version ~(str version) :modLanguage "clojure" :acceptedMinecraftVersions "1"}})
-;         :prefix ~(symbol prefix)
-;         :methods [[~(with-meta 'preInit `{Mod$EventHandler []}) [FMLPreInitializationEvent] ~'void]
-;                   [~(with-meta 'init `{Mod$EventHandler []}) [FMLInitializationEvent] ~'void]
-;                   [~(with-meta 'preInit `{Mod$EventHandler []}) [FMLPostInitializationEvent] ~'void]])
-;       (defn ~(symbol (str prefix "preInit")) [~'this ~'event]
-;         (init-networks))
-;       (defn ~(symbol (str prefix "init")) [~'this ~'event])
-;       (defn ~(symbol (str prefix "postInit")) [~'this ~'event]))))
+(defmacro create-obj-with-proxy [klass]
+  `(proxy [~klass] [] (toString [] (str "proxyToString"))))
+(create-obj-with-proxy java.lang.Object)
+
+(defmacro defclass
+  ([class-name super-class class-data]
+   (let [name-ns (get class-data :ns *ns*)
+         prefix (str class-name "-")
+         fullname (get-fullname name-ns class-name)
+         class-data (reduce concat [] (into [] class-data))]
+     `(do
+        (gen-class
+          :name ~fullname
+          :prefix ~prefix
+          :extends ~super-class
+          ~@class-data)))))
+
+(defmacro defmod [mod-name & options]
+  (let [full-name mod-name
+        options-map (vec->map options)
+        ;mod-meta {:name ""
+        ;          :modid (str mod-name)
+        ;          :version (str version)
+        ;          :modLanguage "clojure"
+        ;          }
+        s (get-in options-map [:events :setup])
+        options-map (assoc options-map :init 'initialize
+                                       :constructors {[] []})
+        addListener (fn [consumer] `(-> (FMLJavaModLoadingContext/get) .getModEventBus (.addListener ~consumer)))
+        ;generate-event-fn (fn [wrap event-name key]
+        ;                    ~(clojure.core/proxy [~wrap] []
+        ;                       (accept [t]
+        ;                         ; here the impl
+        ;                         (when-let [s (get-in options-map [:events ~key])]
+        ;                            ;(~s ~'t)
+        ;                            )
+        ;                         )))
+        generate-event-fn (fn [wrap event-name key]
+                            `(clojure.core/proxy [~wrap] []
+                               (~'accept [~'t]
+                                 ; here the impl
+                                 ~(when-let [s (get-in options-map [:events key])]
+                                    `(~s ~'t)
+                                    )
+                                 )))
+        ;(with-meta ~'t {~event-name :true})
+        setup-fn (generate-event-fn EventWrap$FMLCommonSetupEventWrap FMLCommonSetupEvent :setup)
+        ;setup-fn `(proxy [EventWrap$FMLCommonSetupEventWrap] []
+        ;        (~'accept [~'^FMLCommonSetupEvent t]
+        ;          ; here the impl
+        ;          ~(when-let [s (get-in options-map [:events :setup])]
+        ;             `(~s ~'t)
+        ;             )
+        ;          ))
+        prefix (str mod-name "-")
+        options-map (dissoc options-map :events)]
+    `(do
+       (defclass
+         ~mod-name
+         BaseMod
+         ~options-map)
+       (with-prefix ~prefix
+         (defn ~'initialize
+           ([~'& ~'args]
+            ~(addListener setup-fn)
+            [(into [] ~'args) (atom {})]))))))

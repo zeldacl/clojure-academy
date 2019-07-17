@@ -1,6 +1,6 @@
 (ns cn.li.academy.core
   (:require
-    ;[cn.li.mcmod.core :refer [defmod]]
+    [cn.li.mcmod.core :refer [defmod]]
     [cn.li.academy.proxy :as proxy]
     [clojure.tools.logging :as log])
   (:import (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
@@ -10,13 +10,41 @@
            (org.apache.logging.log4j LogManager)
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
            (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent)
-           (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)))
+           (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)
+           (net.minecraft.block Blocks)))
+
+(defmod aaa)
+
+(defn bbb [wrap event-name key]
+  (clojure.core/proxy [~wrap] []
+    (accept [t]
+      ; here the impl
+      (when-let [s (get-in options-map [:events key])]
+        ;(~s ~'t)
+        )
+      )))
+
+;(cn.li.mcmod.utils/with-prefix
+;  "aaa-"
+;  (defn
+;    initialize
+;    ([& args]
+;     (->
+;       (FMLJavaModLoadingContext/get)
+;       .getModEventBus
+;       (.addListener
+;         (proxy [EventWrap$FMLCommonSetupEventWrap] []
+;           (accept [(with-meta t {FMLCommonSetupEvent :true})] nil))))
+;     [(into [] args) (atom {})])))
+;(cn.li.mcmod.core/defclass aaa BaseMod {:init initialize})
 
 ;(defmod clj-academy
-;        :modid "clj-academy"
-;        :version "0.1.0"
-;        :proxy {:client proxy/client-proxy
-;                :server ""})
+;        :modid "clojure-academy"
+;        ;:version "0.1.0"
+;        :events {:setup (fn [^FMLCommonSetupEvent e]
+;                          (log/info "HELLO FROM PREINIT clojure-academy")
+;                          (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT)))
+;                 })
 
 (def logger (LogManager/getLogger))
 
