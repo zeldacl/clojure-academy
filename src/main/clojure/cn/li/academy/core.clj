@@ -13,16 +13,16 @@
            (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)
            (net.minecraft.block Blocks)))
 
-(defmod aaa)
+;(defmod aaa)
 
-(defn bbb [wrap event-name key]
-  (clojure.core/proxy [~wrap] []
-    (accept [t]
-      ; here the impl
-      (when-let [s (get-in options-map [:events key])]
-        ;(~s ~'t)
-        )
-      )))
+;(defn bbb [wrap event-name key]
+;  (clojure.core/proxy [~wrap] []
+;    (accept [t]
+;      ; here the impl
+;      (when-let [s (get-in options-map [:events key])]
+;        ;(~s ~'t)
+;        )
+;      )))
 
 ;(cn.li.mcmod.utils/with-prefix
 ;  "aaa-"
@@ -38,70 +38,71 @@
 ;     [(into [] args) (atom {})])))
 ;(cn.li.mcmod.core/defclass aaa BaseMod {:init initialize})
 
-;(defmod clj-academy
-;        :modid "clojure-academy"
-;        ;:version "0.1.0"
-;        :events {:setup (fn [^FMLCommonSetupEvent e]
-;                          (log/info "HELLO FROM PREINIT clojure-academy")
-;                          (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT)))
-;                 })
+(defmod clj-academy
+        :modid "clojure-academy"
+        ;:version "0.1.0"
+        :events {:setup (fn [^FMLCommonSetupEvent e]
+                          (log/info "HELLO FROM PREINIT clojure-academy")
+                          (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT)))
+                 })
+
 
 (def logger (LogManager/getLogger))
 
-(gen-class
-  :name ^{Mod "clojure-academy"} ClojureAcademy             ;(with-meta "ClojureAcademy" {Mod "clojure-academy"})
-  :extends cn.li.mcmod.BaseMod
-  :methods []
-  :init "init"
-  :prefix "mod-"
-  :constructors {[] []})
-
-(defn msetup [^{:final true} ^FMLCommonSetupEvent event]
-  (log/info "###############################   "))
-
-
-(def consumer (reify java.util.function.Consumer
-                (accept [this t]
-                  ; here the impl
-                  (log/info "###############################   ")
-                  )))
-
-(def consumer1 (proxy [EventWrap$FMLCommonSetupEventWrap] []
-                 (accept [^FMLCommonSetupEvent t]
-                   ; here the impl
-                   (log/info "###############################-------------   " t)
-                   )))
-
 ;(gen-class
-;  :name cn.li.academy.core.Qqq
-;  :prefix "qq-"
-;  :implements [BlockRegistryEvent$Rrr])
+;  :name ^{Mod "clojure-academy"} ClojureAcademy             ;(with-meta "ClojureAcademy" {Mod "clojure-academy"})
+;  :extends cn.li.mcmod.BaseMod
+;  :methods []
+;  :init "init"
+;  :prefix "mod-"
+;  :constructors {[] []})
 ;
-;(defn qq-accept [this t]
-;  (log/info "###############################^^^^5235262525235   "))
-
-(defn mod-init []
-  (-> (FMLJavaModLoadingContext/get) .getModEventBus (.addListener consumer1))
-  [[] (atom {})])
-
-
-(gen-class
-  :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.academy.core.Caa
-  :extends cn.test.BlockRegistryEvent
-  :prefix "aa-"
-  ;:methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
-  )
-
-(defn aa-onBlocksRegistry [event]
-  (log/info "ddddddddddddddddddd1111   " (str (.getName event))))
-
-
-(gen-class
-  :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.academy.core.Cbb
-  :prefix "bb-"
-  :methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
-  )
-
-(defn bb-onBlocksRegistry [event]
-  (log/info "ddddddddddddddddddd22222222   " (str (.getName event)))
-  (.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222"))
+;(defn msetup [^{:final true} ^FMLCommonSetupEvent event]
+;  (log/info "###############################   "))
+;
+;
+;(def consumer (reify java.util.function.Consumer
+;                (accept [this t]
+;                  ; here the impl
+;                  (log/info "###############################   ")
+;                  )))
+;
+;(def consumer1 (proxy [EventWrap$FMLCommonSetupEventWrap] []
+;                 (accept [^FMLCommonSetupEvent t]
+;                   ; here the impl
+;                   (log/info "###############################-------------   " t)
+;                   )))
+;
+;;(gen-class
+;;  :name cn.li.academy.core.Qqq
+;;  :prefix "qq-"
+;;  :implements [BlockRegistryEvent$Rrr])
+;;
+;;(defn qq-accept [this t]
+;;  (log/info "###############################^^^^5235262525235   "))
+;
+;(defn mod-init []
+;  (-> (FMLJavaModLoadingContext/get) .getModEventBus (.addListener consumer1))
+;  [[] (atom {})])
+;
+;
+;(gen-class
+;  :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.academy.core.Caa
+;  :extends cn.test.BlockRegistryEvent
+;  :prefix "aa-"
+;  ;:methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
+;  )
+;
+;(defn aa-onBlocksRegistry [event]
+;  (log/info "ddddddddddddddddddd1111   " (str (.getName event))))
+;
+;
+;(gen-class
+;  :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.academy.core.Cbb
+;  :prefix "bb-"
+;  :methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
+;  )
+;
+;(defn bb-onBlocksRegistry [event]
+;  (log/info "ddddddddddddddddddd22222222   " (str (.getName event)))
+;  (.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222"))

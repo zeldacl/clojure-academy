@@ -6,7 +6,8 @@
   ;         (net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent))
   (:import (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap)
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
-           (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent)))
+           (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent)
+           (net.minecraftforge.fml.common Mod)))
 
 
 (defmacro create-obj-with-proxy [klass]
@@ -17,14 +18,24 @@
   ([class-name super-class class-data]
    (let [name-ns (get class-data :ns *ns*)
          prefix (str class-name "-")
-         fullname (get-fullname name-ns class-name)
+         fullname (get class-data :fullname (get-fullname name-ns class-name))
+         class-data (dissoc class-data :fullname)
          class-data (reduce concat [] (into [] class-data))]
      `(do
         (gen-class
-          :name ~fullname
+          :name   ~fullname                                        ;~(with-meta fullname `{Mod "ddd"})
           :prefix ~prefix
           :extends ~super-class
           ~@class-data)))))
+
+
+(defmacro generate-event-fn [wrap event-name fn]
+  `(clojure.core/proxy [~wrap] []
+     (~'accept [~'t]                                           ;(with-meta ~'t {~event-name :true})
+       ; here the impl
+       ~(if fn
+          `(~fn ~'t)
+          nil))))
 
 (defmacro defmod [mod-name & options]
   (let [full-name mod-name
@@ -46,16 +57,16 @@
         ;                            ;(~s ~'t)
         ;                            )
         ;                         )))
-        generate-event-fn (fn [wrap event-name key]
-                            `(clojure.core/proxy [~wrap] []
-                               (~'accept [~'t]
-                                 ; here the impl
-                                 ~(when-let [s (get-in options-map [:events key])]
-                                    `(~s ~'t)
-                                    )
-                                 )))
+        ;generate-event-fn (fn [wrap event-name key]
+        ;                    `(clojure.core/proxy [~wrap] []
+        ;                       (~'accept [~'t]
+        ;                         ; here the impl
+        ;                         ~(when-let [s (get-in options-map [:events key])]
+        ;                            `(~s ~'t)
+        ;                            )
+        ;                         )))
         ;(with-meta ~'t {~event-name :true})
-        setup-fn (generate-event-fn EventWrap$FMLCommonSetupEventWrap FMLCommonSetupEvent :setup)
+        setup-fn `(generate-event-fn EventWrap$FMLCommonSetupEventWrap FMLCommonSetupEvent ~(get-in options-map [:events :setup]))
         ;setup-fn `(proxy [EventWrap$FMLCommonSetupEventWrap] []
         ;        (~'accept [~'^FMLCommonSetupEvent t]
         ;          ; here the impl
@@ -64,7 +75,10 @@
         ;             )
         ;          ))
         prefix (str mod-name "-")
-        options-map (dissoc options-map :events)]
+        options-map (dissoc options-map :events)
+        name-ns (get options-map :ns *ns*)
+        fullname (get-fullname name-ns mod-name)
+        options-map (assoc options-map :fullname (with-meta fullname {Mod (get options-map :modid)}))]
     `(do
        (defclass
          ~mod-name
