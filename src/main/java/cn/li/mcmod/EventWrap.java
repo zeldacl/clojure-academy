@@ -17,7 +17,7 @@ public class EventWrap {
         }
     }
 
-    public class FMLClientSetupEventWrap implements java.util.function.Consumer<FMLClientSetupEvent> {
+    public static class FMLClientSetupEventWrap implements java.util.function.Consumer<FMLClientSetupEvent> {
 
         @Override
         public void accept(FMLClientSetupEvent fmlCommonSetupEvent) {
@@ -25,18 +25,18 @@ public class EventWrap {
         }
     }
 
-    public class InterModEnqueueEventWrap implements java.util.function.Consumer<InterModEnqueueEvent> {
-
+    public static class InterModEnqueueEventWrap implements java.util.function.Consumer<InterModEnqueueEvent> {
         @Override
-        public void accept(InterModEnqueueEvent fmlCommonSetupEvent) {
+        public void accept(InterModEnqueueEvent event) {
 
         }
     }
 
-    public class InterModProcessEventWrap implements java.util.function.Consumer<InterModProcessEvent> {
+    public static class InterModProcessEventWrap implements java.util.function.Consumer<InterModProcessEvent> {
+
 
         @Override
-        public void accept(InterModProcessEvent fmlCommonSetupEvent) {
+        public void accept(InterModProcessEvent event) {
 
         }
     }
