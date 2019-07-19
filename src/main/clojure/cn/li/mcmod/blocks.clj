@@ -3,7 +3,10 @@
            (net.minecraft.block.material Material)))
 
 (defmacro defblock [block-name & args]
-  (let [blockdata (apply hash-map args)]))
+  (let [blockdata (apply hash-map args)
+        container? (:container? blockdata)]
+    `(do
+       (defobj ~(if container? `BlockContainer `Block)))))
 
 
 ;(let [a (doto

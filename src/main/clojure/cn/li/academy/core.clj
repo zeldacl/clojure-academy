@@ -2,6 +2,7 @@
   (:require
     [cn.li.mcmod.core :refer [defmod]]
     [cn.li.academy.proxy :as proxy]
+    [cn.li.mcmod.log :as mcmodlog]
     [clojure.tools.logging :as log])
   (:import (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
@@ -50,9 +51,13 @@
 ;                   )))
 (def logger (LogManager/getLogger))
 
+(mcmodlog/init-log)
+
 (defn setup-fn [^FMLCommonSetupEvent e]
   (.println System/out "777777777777777777777777777777777777777777")
   (.println System/err "888888888888888888888888888888888888888888")
+
+  (log/info "HELLO FROM PREINIT clojure-academy" (.name log/*logger-factory*))
   (log/info "HELLO FROM PREINIT clojure-academy")
   (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT))
   (.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222")

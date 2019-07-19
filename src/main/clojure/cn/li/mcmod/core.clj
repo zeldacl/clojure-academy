@@ -31,6 +31,9 @@
           :extends ~super-class
           ~@class-data)))))
 
+(defmacro defobj [super-class]
+  nil)
+
 
 (defmacro generate-event-fn [wrap event-name fn]
   `(clojure.core/proxy [~wrap] []
