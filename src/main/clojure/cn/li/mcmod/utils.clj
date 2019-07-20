@@ -1,6 +1,8 @@
 (ns cn.li.mcmod.utils
   ;(:import (net.minecraftforge.fml.common FMLCommonHandler))
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string])
+  (:import (net.minecraft.world World)
+           (net.minecraft.util.math BlockPos)))
 
 
 ;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
@@ -44,3 +46,9 @@
                     possible-def))
         def-statements (cons `do (map per-def defs))]
     def-statements))
+
+(defn get-tile-entity-at-world
+  ([^World world pos]
+   (.getTileEntity world pos))
+  ([^World world x y z]
+   (get-tile-entity-at-world world (BlockPos. (int x) (int y) (int z)))))

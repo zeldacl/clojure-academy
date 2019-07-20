@@ -6,7 +6,7 @@
   (let [blockdata (apply hash-map args)
         container? (:container? blockdata)]
     `(do
-       (defobj ~(if container? `BlockContainer `Block)))))
+       (defobj Block))))
 
 
 ;(let [a (doto
