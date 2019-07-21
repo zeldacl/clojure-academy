@@ -1,12 +1,12 @@
 (ns cn.li.mcmod.blocks
-  (:import (net.minecraft.block Block Block$Properties SoundType)
+  (:import (net.minecraft.block Block Block$Properties SoundType ContainerBlock)
            (net.minecraft.block.material Material)))
 
 (defmacro defblock [block-name & args]
   (let [blockdata (apply hash-map args)
         container? (:container? blockdata)]
     `(do
-       (defobj Block))))
+       (defobj ~(if container? `ContainerBlock `Block)))))
 
 
 ;(let [a (doto

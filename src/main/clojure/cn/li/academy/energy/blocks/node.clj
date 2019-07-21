@@ -1,6 +1,6 @@
 (ns cn.li.academy.energy.blocks.node
   (:require [cn.li.mcmod.blocks :refer [defblock]])
-  (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world]])
+  (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block?]])
   (:require [cn.li.academy.energy.tileentites.node :refer [set-placer]])
   (:import (net.minecraft.block Block BlockState ChestBlock)
            (net.minecraft.block.material Material)
@@ -29,10 +29,14 @@
                :harvest-level ["pickaxe", 1]}
   :override {;:create-new-tile-entity new-tile-block-entity
              ;:on-block-activated     on-tile-block-click
-             :on-block-placed-by (fn [this ^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+             :on-block-placed-by (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                    (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                      (set-placer tile placer)))
-             :get-drops
+             :on-replaced (fn [^BlockState p_196243_1_ ^World world ^BlockPos pos, ^BlockState p_196243_4_ ^boolean p_196243_5_]
+                            (when-not (same-block? p_196243_1_ p_196243_4_)
+                              (let [this ^Block this]
+                                (drop-inventory-items world pos this)
+                                (proxy-super onReplaced  p_196243_1_ world pos p_196243_4_ p_196243_5_))))
              }
 
 
@@ -69,7 +73,7 @@
 ; You must override Block#fillStateContainer if your block has properties. Look at vanilla for examples.
 
 
-;ChestBlock
+ChestBlock
 ; public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
 ;      if (state.getBlock() != newState.getBlock()) {
 ;         TileEntity tileentity = worldIn.getTileEntity(pos);

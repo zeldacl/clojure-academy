@@ -2,7 +2,9 @@
   ;(:import (net.minecraftforge.fml.common FMLCommonHandler))
   (:require [clojure.string :as string])
   (:import (net.minecraft.world World)
-           (net.minecraft.util.math BlockPos)))
+           (net.minecraft.util.math BlockPos)
+           (net.minecraft.inventory IInventory InventoryHelper)
+           (net.minecraft.block BlockState)))
 
 
 ;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
@@ -52,3 +54,15 @@
    (.getTileEntity world pos))
   ([^World world x y z]
    (get-tile-entity-at-world world (BlockPos. (int x) (int y) (int z)))))
+
+(defn blockstate->block [^BlockState state]
+  (.getBlock state))
+
+(defn same-block? [block1 block2]
+  (identical? (blockstate->block block1) (blockstate->block block2)))
+
+(defn drop-inventory-items [world pos, block-obj]
+  (let [tileentity (get-tile-entity-at-world world pos)]
+    (when (instance? IInventory tileentity)
+      (InventoryHelper/dropInventoryItems ^World world ^BlockPos pos ^IInventory tileentity)
+      (.updateComparatorOutputLevel world pos block-obj))))
