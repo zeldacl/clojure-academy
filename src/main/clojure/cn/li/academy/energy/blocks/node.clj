@@ -1,13 +1,15 @@
 (ns cn.li.academy.energy.blocks.node
   (:require [cn.li.mcmod.blocks :refer [defblock]])
-  (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block?]])
+  (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]])
   (:require [cn.li.academy.energy.tileentites.node :refer [set-placer]])
   (:import (net.minecraft.block Block BlockState ChestBlock)
            (net.minecraft.block.material Material)
            (net.minecraft.item ItemStack)
            (net.minecraft.entity LivingEntity)
-           (net.minecraft.util.math BlockPos)
-           (net.minecraft.world World)))
+           (net.minecraft.util.math BlockPos BlockRayTraceResult)
+           (net.minecraft.world World)
+           (net.minecraft.entity.player PlayerEntity)
+           (net.minecraft.util Hand)))
 
 (defblock block-node
   :container? true
@@ -29,19 +31,55 @@
                :harvest-level ["pickaxe", 1]}
   :override {;:create-new-tile-entity new-tile-block-entity
              ;:on-block-activated     on-tile-block-click
-             :on-block-placed-by (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+             :onBlockPlacedBy (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                    (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                      (set-placer tile placer)))
-             :on-replaced (fn [^BlockState p_196243_1_ ^World world ^BlockPos pos, ^BlockState p_196243_4_ ^boolean p_196243_5_]
-                            (when-not (same-block? p_196243_1_ p_196243_4_)
-                              (let [this ^Block this]
-                                (drop-inventory-items world pos this)
-                                (proxy-super onReplaced  p_196243_1_ world pos p_196243_4_ p_196243_5_))))
+             :onReplaced        (fn [^BlockState p_196243_1_ ^World world ^BlockPos pos, ^BlockState p_196243_4_ ^boolean p_196243_5_]
+                                   (when-not (same-block? p_196243_1_ p_196243_4_)
+                                     (let [this ^Block this]
+                                       (drop-inventory-items world pos this)
+                                       (proxy-super onReplaced p_196243_1_ world pos p_196243_4_ p_196243_5_))))
+             :onBlockActivated   (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
+                                   (let [this ^Block this]
+                                     (open-gui player state worldIn pos this)))
+             :getContainer (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
+                             )
              }
 
 
   ;:creative-tab CreativeTabs/tabBlock
   )
+
+
+
+;As anyone who's started porting to 1.14.2 is probably aware by now, container and GUI creation has changed... quite a bit.  To summarise what I've gathered so far:
+;
+;Containers (more accurately: container types) are now registry objects and must be registered in a RegistryEvent.Register<ContainerType<?>> event handler.
+;Container objects themselves must provide a constructor of the form MyContainer(int windowId, PlayerInventory inv, PacketBuffer extraData).  This will be used to instantiate the client-side container.
+;Your container's constructor must call the super Container constructor with your registered container type and the windowId parameter (this int parameter is not used in any other way - just pass it along to the superclass constructor and forget about it)
+;You can use the extraData parameter to pass... extra data! to your container: one option would be to provide another constructor taking whatever parameters you need, which you call server-side from your container provider (see below), and client-side from the "factory" constructor (having extracted and marshalled any extra data).
+;Container-based GUI's are now associated with a container type with the ScreenManager.registerFactory() method, which takes a registered ContainerType and a ScreenManager.IFactory to construct your GUI object. Call that in your client-side init code.
+;ExtensionPoint.GUIFACTORY is gone, no longer needed, as is the old IGuiHandler system.  ScreenManager does all that work now.
+;While there must be a one-to-one mapping from ContainerType to each GUI, also remember that you can happily re-use the same container class for multiple container types if you need to; just pass the container type as a parameter to your constructor and up along to the Container constructor.
+;All container-based GUI's must provide a constructor taking(T, PlayerInventory, ITextComponent), where the generic T is the type of your container object.
+;Container-based GUI objects are now generified (is that a word?) on the container's class, e.g. public class MyGui extends ContainerScreen<MyContainer>
+;IInteractionObject is gone; instead your tile entity should implement INamedContainerProvider: the createMenu() method is where you create and return your server-side container object. (I believe getDisplayName() is only used to initialize the title field of your GUI object).
+;To open a container-based GUI on the tile entity (server-side), call NetworkHooks.OpenGui(player, myTileEntity, pos) or player.openContainer(myTileEntity)
+;That would typically be called from Block#onBlockActivated()
+;If you want to create a container-based GUI for an item, create a class implementing INamedContainerProvider (a static inner class of the item makes sense, or perhaps an anonymous implementation), implementing createMenu() and getDisplayName() to create and return the container object as above.
+;That would typically be called as something like NetworkHooks.OpenGui(player, new MyItemContainerProvider(stack), pos)  or player.openContainer(new MyItemContainerProvider(stack)) from Item#onItemRightClick() or Item#onItemUse()
+;player.openContainer() can be used if you have no need to pass any extra data to the client, e.g. your GUI is just displaying container slots, like a chest.  But if your client GUI needs access to the client-side tile entity, use NetworkHooks.openGui() and pass at least the tile entity's blockpos so the client container can get the GUI object.
+;Syncing any necessary TE data to the client-side TE needs to be done separately by whatever means you choose.
+;Note that NetworkHooks.openGui() has a couple of variants to allow extra data to be passed to the client-side container object: a simple pos argument if you just need to pass the blockpos of your TE, or a more flexible Consumer<PacketBuffer> if you have more complex data to pass to the client.  The simple pos variant just calls the full-blooded Consumer<PacketBuffer> variant in any case.  It's this packet buffer that is received by the client-side container constructor.
+
+;Bit of follow up since I understand a bit more now....
+;
+;To get extra data passed across to the client (like a TE blockpos, for example), Forge 26.0.16 adds an extra PacketBuffer parameter to the NetworkHooks.openGui() calls, and a corresponding parameter to the container factory constructor.
+;Looks like NetworkHooks.openGui() remains the way to go for modded - I guess player.openContainer() is really for vanilla only?
+;Update: player.openContainer() should be fine to use if you're just creating a GUI purely to display some container slots (and don't need direct access to the clientside tile entity), like a chest GUI for example.
+;Typically, you'll have two or more constructors in your container objects - one "factory" constructor which is called by Minecraft client-side when a GUI is opened (and when the container type is registered during init), and one or more constructors of your choosing which create a container with any data you need to initialize them with.
+;Those extra constructors would be called server-side from your INamedContainerProvider implementation, and client-side from your "factory" constructor, having extracted information from the extraData PacketBuffer.
+
 ; https://github.com/Cadiboo/Example-Mod/blob/d828cd29685f7732cac6a2a8cd0f5cbfee5d6e88/src/main/java/io/github/cadiboo/examplemod/ModEventSubscriber.java#L106-L118
 
 
@@ -70,6 +108,7 @@
 ;https://www.minecraftforge.net/forum/topic/73013-1143-gui-class-replaced-custom-hud-help/
 ;https://www.minecraftforge.net/forum/topic/72985-1143-mousescrollevent-without-a-gui/
 ;https://www.minecraftforge.net/forum/topic/72915-1143-solved-problem-with-playerinteracteventrightclickblock-event/
+;https://www.minecraftforge.net/forum/topic/71577-1142-containers-and-guis/
 ; You must override Block#fillStateContainer if your block has properties. Look at vanilla for examples.
 
 

@@ -4,7 +4,8 @@
   (:import (net.minecraft.world World)
            (net.minecraft.util.math BlockPos)
            (net.minecraft.inventory IInventory InventoryHelper)
-           (net.minecraft.block BlockState)))
+           (net.minecraft.block BlockState ContainerBlock)
+           (net.minecraft.entity.player PlayerEntity)))
 
 
 ;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
@@ -66,3 +67,14 @@
     (when (instance? IInventory tileentity)
       (InventoryHelper/dropInventoryItems ^World world ^BlockPos pos ^IInventory tileentity)
       (.updateComparatorOutputLevel world pos block-obj))))
+
+(defn get-container [^ContainerBlock block ^BlockState state, ^World worldIn, ^BlockPos pos]
+  (.getContainer block state worldIn pos))
+
+(defn open-gui [^PlayerEntity player ^BlockState state, ^World worldIn, ^BlockPos pos ^ContainerBlock block]
+  (when-let [inamedcontainerprovider (get-container block state worldIn pos)]
+    (.openContainer player inamedcontainerprovider)
+    ;(.addStat player (.getOpenStat block))
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
