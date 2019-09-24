@@ -9,6 +9,7 @@
 
 
 ;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
+(defn vec->map [v] (into {} (map vec (partition 2 v))))
 
 (defn handle-inner-classes
   "Helper function for gen-classname to handle changing '.'s into '$'s"
@@ -66,7 +67,7 @@
   (let [tileentity (get-tile-entity-at-world world pos)]
     (when (instance? IInventory tileentity)
       (InventoryHelper/dropInventoryItems ^World world ^BlockPos pos ^IInventory tileentity)
-      (.updateComparatorOutputLevel world pos block-obj))))
+      (.updateComparatorOutputLevel ^World world pos block-obj))))
 
 (defn get-container [^ContainerBlock block ^BlockState state, ^World worldIn, ^BlockPos pos]
   (.getContainer block state worldIn pos))

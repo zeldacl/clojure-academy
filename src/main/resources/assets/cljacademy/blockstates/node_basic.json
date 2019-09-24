@@ -1,0 +1,56 @@
+{
+  "defaults": {
+    "model": "cljacademy:node_base"
+  },
+  "forge_marker": 1,
+  "variants": {
+    "connected": {
+      "false": {
+        "textures": {
+          "vert": "cljacademy:blocks/node_top_0"
+        }
+      },
+      "true": {
+        "textures": {
+          "vert": "cljacademy:blocks/node_top_1"
+        }
+      }
+    },
+    "energy": {
+      "0": {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_0"
+        }
+      },
+      "1": {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_1"
+        }
+      },
+      "2": {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_2"
+        }
+      },
+      "3": {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_3"
+        }
+      },
+      "4": {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_4"
+        }
+      }
+    },
+    "inventory": [
+      {
+        "textures": {
+          "side": "cljacademy:blocks/node_basic_side_0",
+          "vert": "cljacademy:blocks/node_top_0"
+        }
+      }
+    ]
+  },
+  "__xconfgen": true
+}

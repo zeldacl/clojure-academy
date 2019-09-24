@@ -34,11 +34,11 @@
              :onBlockPlacedBy (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                    (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                      (set-placer tile placer)))
-             :onReplaced        (fn [^BlockState p_196243_1_ ^World world ^BlockPos pos, ^BlockState p_196243_4_ ^boolean p_196243_5_]
-                                   (when-not (same-block? p_196243_1_ p_196243_4_)
+             :onReplaced        (fn [^BlockState block-state-old ^World world ^BlockPos pos, ^BlockState block-state ^boolean p_196243_5_]
+                                   (when-not (same-block? block-state-old block-state)
                                      (let [this ^Block this]
                                        (drop-inventory-items world pos this)
-                                       (proxy-super onReplaced p_196243_1_ world pos p_196243_4_ p_196243_5_))))
+                                       (proxy-super onReplaced block-state-old world pos block-state p_196243_5_))))
              :onBlockActivated   (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                    (let [this ^Block this]
                                      (open-gui player state worldIn pos this)))

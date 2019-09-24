@@ -42,7 +42,7 @@
 ;(cn.li.mcmod.core/generate-event-fn
 ;  EventWrap$InterModEnqueueEventWrap
 ;  InterModEnqueueEvent
-;  (fn [^InterModEnqueueEvent e] (log/info "HELLO FROM InterModEnqueueEvent clojure-academy")))
+;  (fn [^InterModEnqueueEvent e] (log/info "HELLO FROM InterModEnqueueEvent cljacademy")))
 
 ;(def consumer2 (proxy [EventWrap$InterModEnqueueEventWrap] []
 ;                 (accept [^InterModEnqueueEvent t]
@@ -57,8 +57,8 @@
   (.println System/out "777777777777777777777777777777777777777777")
   (.println System/err "888888888888888888888888888888888888888888")
 
-  (log/info "HELLO FROM PREINIT clojure-academy" (.name log/*logger-factory*))
-  (log/info "HELLO FROM PREINIT clojure-academy")
+  (log/info "HELLO FROM PREINIT cljacademy" (.name log/*logger-factory*))
+  (log/info "HELLO FROM PREINIT cljacademy")
   (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT))
   (.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222")
   ;(throw "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqq")
@@ -66,29 +66,29 @@
 
 (defn mod-enqueue-fn [^InterModEnqueueEvent e]
   (.info logger "rrrrrrrrrrrrrrrrrrrrrrr5555555555555555555")
-  (log/info "HELLO FROM InterModEnqueueEvent clojure-academy"))
+  (log/info "HELLO FROM InterModEnqueueEvent cljacademy"))
 
 (defn mod-process-fn [^InterModProcessEvent e]
-  (log/info "HELLO FROM InterModProcessEvent clojure-academy"))
+  (log/info "HELLO FROM InterModProcessEvent cljacademy"))
 
 (defn do-client-stuff-fn [^FMLClientSetupEvent e]
-  (log/info "HELLO FROM FMLClientSetupEvent  clojure-academy"))
+  (log/info "HELLO FROM FMLClientSetupEvent  cljacademy"))
 
 (defn server-starting-fn [this e]
-  (log/info "HELLO FROM FMLServerStartingEvent  clojure-academy"))
+  (log/info "HELLO FROM FMLServerStartingEvent  cljacademy"))
 
-(defmod clojure-academy
-        ;:modid "clojure-academy"
+(defmod cljacademy
+        ;:modid "cljacademy"
         ;:version "0.1.0"
         ;:events {:setup           (fn [^FMLCommonSetupEvent e]
-        ;                      (log/info "HELLO FROM PREINIT clojure-academy")
+        ;                      (log/info "HELLO FROM PREINIT cljacademy")
         ;                      (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT)))
         ;   :mod-enqueue     (fn [^InterModEnqueueEvent e]
-        ;                      (log/info "HELLO FROM InterModEnqueueEvent clojure-academy"))
+        ;                      (log/info "HELLO FROM InterModEnqueueEvent cljacademy"))
         ;   :mod-process     (fn [^InterModProcessEvent e]
-        ;                      (log/info "HELLO FROM InterModProcessEvent clojure-academy"))
+        ;                      (log/info "HELLO FROM InterModProcessEvent cljacademy"))
         ;   :do-client-stuff (fn [^FMLClientSetupEvent e]
-        ;                      (log/info "HELLO FROM FMLClientSetupEvent  clojure-academy"))
+        ;                      (log/info "HELLO FROM FMLClientSetupEvent  cljacademy"))
         ;   }
         :events {:setup           setup-fn
                  :mod-enqueue     mod-enqueue-fn
@@ -98,7 +98,7 @@
                  })
 
 ;(cn.li.mcmod.utils/with-prefix
-;  "clojure-academy-"
+;  "cljacademy-"
 ;  (clojure.core/defn
 ;    initialize
 ;    ([& args]
@@ -131,7 +131,7 @@
 ;(def logger (LogManager/getLogger))
 
 ;(gen-class
-;  :name ^{Mod "clojure-academy"} ClojureAcademy             ;(with-meta "ClojureAcademy" {Mod "clojure-academy"})
+;  :name ^{Mod "cljacademy"} ClojureAcademy             ;(with-meta "ClojureAcademy" {Mod "cljacademy"})
 ;  :extends cn.li.mcmod.BaseMod
 ;  :methods []
 ;  :init "init"

@@ -1,7 +1,7 @@
 (ns cn.li.mcmod.core
   (:require [cn.li.mcmod.network :refer [init-networks]]
-            [cn.li.mcmod.common :refer [vec->map]]
-            [cn.li.mcmod.utils :refer [get-fullname with-prefix]]
+    ;[cn.li.mcmod.common :refer [vec->map]]
+            [cn.li.mcmod.utils :refer [get-fullname with-prefix vec->map]]
             [clojure.tools.logging :as log])
   ;(:import (net.minecraftforge.fml.common Mod Mod$EventHandler)
   ;         (net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent))
