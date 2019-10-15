@@ -36,6 +36,12 @@
   [name-ns class-name]
   (symbol (str (string/replace name-ns #"-" "_") "." (gen-classname class-name))))
 
+(defn construct
+  "Given a class and any arguments to the constructor, makes an instance of that class.
+  Not a macro like Clojure's new keyword, so can be used with class names that are stored in symbols."
+  [klass & args]
+  (clojure.lang.Reflector/invokeConstructor klass (into-array Object args)))
+
 (defmacro with-prefix
   "Useful macro that takes a prefix (both strings and symbols work) and any number of statements.
   For each def/defn/def-/defn- statement within the macro, adds the prefix onto the name in each statement."

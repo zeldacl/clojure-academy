@@ -11,25 +11,28 @@
            (net.minecraft.entity.player PlayerEntity)
            (net.minecraft.util Hand)))
 
+(defblock sss :ww 4)
+
 (defblock block-node
-  :container? true
-  :states {:type :unknown
-           ;:connected [:true :false]
-           ;:energy    [0 1 2 3 4]
-           }
+  ;:container? true
+  ;:states {:type :unknown
+  ;         ;:connected [:true :false]
+  ;         ;:energy    [0 1 2 3 4]
+  ;         }
   ;:override {:create-new-tile-entity new-tile-block-entity
   ;           :on-block-activated     on-tile-block-click}
-  :properties {
+  :state-properties {
                :connected [:bool]
                :energy [:integer 0 4]
                }
-  :attributes {;:creative-tab ""
+  ;:registry-name ""
+  :properties {;:creative-tab ""
                :material      Material/ROCK
                :hardness      (float 2.5)
                ;:step-sound Block/soundTypeStone
-               :registry-name ""
+
                :harvest-level ["pickaxe", 1]}
-  :override {;:create-new-tile-entity new-tile-block-entity
+  :overrides {;:create-new-tile-entity new-tile-block-entity
              ;:on-block-activated     on-tile-block-click
              :onBlockPlacedBy (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                    (when-let [tile (get-tile-entity-at-world worldIn pos)]
@@ -44,6 +47,8 @@
                                      (open-gui player state worldIn pos this)))
              :getContainer (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
                              )
+             :hasTileEntity (constantly true)
+             :createTileEntity (fn [] (throw (Error "todo")))
              }
 
 
