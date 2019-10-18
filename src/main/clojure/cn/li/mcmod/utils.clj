@@ -5,8 +5,16 @@
            (net.minecraft.util.math BlockPos)
            (net.minecraft.inventory IInventory InventoryHelper)
            (net.minecraft.block BlockState ContainerBlock)
-           (net.minecraft.entity.player PlayerEntity)))
+           (net.minecraft.entity.player PlayerEntity)
+           (net.minecraft.util SoundEvents)
+           (net.minecraftforge.registries GameData)))
 
+
+(defn ensure-registered []
+  (let [_ SoundEvents/AMBIENT_CAVE]
+    (GameData/init)))
+
+(ensure-registered)
 
 ;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
 (defn vec->map [v] (into {} (map vec (partition 2 v))))
@@ -35,6 +43,19 @@
   a java class by using gen-classname on the class name and turning '-'s into '_'s in the package."
   [name-ns class-name]
   (symbol (str (string/replace name-ns #"-" "_") "." (gen-classname class-name))))
+
+(defn gen-method
+  "Given a key word, returns a java method as a symbol by capitalizing all but the first word."
+  [k]
+  (let [key-name (name k)
+        words (string/split key-name #"-")
+        method-name (apply str (first words) (map string/capitalize (rest words)))]
+    (symbol method-name)))
+
+(defn update-map-keys
+  "Utility function. Given a map and a function, applies that function to all keys in the map."
+  [func m]
+  (into {} (map #(vector (func (key %1)) (val %1)) m)))
 
 (defn construct
   "Given a class and any arguments to the constructor, makes an instance of that class.

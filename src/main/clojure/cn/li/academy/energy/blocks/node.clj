@@ -7,12 +7,11 @@
            (net.minecraft.item ItemStack)
            (net.minecraft.entity LivingEntity)
            (net.minecraft.util.math BlockPos BlockRayTraceResult)
-           (net.minecraft.world World)
+           (net.minecraft.world World IBlockReader)
            (net.minecraft.entity.player PlayerEntity)
            (net.minecraft.util Hand)))
 
-(defblock sss :ww 4)
-
+;(defblock vvv :properties {:material      Material/ROCK})
 (defblock block-node
   ;:container? true
   ;:states {:type :unknown
@@ -33,23 +32,23 @@
 
                :harvest-level ["pickaxe", 1]}
   :overrides {;:create-new-tile-entity new-tile-block-entity
-             ;:on-block-activated     on-tile-block-click
-             :onBlockPlacedBy (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
-                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
-                                     (set-placer tile placer)))
-             :onReplaced        (fn [^BlockState block-state-old ^World world ^BlockPos pos, ^BlockState block-state ^boolean p_196243_5_]
-                                   (when-not (same-block? block-state-old block-state)
-                                     (let [this ^Block this]
-                                       (drop-inventory-items world pos this)
-                                       (proxy-super onReplaced block-state-old world pos block-state p_196243_5_))))
-             :onBlockActivated   (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
-                                   (let [this ^Block this]
-                                     (open-gui player state worldIn pos this)))
-             :getContainer (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
-                             )
-             :hasTileEntity (constantly true)
-             :createTileEntity (fn [] (throw (Error "todo")))
-             }
+              ;:on-block-activated     on-tile-block-click
+              :onBlockPlacedBy  (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+                                  (when-let [tile (get-tile-entity-at-world worldIn pos)]
+                                    (set-placer tile placer)))
+              :onReplaced       (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+                                  (when-not (same-block? state newState)
+                                    (let [this ^Block this]
+                                      (drop-inventory-items worldIn pos this)
+                                      (proxy-super onReplaced state worldIn pos newState isMoving))))
+              :onBlockActivated (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
+                                  (let [this ^Block this]
+                                    (open-gui player state worldIn pos this)))
+              :getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
+                                  3)
+              :hasTileEntity    (constantly true)
+              :createTileEntity (fn [^BlockState state, ^IBlockReader world] 1)
+              }
 
 
   ;:creative-tab CreativeTabs/tabBlock
@@ -117,7 +116,7 @@
 ; You must override Block#fillStateContainer if your block has properties. Look at vanilla for examples.
 
 
-ChestBlock
+;ChestBlock
 ; public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
 ;      if (state.getBlock() != newState.getBlock()) {
 ;         TileEntity tileentity = worldIn.getTileEntity(pos);

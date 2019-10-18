@@ -1,9 +1,16 @@
 (ns cn.li.mcmod.blocks
-  (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct]])
-  (:import (net.minecraft.block Block Block$Properties SoundType ContainerBlock)
-           (net.minecraft.block.material Material))
+  (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]])
+  (:import (net.minecraft.block Block Block$Properties))
   ;(:require (cn.li.mcmod.core :refer [defclass]))
   )
+
+
+;(gen-class
+;  :name "ttt"
+;  :extends cn.li.mcmod.BaseBlock
+;  ;:init ~'initialize
+;  ;:constructors {[] [Block$Properties]}
+;  )
 
 
 (defn create-block-properties [properties]
@@ -23,7 +30,12 @@
         ;options-map (dissoc options-map :events)
         name-ns (get blockdata :ns *ns*)
         fullname (get-fullname name-ns block-name)
+        overrides (update-map-keys gen-method overrides)
+        overrides (map (fn [override]
+                         `(defn ~(key override) [~'this ~'& ~'args]
+                            (apply ~(val override) ~'args))) overrides)
         ]
+    ;(ensure-registered)
     ;`(do
     ;   (defclass ~block-name ~Block ~blockdata)
     ;   ~(if overrides
@@ -31,11 +43,12 @@
     ;         ~@overrides)))
     `(do
        (gen-class
-         :name ~block-name
+         :name ~fullname
          :prefix ~(symbol prefix)
-         :extends Block
+         :extends ~Block
          :init ~'initialize
-         :constructors {[] [Block$Properties]})
+         ;:constructors {[] [Block$Properties]}
+         )
        (with-prefix ~prefix
          (defn ~'initialize
            ([~'& ~'args]
