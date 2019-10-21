@@ -1,5 +1,5 @@
 (ns cn.li.academy.energy.blocks.node
-  (:require [cn.li.mcmod.blocks :refer [defblock]])
+  (:require [cn.li.mcmod.blocks :refer [defblock instance-block]])
   (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]])
   (:require [cn.li.academy.energy.tileentites.node :refer [set-placer]])
   (:import (net.minecraft.block Block BlockState ChestBlock)
@@ -53,6 +53,8 @@
 
   ;:creative-tab CreativeTabs/tabBlock
   )
+
+(instance-block block-node)
 
 
 
