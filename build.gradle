@@ -10,7 +10,7 @@ buildscript {
     dependencies {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
 //        classpath "com.netflix.nebula:nebula-clojure-plugin:6.0.1"
-        classpath 'io.github.gradle-clojure:gradle-clojure-plugin:0.4.0'
+        classpath "dev.clojurephant:clojurephant-plugin:0.5.0-alpha.5"
 //        classpath group: 'io.github.gradle-clojure', name: 'gradle-clojure-plugin', version: '0.4.0', changing: true
     }
 }
@@ -18,7 +18,7 @@ buildscript {
 //    id 'scala'
 //}
 
-apply plugin: 'gradle-clojure.clojure'
+apply plugin: "dev.clojurephant.clojure"
 //apply plugin: "nebula.clojure"
 apply plugin: 'net.minecraftforge.gradle'
 
@@ -111,6 +111,7 @@ minecraft {
 //    main
 //}
 //
+checkClojure.enabled = false
 clojure {
     builds {
 //        output-dir = "classes"

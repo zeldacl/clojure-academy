@@ -21,8 +21,9 @@
       (.sound block-properties sound))
     (when-let [hardness (:hardness properties)]
       (.hardnessAndResistance block-properties hardness))
-    (when-let [harvest-level (:harvest-level properties)]
-      (.harvestLevel block-properties harvest-level))))
+    ;(when-let [[harvest level] (:harvest-level properties)]
+    ;  (.hardnessAndResistance block-properties harvest level))
+    block-properties))
 
 (defmulti create-state-property (fn [name property]
                                   (first property)))
@@ -44,8 +45,8 @@
   ;(mapv (fn [[name property]] (->state-property name property)) state-properties)
   (reduce-kv #(assoc %1 %2 (->state-property (str %2) %3)) {} state-properties))
 
-(defmulti instance-block (fn [class-name & constructor-args]
-                           (keyword class-name)))
+;(defmulti instance-block (fn [class-name & constructor-args]
+;                           (keyword class-name)))
 
 (defmacro defblock [block-name & args]
   (let [blockdata (apply hash-map args)
@@ -75,13 +76,14 @@
          :prefix ~(symbol prefix)
          :extends ~Block
          :init ~'initialize
-         ;:constructors {[] [Block$Properties]}
+         :constructors {[] [Block$Properties]}
          :post-init ~'post-initialize
+         :state state
          )
        (def ~class-name ~fullname)
-       ;(import ~fullname)
-       (defmethod instance-block ~(keyword block-name) [~'class-name ~'& ~'constructor-args]
-         (apply construct ~class-name ~'constructor-args))
+       (import ~fullname)
+       ;(defmethod instance-block ~(keyword block-name) [~'class-name ~'& ~'constructor-args]
+       ;  (apply construct ~class-name ~'constructor-args))
        (with-prefix ~prefix
          (defn ~'initialize
            ([~'& ~'args]
@@ -91,7 +93,7 @@
          (defn ~'post-initialize [~'obj ~'& ~'args]
            (.setRegistryName ~'obj ~registry-name))
          (defn ~'fillStateContainer [~'this ~'builder]
-           (apply '.add ~'builder (mapv #(second %1) (:state-properties (.state ~'this)) ))
+           ;(apply '.add ~'builder (mapv #(second %1) (:state-properties (deref ('.state ~'this)) ) ))
            )
          )
        ~(if overrides
@@ -101,8 +103,8 @@
     ))
 
 
-;(defn instance-block [class-name & constructor-args]
-;  (apply construct class-name constructor-args))
+(defn instance-block [class-name & constructor-args]
+  (apply construct class-name constructor-args))
 
 
 ;(let [a (doto
