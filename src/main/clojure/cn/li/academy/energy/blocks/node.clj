@@ -1,5 +1,5 @@
 (ns cn.li.academy.energy.blocks.node
-  (:require [cn.li.mcmod.blocks :refer [defblock instance-block]])
+  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate]])
   (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]])
   (:require [cn.li.academy.energy.tileentites.node :refer [set-placer]])
   (:import (net.minecraft.block Block BlockState ChestBlock)
@@ -9,7 +9,13 @@
            (net.minecraft.util.math BlockPos BlockRayTraceResult)
            (net.minecraft.world World IBlockReader)
            (net.minecraft.entity.player PlayerEntity)
-           (net.minecraft.util Hand)))
+           (net.minecraft.util Hand)
+    ;(cn.li.mcmod.blocks Ddd)
+           ))
+
+
+(defblockstate connected [:bool])
+(defblockstate energy [:integer 0 4])
 
 ;(defblock vvv :properties {:material      Material/ROCK})
 (defblock block-node
@@ -20,10 +26,11 @@
   ;         }
   ;:override {:create-new-tile-entity new-tile-block-entity
   ;           :on-block-activated     on-tile-block-click}
-  :state-properties {
-               :connected [:bool]
-               :energy [:integer 0 4]
-               }
+  ;:state-properties {
+  ;             :connected [:bool]
+  ;             :energy [:integer 0 4]
+  ;             }
+  :state-properties [:connected :energy]
   ;:registry-name ""
   :properties {;:creative-tab ""
                :material      Material/ROCK
@@ -54,7 +61,7 @@
   ;:creative-tab CreativeTabs/tabBlock
   )
 
-(instance-block block-node)
+;(instance-block block-node)
 
 
 

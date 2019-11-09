@@ -5,12 +5,14 @@
             [clojure.tools.logging :as log])
   ;(:import (net.minecraftforge.fml.common Mod Mod$EventHandler)
   ;         (net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent))
-  (:import (cn.li.mcmod BaseMod EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap EventWrap$FMLClientSetupEventWrap)
-           (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
-           (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent InterModEnqueueEvent InterModProcessEvent FMLClientSetupEvent)
-           (net.minecraftforge.fml.common Mod)
-           (net.minecraftforge.eventbus.api SubscribeEvent)
-           (net.minecraftforge.fml.event.server FMLServerStartingEvent)))
+  (:import                                                  ;(EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap EventWrap$FMLClientSetupEventWrap)
+    (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
+    (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent InterModEnqueueEvent InterModProcessEvent FMLClientSetupEvent)
+    (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber$Bus Mod$EventBusSubscriber)
+    (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
+    (net.minecraftforge.fml.event.server FMLServerStartingEvent)
+    (net.minecraftforge.common MinecraftForge)
+    (cn.li.mcmod EventWrap$FMLClientSetupEventWrap EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap)))
 
 
 ;(defmacro create-obj-with-proxy [klass]
@@ -111,8 +113,9 @@
        (gen-class
          :name ~(with-meta fullname `{Mod ~(str mod-name)})
          :prefix ~(symbol prefix)
-         :extends BaseMod
+         ;:extends BaseMod
          :init ~'initialize
+         :post-init ~'post-initialize
          :constructors {[] []}
          :methods [[~(with-meta 'onServerStarting `{SubscribeEvent []}) [FMLServerStartingEvent] ~'void]])
        (with-prefix ~prefix
@@ -124,6 +127,8 @@
             (addListener ~mod-process-fn)
             (addListener ~do-client-stuff-fn)
             [(into [] ~'args) (atom {})]))
+         (defn ~'post-initialize [~'obj ~'& ~'args]
+           (.register MinecraftForge/EVENT_BUS ~'obj))
          (defn ~'onServerStarting [~'this ~'event]
            ~(when (get-in options-map [:events :server-starting])
               `(~(get-in options-map [:events :server-starting]) ~'this ~'event))))
@@ -136,3 +141,15 @@
        ;   ('addListener ~do-client-stuff-fn)
        ;   [(into [] ~'args) (atom {})]))
        )))
+
+
+(gen-class
+  :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.academy.core.Cbb
+  :prefix "bb-"
+  :methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
+  )
+
+(defn bb-onBlocksRegistry [^net.minecraftforge.event.RegistryEvent$Register event]
+  (log/info "ddddddddddddddddddd22222222   " (str (.getName event)))
+  ;(.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222")
+  )

@@ -1,5 +1,6 @@
 (ns cn.li.mcmod.blocks
-  (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]])
+  (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]]
+            [clojure.tools.logging :as log])
   (:import (net.minecraft.block Block Block$Properties)
            (net.minecraft.state IProperty BooleanProperty IntegerProperty))
   ;(:require (cn.li.mcmod.core :refer [defclass]))
@@ -48,6 +49,25 @@
 ;(defmulti instance-block (fn [class-name & constructor-args]
 ;                           (keyword class-name)))
 
+(def ^:dynamic *block-states* (atom {}))
+
+(defn update-block-states [name property]
+  (swap! *block-states* assoc (keyword name) property))
+
+(defn get-block-states [name]
+  (get @*block-states* (keyword name)))
+
+
+(defmacro defblockstate [name property]
+  `(let [p# (create-state-property nil ~property)]
+     (update-block-states  ~(str name) p#)
+     (def ~name p#)))
+
+
+(defn getfield
+  [this key]
+  (@(.-state this) key))
+
 (defmacro defblock [block-name & args]
   (let [blockdata (apply hash-map args)
         class-name (symbol block-name)
@@ -59,10 +79,14 @@
         ;options-map (dissoc options-map :events)
         name-ns (get blockdata :ns *ns*)
         fullname (get-fullname name-ns class-name)
+        this-sym (with-meta 'this {:tag fullname})
         overrides (update-map-keys gen-method overrides)
         overrides (map (fn [override]
                          `(defn ~(key override) [~'this ~'& ~'args]
                             (apply ~(val override) ~'args))) overrides)
+        ;state-properties (atom (sanitize-state-properties (:state-properties blockdata)))
+        ;get-all-state-properties (constantly state-properties)
+        ;state-keys (map)
         ]
     ;(ensure-registered)
     ;`(do
@@ -78,9 +102,11 @@
          :init ~'initialize
          :constructors {[] [Block$Properties]}
          :post-init ~'post-initialize
-         :state state
+         :state ~'state
          )
+       ;(comment (compile ~name-ns))
        (def ~class-name ~fullname)
+       ;(def ~class-name (eval '~fullname))
        (import ~fullname)
        ;(defmethod instance-block ~(keyword block-name) [~'class-name ~'& ~'constructor-args]
        ;  (apply construct ~class-name ~'constructor-args))
@@ -88,13 +114,26 @@
          (defn ~'initialize
            ([~'& ~'args]
             [[(create-block-properties ~(:properties blockdata))] (atom {
-                                                                         :state-properties (sanitize-state-properties ~(:state-properties blockdata))
+                                                                         ;:state-properties (sanitize-state-properties ~(:state-properties blockdata))
                                                                          })]))
          (defn ~'post-initialize [~'obj ~'& ~'args]
            (.setRegistryName ~'obj ~registry-name))
          (defn ~'fillStateContainer [~'this ~'builder]
-           ;(apply '.add ~'builder (mapv #(second %1) (:state-properties (deref ('.state ~'this)) ) ))
+           (log/info ~'this ~'builder)
+           (log/info "qqqq" *block-states*)
+           ;(apply '.add ~'builder (mapv #(second %1) @~state-properties ))
+           (log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata) ))
+           (map #('.add ~'builder (get-block-states %1)) ~(:state-properties blockdata))
+           ;(apply '.add ~'builder (mapv #(get-block-states %1) ~(:state-properties blockdata) ))
            )
+           ;(let [m# (~sanitize-state-properties (:state-properties ~blockdata))]
+           ;  (log/info "rrrr" m#)
+           ;  (log/info "yyyy" (mapv #(second %1) m# ))
+           ;  ;(apply '.add ~'builder (mapv #(second %1) m# )))
+           ;
+           ;;(apply '.add ~'builder (mapv #(second %1) (getfield ~'this :state-properties) ))
+           ;;(apply '.add ~'builder (mapv #(second %1) (:state-properties (deref (.-state ~this-sym) ) ) ))
+           ;)
          )
        ~(if overrides
           `(with-prefix ~(str block-name "-")
@@ -104,7 +143,9 @@
 
 
 (defn instance-block [class-name & constructor-args]
-  (apply construct class-name constructor-args))
+  (apply construct class-name constructor-args)
+  ;(apply construct (resolve class-name) constructor-args)
+  )
 
 
 ;(let [a (doto
