@@ -31,7 +31,7 @@
   ;             :energy [:integer 0 4]
   ;             }
   :state-properties [:connected :energy]
-  ;:registry-name ""
+  :registry-name "node_basic"
   :properties {;:creative-tab ""
                :material      Material/ROCK
                :hardness      (float 2.5)

@@ -3,7 +3,10 @@
     [cn.li.mcmod.core :refer [defmod]]
     [cn.li.academy.proxy :as proxy]
     [cn.li.mcmod.log :as mcmodlog]
-    [clojure.tools.logging :as log])
+    [clojure.tools.logging :as log]
+    [cn.li.academy.ac-blocks :as ac-blocks]
+    [cn.li.academy.global]
+    [cn.li.mcmod.registry :as registry])
   (:import (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
     ;(cn.test BlockRegistryEvent BlockRegistryEvent$Rrr)
@@ -52,6 +55,7 @@
 (def logger (LogManager/getLogger))
 
 (mcmodlog/init-log)
+(registry/init-item-group "cljacademy" ac-blocks/block-node-instance)
 
 (defn setup-fn [^FMLCommonSetupEvent e]
   (.println System/out "777777777777777777777777777777777777777777")

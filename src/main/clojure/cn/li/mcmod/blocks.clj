@@ -1,8 +1,11 @@
 (ns cn.li.mcmod.blocks
   (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [cn.li.mcmod.registry :refer [set-registry-name]])
   (:import (net.minecraft.block Block Block$Properties)
-           (net.minecraft.state IProperty BooleanProperty IntegerProperty))
+           (net.minecraft.state IProperty BooleanProperty IntegerProperty)
+           (net.minecraft.inventory.container Container)
+           (net.minecraftforge.common.extensions IForgeContainerType))
   ;(:require (cn.li.mcmod.core :refer [defclass]))
   )
 
@@ -74,7 +77,8 @@
         overrides (:overrides blockdata)
         ;container? (:container? blockdata)
         prefix (str block-name "-")
-        registry-name (or (:registry-name blockdata) (str block-name))
+        ;registry-name (or (:registry-name blockdata) (str block-name))
+        registry-name (:registry-name blockdata)
         ;state-properties (sanitize-state-properties (:state-properties blockdata))
         ;options-map (dissoc options-map :events)
         name-ns (get blockdata :ns *ns*)
@@ -87,6 +91,7 @@
         ;state-properties (atom (sanitize-state-properties (:state-properties blockdata)))
         ;get-all-state-properties (constantly state-properties)
         ;state-keys (map)
+        x (gensym)
         ]
     ;(ensure-registered)
     ;`(do
@@ -116,8 +121,14 @@
             [[(create-block-properties ~(:properties blockdata))] (atom {
                                                                          ;:state-properties (sanitize-state-properties ~(:state-properties blockdata))
                                                                          })]))
-         (defn ~'post-initialize [~'obj ~'& ~'args]
-           (.setRegistryName ~'obj ~registry-name))
+         (defn ~'post-initialize [~(with-meta x {:tag `Block}) ~'& ~'args]
+           (log/info "^^^^^^^^^^^^^^^^^^" ~x ~'args)
+           ~(when registry-name
+              ;`(.setRegistryName ~x ~registry-name)
+              `(set-registry-name ~x ~registry-name)
+              )
+           ;(.setRegistryName ~'obj ~registry-name)
+           )
          (defn ~'fillStateContainer [~'this ~'builder]
            (log/info ~'this ~'builder)
            (log/info "qqqq" *block-states*)
@@ -148,8 +159,3 @@
   )
 
 
-;(let [a (doto
-;          (Block$Properties/create Material/AIR)
-;          (.hardnessAndResistance 0.5 0.5)
-;          (.sound SoundType/WOOD)
-;          )])
