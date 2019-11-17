@@ -7,8 +7,17 @@
            (net.minecraft.block BlockState ContainerBlock)
            (net.minecraft.entity.player PlayerEntity)
            (net.minecraft.util SoundEvents)
-           (net.minecraftforge.registries GameData)))
+           (net.minecraftforge.registries GameData)
+           (net.minecraftforge.common.util NonNullSupplier LazyOptional)))
 
+
+(defn ->NonNullSupplier [create-fn]
+  (reify net.minecraftforge.common.util.NonNullSupplier
+    (get [this]
+      (create-fn))))
+
+(defn ->LazyOptional [create-fn]
+  (LazyOptional/of (->NonNullSupplier create-fn)))
 
 (defn ensure-registered []
   (let [_ SoundEvents/AMBIENT_CAVE]
@@ -68,7 +77,14 @@
   For each def/defn/def-/defn- statement within the macro, adds the prefix onto the name in each statement."
   [prefix & defs]
   (let [per-def (fn [possible-def]
-                  (if (or (= (first possible-def) 'def) (= (first possible-def) 'defn) (= (first possible-def) 'def-) (= (first possible-def) 'defn-) (= (first possible-def) `def) (= (first possible-def) `defn) (= (first possible-def) `defn-))
+                  (if (or
+                        (= (first possible-def) 'def)
+                        (= (first possible-def) 'defn)
+                        (= (first possible-def) 'def-)
+                        (= (first possible-def) 'defn-)
+                        (= (first possible-def) `def)
+                        (= (first possible-def) `defn)
+                        (= (first possible-def) `defn-))
                     (let [first-val (first possible-def)
                           def-name (second possible-def)
                           def-name (symbol (str prefix def-name))
