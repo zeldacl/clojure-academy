@@ -1,10 +1,12 @@
 (ns cn.li.academy.energy.tileentites.node
   (:require [cn.li.mcmod.tileentity :refer [deftilerntity]]
+            [cn.li.mcmod.blocks :refer [get-block-states]]
             [cn.li.academy.energy.utils :refer [imag-energy-item?]])
   (:import (net.minecraft.entity.player PlayerEntity)
            (net.minecraftforge.items ItemStackHandler)
            (net.minecraft.tileentity TileEntity)
-           (cn.li.academy.api.energy.capability WirelessNode)))
+           (cn.li.academy.api.energy.capability WirelessNode)
+           (net.minecraft.block BlockState)))
 
 
 (defn create-slots [tile size]
@@ -16,8 +18,9 @@
 
 (defn create-wireless-node [tile]
   (proxy [WirelessNode] []
-    (getMaxEnergy (fn []
-                    ))))
+    (getMaxEnergy []
+      (let [block-state (.getBlockState tile)
+            node-type (.get ^BlockState block-state (get-block-states :node-type))]))))
 
 
 (deftilerntity tile-node

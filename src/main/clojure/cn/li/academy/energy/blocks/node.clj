@@ -1,8 +1,9 @@
 (ns cn.li.academy.energy.blocks.node
-  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate]])
-  (:require [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]])
-  (:require [cn.li.academy.energy.tileentites.node :refer [set-placer]])
-  (:import (net.minecraft.block Block BlockState ChestBlock)
+  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate]]
+            [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]]
+            [cn.li.academy.energy.tileentites.node :refer [set-placer]]
+            [cn.li.academy.energy.common :refer [node-type connected energy]])
+  (:import (net.minecraft.block Block BlockState)
            (net.minecraft.block.material Material)
            (net.minecraft.item ItemStack)
            (net.minecraft.entity LivingEntity)
@@ -14,8 +15,6 @@
            ))
 
 
-(defblockstate connected [:bool])
-(defblockstate energy [:integer 0 4])
 
 ;(defblock vvv :properties {:material      Material/ROCK})
 (defblock block-node
@@ -30,7 +29,7 @@
   ;             :connected [:bool]
   ;             :energy [:integer 0 4]
   ;             }
-  :state-properties [:connected :energy]
+  :state-properties [:connected :energy :node-type]
   :registry-name "node_basic"
   :properties {;:creative-tab ""
                :material      Material/ROCK
