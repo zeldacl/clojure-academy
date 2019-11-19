@@ -5,5 +5,22 @@
 (defblockstate connected [:bool])
 (defblockstate energy [:integer 0 4])
 
-(defn get-max-energy [node-type]
-  )
+STANDARD ("standard", 50000, 300, 12, 10),
+ADVANCED ("advanced", 200000, 900, 19, 20)                  ;
+
+(def config-node {
+                  :basic    {:max-energy 15000 :band-width 150 :range 9 :capacity 5}
+                  :standard {:max-energy 50000 :band-width 300 :range 12 :capacity 10}
+                  :advanced {:max-energy 200000 :band-width 900 :range 19 :capacity 20}
+                  })
+
+(defn node-type-id->keyword [type-id]
+  (condp = type-id
+    0 :basic
+    1 :standard
+    2 :advanced
+    :basic))
+
+(defn get-node-attr [node-type-id attr]
+  (get-in config-node [(node-type-id->keyword node-type-id) attr]))
+

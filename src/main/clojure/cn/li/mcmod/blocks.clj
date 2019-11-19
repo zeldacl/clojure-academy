@@ -63,7 +63,7 @@
 
 (defmacro defblockstate [name property]
   `(let [p# (create-state-property nil ~property)]
-     (update-block-states  ~(str name) p#)
+     (update-block-states ~(str name) p#)
      (def ~name p#)))
 
 
@@ -133,18 +133,18 @@
            (log/info ~'this ~'builder)
            (log/info "qqqq" *block-states*)
            ;(apply '.add ~'builder (mapv #(second %1) @~state-properties ))
-           (log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata) ))
+           (log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata)))
            (map #('.add ~'builder (get-block-states %1)) ~(:state-properties blockdata))
            ;(apply '.add ~'builder (mapv #(get-block-states %1) ~(:state-properties blockdata) ))
            )
-           ;(let [m# (~sanitize-state-properties (:state-properties ~blockdata))]
-           ;  (log/info "rrrr" m#)
-           ;  (log/info "yyyy" (mapv #(second %1) m# ))
-           ;  ;(apply '.add ~'builder (mapv #(second %1) m# )))
-           ;
-           ;;(apply '.add ~'builder (mapv #(second %1) (getfield ~'this :state-properties) ))
-           ;;(apply '.add ~'builder (mapv #(second %1) (:state-properties (deref (.-state ~this-sym) ) ) ))
-           ;)
+         ;(let [m# (~sanitize-state-properties (:state-properties ~blockdata))]
+         ;  (log/info "rrrr" m#)
+         ;  (log/info "yyyy" (mapv #(second %1) m# ))
+         ;  ;(apply '.add ~'builder (mapv #(second %1) m# )))
+         ;
+         ;;(apply '.add ~'builder (mapv #(second %1) (getfield ~'this :state-properties) ))
+         ;;(apply '.add ~'builder (mapv #(second %1) (:state-properties (deref (.-state ~this-sym) ) ) ))
+         ;)
          )
        ~(if overrides
           `(with-prefix ~(str block-name "-")
