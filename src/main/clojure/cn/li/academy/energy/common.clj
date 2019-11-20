@@ -5,9 +5,6 @@
 (defblockstate connected [:bool])
 (defblockstate energy [:integer 0 4])
 
-STANDARD ("standard", 50000, 300, 12, 10),
-ADVANCED ("advanced", 200000, 900, 19, 20)                  ;
-
 (def config-node {
                   :basic    {:max-energy 15000 :band-width 150 :range 9 :capacity 5}
                   :standard {:max-energy 50000 :band-width 300 :range 12 :capacity 10}

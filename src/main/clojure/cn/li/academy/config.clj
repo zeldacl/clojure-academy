@@ -2,4 +2,4 @@
 
 ;(def ss {:a 1 :b 5})
 ;https://github.com/Cadiboo/Example-Mod
-(defrecord ^{Config}  Foo [bar baz])
+;(defrecord ^{Config}  Foo [bar baz])
