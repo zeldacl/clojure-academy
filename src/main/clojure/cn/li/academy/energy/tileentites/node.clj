@@ -1,6 +1,7 @@
 (ns cn.li.academy.energy.tileentites.node
   (:require [cn.li.mcmod.tileentity :refer [deftilerntity]]
             [cn.li.mcmod.blocks :refer [get-block-states]]
+            [cn.li.mcmod.utils :refer [->LazyOptional]]
             [cn.li.academy.energy.utils :refer [imag-energy-item?]]
             [cn.li.academy.energy.common :refer [get-node-attr]])
   (:import (net.minecraft.entity.player PlayerEntity)
@@ -8,7 +9,8 @@
            (net.minecraft.tileentity TileEntity)
            (cn.li.academy.api.energy.capability WirelessNode)
            (net.minecraft.block BlockState)
-           (cn.li.academy.api.energy ImagEnergyItem)))
+           (cn.li.academy.api.energy ImagEnergyItem)
+           (net.minecraftforge.common.util LazyOptional)))
 
 
 (defn create-slots [tile size]
@@ -42,12 +44,20 @@
 
 (deftilerntity tile-node
   :fields {
-           :energy 0
+           :wireless-node nil
+           :slots nil
            }
   :post-init (fn [this &args]
-               )
+               (assoc! this :slots (->LazyOptional (constantly (create-slots this 2)) ) )
+               (assoc! this :wireless-node (->LazyOptional (constantly (create-wireless-node this)) ) ))
   :overrides {
               :tick (fn [this]
+                      (let [slots (.orElse ^LazyOptional (:slots this) nil)
+                            wireless-node (.orElse ^LazyOptional (:wireless-node this) nil)]
+                        (when (and slots wireless-node)
+                          (update-charge-in slot-in wireless-node)))
+                      (when [])
+                      (update-charge-in (:slot-in this) (:wireless-node this))
                       (let [world (.-world this)])
                       )
               })
