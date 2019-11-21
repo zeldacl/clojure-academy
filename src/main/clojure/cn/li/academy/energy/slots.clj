@@ -1,4 +1,4 @@
-(ns cn.li.academy.energy.ui.slots
+(ns cn.li.academy.energy.slots
   (:require [cn.li.mcmod.ui :refer [defcontainerslot]])
   (:import (net.minecraft.item ItemStack)))
 

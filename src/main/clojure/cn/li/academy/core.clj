@@ -55,7 +55,7 @@
 (def logger (LogManager/getLogger))
 
 (mcmodlog/init-log)
-(registry/init-item-group "cljacademy" ac-blocks/block-node-instance)
+;(registry/init-item-group "cljacademy" ac-blocks/block-node-instance)
 
 (defn setup-fn [^FMLCommonSetupEvent e]
   (.println System/out "777777777777777777777777777777777777777777")

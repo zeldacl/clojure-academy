@@ -1,21 +1,33 @@
 (ns cn.li.academy.energy.blocks.node
-  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate]]
-            [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui]]
-            [cn.li.academy.energy.tileentites.node :refer [set-placer]]
-            [cn.li.academy.energy.common :refer [node-type connected energy]])
+  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate get-block-states]]
+            [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui ->LazyOptional construct]]
+    ;[cn.li.academy.energy.tileentites.node :refer [set-placer]]
+            [cn.li.academy.energy.common :refer [node-type connected energy get-node-attr]]
+            [cn.li.mcmod.tileentity :refer [deftilerntity]]
+            [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv]]
+            [cn.li.academy.energy.slots :refer [slot-ifitem]]
+            ;[cn.li.academy.ac-blocks :refer [block-node-instance]]
+            [cn.li.academy.energy.utils :refer [imag-energy-item? make-transfer-rules make-energy-transfer-stack-in-slot-fn]])
   (:import (net.minecraft.block Block BlockState)
            (net.minecraft.block.material Material)
            (net.minecraft.item ItemStack)
            (net.minecraft.entity LivingEntity)
            (net.minecraft.util.math BlockPos BlockRayTraceResult)
            (net.minecraft.world World IBlockReader)
-           (net.minecraft.entity.player PlayerEntity)
+           (net.minecraft.entity.player PlayerEntity PlayerInventory)
            (net.minecraft.util Hand)
     ;(cn.li.mcmod.blocks Ddd)
-           ))
+           (net.minecraftforge.items ItemStackHandler)
+           (net.minecraft.tileentity TileEntity)
+           (cn.li.academy.api.energy.capability WirelessNode)
+           (cn.li.academy.api.energy ImagEnergyItem)
+           (net.minecraftforge.common.util LazyOptional)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; block
 
+(declare set-placer)                                        ;
 ;(defblock vvv :properties {:material      Material/ROCK})
 (defblock block-node
   ;:container? true
@@ -60,6 +72,7 @@
   ;:creative-tab CreativeTabs/tabBlock
   )
 
+(def block-node-instance (instance-block block-node))
 ;(instance-block block-node)
 
 
@@ -156,3 +169,105 @@
 ;  :creative-tab CreativeTabs/tabBlock
 ;  :light-level (float 1.0)
 ;  :step-sound Block/soundTypeStone)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tileentity
+
+(defn create-slots [tile size]
+  (proxy [ItemStackHandler] [size]
+    (onContentsChanged [slot]
+      (.markDirty ^TileEntity tile))
+    (isItemValid [slot, stack]
+      (imag-energy-item? stack))))
+
+(defn create-wireless-node [tile]
+  (let [node-attr-fn (fn [attr-key]
+                       (let [block-state (.getBlockState tile)
+                             node-type-id (.get ^BlockState block-state (get-block-states :node-type))]
+                         (get-node-attr node-type-id attr-key)))]
+    (proxy [WirelessNode] []
+      (getMaxEnergy [] (node-attr-fn :max-energy))
+      (getBandwidth [] (node-attr-fn :band-width))
+      (getCapacity [] (node-attr-fn :range))
+      (getRange [] (node-attr-fn :capacity)))))
+
+
+(defn update-charge-in [^ItemStack stack ^WirelessNode wireless-node]
+  (when (imag-energy-item? stack)
+    (let [item ^ImagEnergyItem (.getItem stack)
+          bandwidth (min (.getBandwidth wireless-node) (.getBandwidth item))
+          trans-energy (min bandwidth
+                         (.getEnergy item)
+                         (- (.getMaxEnergy wireless-node) (.getEnergy wireless-node)))]
+      (when (> trans-energy 0)
+        (.setEnergy item (- (.getEnergy item) trans-energy))
+        (.setEnergy wireless-node (+ trans-energy (.getEnergy wireless-node)))))))
+
+(defn update-charge-out [^ItemStack stack ^WirelessNode wireless-node]
+  (let [energy (.getEnergy wireless-node)]
+    (when (and (imag-energy-item? stack) (> energy 0))
+      (let [item ^ImagEnergyItem (.getItem stack)
+            bandwidth (min (.getBandwidth wireless-node) (.getBandwidth item))
+            trans-energy (min bandwidth
+                           (.getEnergy wireless-node)
+                           (- (.getMaxEnergy item) (.getEnergy item)))]
+        (when (> trans-energy 0)
+          (.setEnergy wireless-node (- (.getEnergy wireless-node) trans-energy))
+          (.setEnergy item (+ trans-energy (.getEnergy item))))))))
+
+(defn rebuild-block-state [^World world ^BlockPos pos ^WirelessNode wireless-node]
+  (let [block-state ^BlockState (.getBlockState world pos)
+        block (.getBlock block-state)
+        connected (.get block-state (get-block-states :connected))
+        energy (.get block-state (get-block-states :energy))
+        pct (min 4 (Math/round (* 4 (/ (.getEnergy wireless-node) (.getMaxEnergy wireless-node)))))
+        block-state ^BlockState (.with block-state (get-block-states :connected) true)
+        block-state ^BlockState (.with block-state (get-block-states :energy) pct)]
+    (.setBlockState world pos block-state 0)))
+
+(deftilerntity tile-node
+  :fields {
+           :wireless-node nil
+           :slots         nil
+           }
+  :post-init (fn [this &args]
+               (assoc! this :slots (->LazyOptional (constantly (create-slots this 2))))
+               (assoc! this :wireless-node (->LazyOptional (constantly (create-wireless-node this)))))
+  :overrides {
+              :tick       (fn [this]
+                            (let [slots ^ItemStackHandler (.orElse ^LazyOptional (:slots this) nil)
+                                  wireless-node (.orElse ^LazyOptional (:wireless-node this) nil)]
+                              (when (and slots wireless-node)
+                                (update-charge-in (.getStackInSlot slots 0) wireless-node)
+                                (update-charge-out (.getStackInSlot slots 1) wireless-node)
+                                (rebuild-block-state (.world this) (.getPos this) wireless-node))))
+              :createMenu (fn [this, i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
+                            (construct container-node i playerInventory playerEntity))
+              })
+
+(defn set-placer [tile-entity placer]
+  (when (instance? PlayerEntity placer) nil)
+  (throw "err"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; blockcontainer
+
+(defblockcontainer container-node
+  :overrides {
+              :transferStackInSlot (make-energy-transfer-stack-in-slot-fn
+                                     [(make-transfer-rules slot-ifitem slot-inv)
+                                      (make-transfer-rules slot-inv slot-ifitem imag-energy-item?)])
+              :canInteractWith     (fn [this ^PlayerEntity playerIn]
+                                     (let [^container-node this this
+                                           ^TileEntity tileentity (:tileentity @(.-data this))]
+                                       (Container/isWithinUsableDistance
+                                         (IWorldPosCallable/of (.getWorld tileentity) (.getPos tileentity))
+                                         playerIn block-node-instance))
+                                     )
+              })
+
+(defcontainertype block-node-container-type block-node-instance (.getRegistryName ^Block block-node-instance))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; screen
