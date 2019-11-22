@@ -27,8 +27,9 @@
          (defn ~'read [~'this ~'compound]
            (~'.superRead ~this-sym ~'compound)
            (read-tag-data! (~'.-state ~this-sym) ~'compound)
-           (~on-load ~this-sym))
+           ;(~on-load ~this-sym)
+           )
          (defn ~'write [~'this ~'compound]
            (~'.superWrite ~this-sym ~'compound)
-           (~on-save ~this-sym)
+           ;(~on-save ~this-sym)
            (write-tag-data! (~'.-state ~this-sym) ~'compound))))))
