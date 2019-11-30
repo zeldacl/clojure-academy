@@ -4,7 +4,7 @@
     ;[cn.li.academy.energy.tileentites.node :refer [set-placer]]
             [cn.li.academy.energy.common :refer [node-type connected energy get-node-attr]]
             [cn.li.mcmod.tileentity :refer [deftilerntity]]
-            [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv]]
+            [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv defcontainerscreen]]
             [cn.li.academy.energy.slots :refer [slot-ifitem]]
             ;[cn.li.academy.ac-blocks :refer [block-node-instance]]
             [cn.li.academy.energy.utils :refer [imag-energy-item? make-transfer-rules make-energy-transfer-stack-in-slot-fn]])
@@ -15,13 +15,14 @@
            (net.minecraft.util.math BlockPos BlockRayTraceResult)
            (net.minecraft.world World IBlockReader)
            (net.minecraft.entity.player PlayerEntity PlayerInventory)
-           (net.minecraft.util Hand)
+           (net.minecraft.util Hand IWorldPosCallable)
     ;(cn.li.mcmod.blocks Ddd)
            (net.minecraftforge.items ItemStackHandler)
            (net.minecraft.tileentity TileEntity)
            (cn.li.academy.api.energy.capability WirelessNode)
            (cn.li.academy.api.energy ImagEnergyItem)
-           (net.minecraftforge.common.util LazyOptional)))
+           (net.minecraftforge.common.util LazyOptional)
+           (net.minecraft.inventory.container Container)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -262,8 +263,8 @@
                                      (let [^container-node this this
                                            ^TileEntity tileentity (:tileentity @(.-data this))]
                                        (Container/isWithinUsableDistance
-                                         (IWorldPosCallable/of (.getWorld tileentity) (.getPos tileentity))
-                                         playerIn block-node-instance))
+                                         ^IWorldPosCallable (IWorldPosCallable/of (.getWorld tileentity) (.getPos tileentity))
+                                         ^PlayerEntity playerIn ^Block block-node-instance))
                                      )
               })
 
@@ -271,3 +272,5 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; screen
+
+(defcontainerscreen node-screen container-node)

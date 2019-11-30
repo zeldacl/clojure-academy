@@ -1,7 +1,8 @@
 (ns cn.li.mcmod.ui
   (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix construct]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.core :refer [defclass]])
+            [cn.li.mcmod.core :refer [defclass]]
+            [clojure.string :as str])
   (:import (net.minecraftforge.common.extensions IForgeContainerType)
            (net.minecraft.inventory.container Container Slot)
            (net.minecraft.entity.player PlayerInventory)
@@ -9,7 +10,10 @@
            (net.minecraftforge.items SlotItemHandler IItemHandler)
            (net.minecraftforge.items.wrapper InvWrapper)
            (net.minecraftforge.fml.network IContainerFactory)
-           (net.minecraft.util ResourceLocation)))
+           (net.minecraft.util ResourceLocation)
+           (net.minecraft.util.text ITextComponent)
+           (net.minecraft.client.gui.screen.inventory ContainerScreen)
+           (com.mojang.blaze3d.platform GlStateManager GlStateManager$SourceFactor GlStateManager$DestFactor)))
 
 ;;; This fn allows calling any method, as long as it's the first with that name in getDeclaredMethods().
 ;;; Works even when the arguments are primitive types.
@@ -132,7 +136,67 @@
   `(def ~name (create-container-type ~container ~registry-name)))
 ;IForgeContainerType.create(RPGInventoryContainer::new).setRegistryName("rpg_inventory")
 
-(defmacro defcontainerscreen [name container])
+(defmacro defcontainerscreen [name container & args]
+  (let [blockdata (apply hash-map args)
+        class-name (symbol name)
+        prefix (str name "-")
+        name-ns (get blockdata :ns *ns*)
+        fullname (get-fullname name-ns class-name)
+        this-sym (with-meta 'this {:tag fullname})
+        ]
+    `(do
+       (gen-class
+         :name ~fullname
+         :prefix ~(symbol prefix)
+         :extends ~ContainerScreen
+         ;:init ~'initialize
+         :constructors {[~(var-get (resolve container)) PlayerInventory ITextComponent] [~(var-get (resolve container)) PlayerInventory ITextComponent]}
+         :post-init ~'post-initialize
+         :state 'data)
+       (with-prefix ~prefix
+         ;(defn ~'aaa
+         ;  ([~'world-id ~'player-inventory ~'packet-buffer]
+         ;   [[~'world-id ~'player-inventory ~'packet-buffer]
+         ;    (atom {:player-inventory ~'player-inventory
+         ;           :tileentity (.readBlockPos ~'packet-buffer)})]))
+         (defn ~'render [~'this ~'mouseX ~'mouseY ~'partialTicks]
+           ;if(isSlotActive()) {
+           ;            this.drawDefaultBackground();
+           ;            super.drawScreen(a, b, c);
+           ;            renderHoveredToolTip(a, b);
+           ;        } else {
+           ;            gui.resize(width, height);
+           ;            this.drawDefaultBackground();
+           ;            GL11.glEnable(GL11.GL_BLEND);
+           ;            gui.draw(a, b);
+           ;            GL11.glDisable(GL11.GL_BLEND);
+           ;        }
+           )
+         ;(defn ~'drawGuiContainerForegroundLayer [~'this ~'mouseX ~'mouseY])
+         (defn ~'drawGuiContainerBackgroundLayer [~'this ~'partialTicks ~'mouseX ~'mouseY]
+           (GlStateManager/enableBlend)
+           (GlStateManager/blendFunc GlStateManager$SourceFactor/SRC_ALPHA GlStateManager$DestFactor/ONE_MINUS_SRC_ALPHA)
+           ;gui.resize(width, height);
+           ;        gui.draw(var2, var3);
+           )
+         (defn ~'mouseClicked [~'this ~'par1 ~'par2 ~'par3]
+           ;if(isSlotActive()) super.mouseClicked(par1, par2, par3);
+           ;        gui.mouseClicked(par1, par2, par3);
+           )
+         (defn ~'mouseDragged [~'this ~'par1 ~'par2 ~'par3 ~'par4 ~'par5]
+           ;if(isSlotActive()) super.mouseClickMove(mx, my, btn, time);
+           ;        gui.mouseClickMove(mx, my, btn, time);
+           )
+         (defn ~'removed [~'this]
+           ;super.removed();
+           ;        gui.dispose();
+           )
+         (defn ~'keyPressed [~'this ~'par1 ~'par2 ~'par3]
+           ;gui.keyTyped(ch, key);
+           ;        if(containerAcceptsKey(key) || key == Keyboard.KEY_ESCAPE)
+           ;            super.keyTyped(ch, key);
+           )
+         ))))
 
 ;(let [a (doto
 ;          (Block$Properties/create Material/AIR)

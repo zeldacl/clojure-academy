@@ -14,7 +14,10 @@
     (net.minecraftforge.fml.event.server FMLServerStartingEvent)
     (net.minecraftforge.common MinecraftForge)
     (cn.li.mcmod EventWrap$FMLClientSetupEventWrap EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap)))
+
 (set! *warn-on-reflection* true)
+(set! *unchecked-math* true)
+;(set! *unchecked-math* :warn-on-boxed)
 
 ;(defmacro create-obj-with-proxy [klass]
 ;  `(proxy [~klass] [] (toString [] (str "proxyToString"))))

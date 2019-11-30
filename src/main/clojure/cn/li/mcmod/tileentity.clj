@@ -1,5 +1,6 @@
 (ns cn.li.mcmod.tileentity
-  (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix]])
+  (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix]]
+            [cn.li.mcmod.nbt :refer [read-tag-data! write-tag-data!]])
   (:import (net.minecraft.tileentity TileEntity)))
 
 (defmacro deftilerntity [name & args]
