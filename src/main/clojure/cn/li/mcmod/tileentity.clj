@@ -10,7 +10,9 @@
         ;classdata (assoc-in classdata [:expose 'readFromNBT] 'superReadFromNBT)
         ;classdata (assoc-in classdata [:expose 'writeToNBT] 'superWriteToNBT)
         fullname (get-fullname name-ns name)
-        this-sym (with-meta 'this {:tag fullname})]
+        this-sym (with-meta 'this {:tag fullname})
+        post-init (:post-init classdata)
+        fields (:fields classdata)]
     `(do
        (gen-class
          :name ~fullname
@@ -19,18 +21,26 @@
          :init ~'initialize
          :constructors {[] []}
          :post-init ~'post-initialize
-         :state ~'state
+         :state ~'data
          :exposes-methods {
                            ~'write ~'superWrite,
                            ~'read  ~'superRead
                            })
+       (def ~name ~fullname)
+       (import ~fullname)
        (with-prefix ~prefix
+         (defn ~'initialize
+           ([~'& ~'args]
+            [[] (atom ~fields)]))
+         (defn ~'post-initialize [~'this ~'& ~'args]
+           (when ~post-init
+             (~post-init ~'this ~'args)))
          (defn ~'read [~'this ~'compound]
            (~'.superRead ~this-sym ~'compound)
-           (read-tag-data! (~'.-state ~this-sym) ~'compound)
+           (read-tag-data! (~'.-data ~this-sym) ~'compound)
            ;(~on-load ~this-sym)
            )
          (defn ~'write [~'this ~'compound]
            (~'.superWrite ~this-sym ~'compound)
            ;(~on-save ~this-sym)
-           (write-tag-data! (~'.-state ~this-sym) ~'compound))))))
+           (write-tag-data! (~'.-data ~this-sym) ~'compound))))))

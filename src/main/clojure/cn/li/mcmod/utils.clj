@@ -8,7 +8,8 @@
            (net.minecraft.entity.player PlayerEntity)
            (net.minecraft.util SoundEvents)
            (net.minecraftforge.registries GameData)
-           (net.minecraftforge.common.util NonNullSupplier LazyOptional)))
+           (net.minecraftforge.common.util NonNullSupplier LazyOptional)
+           (net.minecraftforge.fml.common.thread SidedThreadGroups)))
 
 
 (defn ->NonNullSupplier [create-fn]
@@ -25,7 +26,8 @@
 
 (ensure-registered)
 
-;(def client? (.isClient (.getSide (FMLCommonHandler/instance))))
+
+(def client? (= (.getThreadGroup (Thread/currentThread)) SidedThreadGroups/CLIENT))
 (defn vec->map [v] (into {} (map vec (partition 2 v))))
 
 (defn handle-inner-classes

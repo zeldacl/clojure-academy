@@ -3,7 +3,7 @@
     ;[cn.li.mcmod.common :refer [vec->map]]
             [cn.li.mcmod.utils :refer [get-fullname with-prefix vec->map]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.registry :refer [on-blocks-registry on-items-registry on-blocks-container-registry]])
+            [cn.li.mcmod.registry :refer [on-blocks-registry on-items-registry on-blocks-container-registry on-tile-entity-registry]])
   ;(:import (net.minecraftforge.fml.common Mod Mod$EventHandler)
   ;         (net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent))
   (:import                                                  ;(EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap EventWrap$FMLClientSetupEventWrap)
@@ -164,7 +164,7 @@
       prefix (str class-name "-")
       full-name (get-fullname *ns* class-name)]
   (gen-class
-    :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} full-name
+    :name ^{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}} cn.li.mcmod.core.McmodRegistry
     :prefix prefix
     :methods [^{:static true} [^{SubscribeEvent {:priority EventPriority/NORMAL}} onBlocksRegistry [^{:final true} net.minecraftforge.event.RegistryEvent$Register] void]]
     )
@@ -176,7 +176,7 @@
         "minecraft:item" (on-items-registry event)
         "minecraft:entity_type" nil
         "minecraft:fluid" nil
-        "minecraft:block_entity_type" nil                   ;tile-entity
+        "minecraft:block_entity_type" (on-tile-entity-registry event)                   ;tile-entity
         "minecraft:menu" (on-blocks-container-registry event)                                ;container
         "minecraft:recipe_serializer" nil                   ;ShapedRecipe
         "minecraft:mob_effect" nil                          ;

@@ -4,9 +4,13 @@
     [cn.li.academy.proxy :as proxy]
     [cn.li.mcmod.log :as mcmodlog]
     [clojure.tools.logging :as log]
-    [cn.li.academy.ac-blocks :as ac-blocks]
+    [cn.li.academy.ac-registry :as ac-blocks]
     [cn.li.academy.global]
-    [cn.li.mcmod.registry :as registry])
+    [cn.li.mcmod.registry :as registry]
+    [cn.li.academy.energy.blocks.node :as node]
+    [cn.li.academy.client.ac-registry :refer [init]]
+    [cn.li.academy.ac-registry :refer [init-registry]]
+    [cn.li.mcmod.client.registry :refer [on-screens-registry]])
   (:import (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
     ;(cn.test BlockRegistryEvent BlockRegistryEvent$Rrr)
@@ -15,7 +19,9 @@
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
            (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent InterModEnqueueEvent InterModProcessEvent FMLClientSetupEvent)
     ;(EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap)
-           (net.minecraft.block Blocks)))
+           (net.minecraft.block Blocks)
+           (net.minecraftforge.fml DistExecutor)
+           (java.util.function Supplier)))
 
 ;(defmod aaa)
 
@@ -55,12 +61,27 @@
 (def logger (LogManager/getLogger))
 
 (mcmodlog/init-log)
-;(registry/init-item-group "cljacademy" ac-blocks/block-node-instance)
+(registry/init-item-group "cljacademy" node/block-node-instance)
+(init-registry)
 
 (defn setup-fn [^FMLCommonSetupEvent e]
   (.println System/out "777777777777777777777777777777777777777777")
   (.println System/err "888888888888888888888888888888888888888888")
 
+  (DistExecutor/runForDist
+    (proxy [Supplier] []
+      (get []
+        (proxy [Supplier] []
+          (get []
+            (log/info "HELLO FROM PREINIT cljacademy client 1111111111111111111")
+            (init)
+            (on-screens-registry)
+            ))))
+    (proxy [Supplier] []
+      (get []
+        (proxy [Supplier] []
+          (get []
+            (log/info "HELLO FROM PREINIT cljacademy server 22222222222222222222222"))))))
   (log/info "HELLO FROM PREINIT cljacademy" (.name log/*logger-factory*))
   (log/info "HELLO FROM PREINIT cljacademy")
   (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT))

@@ -4,7 +4,7 @@
     ;[cn.li.academy.energy.tileentites.node :refer [set-placer]]
             [cn.li.academy.energy.common :refer [node-type connected energy get-node-attr]]
             [cn.li.mcmod.tileentity :refer [deftilerntity]]
-            [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv defcontainerscreen]]
+            [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv]]
             [cn.li.academy.energy.slots :refer [slot-ifitem]]
             ;[cn.li.academy.ac-blocks :refer [block-node-instance]]
             [cn.li.academy.energy.utils :refer [imag-energy-item? make-transfer-rules make-energy-transfer-stack-in-slot-fn]])
@@ -30,6 +30,8 @@
 
 (declare set-placer)                                        ;
 ;(defblock vvv :properties {:material      Material/ROCK})
+(declare tile-node)
+
 (defblock block-node
   ;:container? true
   ;:states {:type :unknown
@@ -52,21 +54,21 @@
                :harvest-level ["pickaxe", 1]}
   :overrides {;:create-new-tile-entity new-tile-block-entity
               ;:on-block-activated     on-tile-block-click
-              :onBlockPlacedBy  (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+              :onBlockPlacedBy  (fn [this ^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                     (set-placer tile placer)))
-              :onReplaced       (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+              :onReplaced       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
                                   (when-not (same-block? state newState)
                                     (let [this ^Block this]
                                       (drop-inventory-items worldIn pos this)
                                       (proxy-super onReplaced state worldIn pos newState isMoving))))
-              :onBlockActivated (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
+              :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                   (let [this ^Block this]
                                     (open-gui player state worldIn pos this)))
-              :getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
+              :getContainer     (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos]
                                   3)
               :hasTileEntity    (constantly true)
-              :createTileEntity (fn [^BlockState state, ^IBlockReader world] 1)
+              :createTileEntity (fn [this ^BlockState state, ^IBlockReader world] (construct tile-node))
               }
 
 
@@ -77,7 +79,7 @@
 ;(instance-block block-node)
 
 
-
+;https://www.minecraftforge.net/forum/topic/75367-1144resolved-obj-models-how-to-get-started/
 ;As anyone who's started porting to 1.14.2 is probably aware by now, container and GUI creation has changed... quite a bit.  To summarise what I've gathered so far:
 ;
 ;Containers (more accurately: container types) are now registry objects and must be registered in a RegistryEvent.Register<ContainerType<?>> event handler.
@@ -270,7 +272,17 @@
 
 (defcontainertype block-node-container-type block-node-instance (.getRegistryName ^Block block-node-instance))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; screen
 
-(defcontainerscreen node-screen container-node)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; all
+
+(def node-struct {
+                  :block block-node
+                  :block-instance block-node-instance
+                  :tile-entity tile-node
+                  :container container-node
+                  :container-type block-node-container-type
+                  ;:screen node-screen
+                  })
