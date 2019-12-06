@@ -6,6 +6,7 @@
     [clojure.tools.logging :as log]
     [cn.li.academy.ac-registry :as ac-blocks]
     [cn.li.academy.global]
+    [cn.li.mcmod.item :as item]
     [cn.li.mcmod.registry :as registry]
     [cn.li.academy.energy.blocks.node :as node]
     [cn.li.academy.client.ac-registry :refer [init]]
@@ -61,7 +62,7 @@
 (def logger (LogManager/getLogger))
 
 (mcmodlog/init-log)
-(registry/init-item-group "cljacademy" node/block-node-instance)
+(item/init-item-group "cljacademy" "logo")
 (init-registry)
 
 (defn setup-fn [^FMLCommonSetupEvent e]

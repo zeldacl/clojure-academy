@@ -12,21 +12,18 @@
            (net.minecraft.item ItemGroup ItemStack Item Item$Properties BlockItem)
            (net.minecraft.util ResourceLocation)
            (net.minecraft.tileentity TileEntityType TileEntityType$Builder)
-           (java.util.function Supplier)))
+           (java.util.function Supplier)
+           (net.minecraftforge.registries IForgeRegistryEntry)))
 
 (defonce ^:dynamic *item-group* nil)
-(defn create-item-group [label icon]
-  (proxy [ItemGroup] [label]
-    (createIcon []
-      (ItemStack. icon))))
-
-(defn init-item-group [label icon]
-  (alter-var-root #'*item-group* (constantly (create-item-group label icon))))
 
 
-(defn set-registry-name [^Block block-instance ^String registry-name]
+(defn set-registry-name [^IForgeRegistryEntry block-instance ^String registry-name]
   (log/info "*******************  " *mod-id* registry-name)
-  (.setRegistryName block-instance  *mod-id* registry-name))
+  (let [registry-name (if (instance? ResourceLocation registry-name)
+                        registry-name
+                        (ResourceLocation. *mod-id* registry-name))]
+    (.setRegistryName block-instance registry-name)))
 
 (defonce ^:dynamic *registry-items* (atom []))
 (defn registry-item [item]

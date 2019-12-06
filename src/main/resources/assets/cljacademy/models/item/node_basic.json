@@ -1,3 +1,7 @@
 {
-  "parent": "cljacademy:block/node_basic"
+  "parent": "cljacademy:block/node_base",
+  "textures": {
+    "side": "cljacademy:block/node_basic_side_0",
+    "vert": "cljacademy:block/node_top_0"
+  }
 }

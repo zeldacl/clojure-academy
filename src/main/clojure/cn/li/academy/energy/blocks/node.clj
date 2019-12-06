@@ -44,7 +44,7 @@
   ;             :connected [:bool]
   ;             :energy [:integer 0 4]
   ;             }
-  :state-properties [:connected :energy :node-type]
+  :state-properties [node-type connected energy]
   :registry-name "node_basic"
   :properties {;:creative-tab ""
                :material      Material/ROCK
@@ -54,21 +54,21 @@
                :harvest-level ["pickaxe", 1]}
   :overrides {;:create-new-tile-entity new-tile-block-entity
               ;:on-block-activated     on-tile-block-click
-              :onBlockPlacedBy  (fn [this ^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+              :onBlockPlacedBy  (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                     (set-placer tile placer)))
-              :onReplaced       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+              :onReplaced       (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
                                   (when-not (same-block? state newState)
                                     (let [this ^Block this]
                                       (drop-inventory-items worldIn pos this)
                                       (proxy-super onReplaced state worldIn pos newState isMoving))))
-              :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
+              :onBlockActivated (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                   (let [this ^Block this]
                                     (open-gui player state worldIn pos this)))
-              :getContainer     (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos]
+              :getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
                                   3)
               :hasTileEntity    (constantly true)
-              :createTileEntity (fn [this ^BlockState state, ^IBlockReader world] (construct tile-node))
+              :createTileEntity (fn [^BlockState state, ^IBlockReader world] (.newInstance ^Class tile-node))
               }
 
 

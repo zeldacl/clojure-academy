@@ -1,7 +1,8 @@
 (ns cn.li.mcmod.blocks
   (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.registry :refer [set-registry-name]])
+            [cn.li.mcmod.registry :refer [set-registry-name]]
+            [clojure.string :as str])
   (:import (net.minecraft.block Block Block$Properties)
            (net.minecraft.state IProperty BooleanProperty IntegerProperty)
            (net.minecraft.inventory.container Container)
@@ -62,7 +63,7 @@
 
 
 (defmacro defblockstate [name property]
-  `(let [p# (create-state-property nil ~property)]
+  `(let [p# (create-state-property ~(str/replace (str name) "-" "_") ~property)]
      (update-block-states ~(str name) p#)
      (def ~name p#)))
 
@@ -88,6 +89,7 @@
         overrides (map (fn [override]
                          `(defn ~(key override) [~'this ~'& ~'args]
                             (apply ~(val override) ~'args))) overrides)
+        ;state-property-names (mapv #(.getName ^IProperty %1) (:state-properties blockdata))
         ;state-properties (atom (sanitize-state-properties (:state-properties blockdata)))
         ;get-all-state-properties (constantly state-properties)
         ;state-keys (map)
@@ -131,10 +133,12 @@
            )
          (defn ~'fillStateContainer [~'this ~'builder]
            (log/info ~'this ~'builder)
-           (log/info "qqqq" *block-states*)
+           (log/info "qqqq" *block-states* "eeeee" ~(:state-properties blockdata))
            ;(apply '.add ~'builder (mapv #(second %1) @~state-properties ))
            (log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata)))
-           (map #('.add ~'builder (get-block-states %1)) ~(:state-properties blockdata))
+           ;(map #('.add ~'builder (get-block-states %1)) ~state-property-names)
+           ;(.add ~'builder (into-array IProperty (mapv #(get-block-states %1) ~state-property-names)))
+           (.add ~'builder (into-array IProperty ~(:state-properties blockdata)))
            ;(apply '.add ~'builder (mapv #(get-block-states %1) ~(:state-properties blockdata) ))
            )
          ;(let [m# (~sanitize-state-properties (:state-properties ~blockdata))]
