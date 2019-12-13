@@ -1,23 +1,24 @@
 package cn.li.academy.api.energy.capability;
 
 import cn.li.academy.api.energy.IWirelessTile;
+import cn.li.academy.api.energy.ImagEnergyItem;
 
 /**
  * Information providing interface of a wireless node.
  * @author WeathFolD
  */
-public interface IWirelessNode extends IWirelessTile {
+public interface IWirelessNode extends ImagEnergyItem, IWirelessTile {
     
-    double getMaxEnergy();
+//    double getMaxEnergy();
     String getPlacerName();
     void setPlacerName(String name);
-    double getEnergy();
-    void setEnergy(double value);
+//    double getEnergy();
+//    void setEnergy(double value);
     
     /**
      * @return How many energy that this node can transfer each tick.
      */
-    double getBandwidth();
+//    double getBandwidth();
     
     int getCapacity();
     

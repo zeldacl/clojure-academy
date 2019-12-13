@@ -65,10 +65,10 @@
               :onBlockActivated (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                   (let [this ^Block this]
                                     (open-gui player state worldIn pos this)))
-              :getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
-                                  3)
+              ;:getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
+              ;                    3)
               :hasTileEntity    (constantly true)
-              :createTileEntity (fn [^BlockState state, ^IBlockReader world] (.newInstance ^Class tile-node))
+              :createTileEntity (fn [^BlockState state, ^IBlockReader world] (construct tile-node))
               }
 
 
@@ -195,38 +195,39 @@
       (getCapacity [] (node-attr-fn :range))
       (getRange [] (node-attr-fn :capacity)))))
 
+(defn- update-charge! [^ImagEnergyItem from ^ImagEnergyItem to]
+  (let [trans-energy (min (.getEnergy from)
+                       (min (.getBandwidth from) (.getBandwidth to))
+                       (- (.getMaxEnergy to) (.getEnergy to)))]
+    (when (> trans-energy 0)
+      (.setEnergy from (- (.getEnergy from) trans-energy))
+      (.setEnergy to (+ trans-energy (.getEnergy to))))
+    trans-energy))
 
-(defn update-charge-in [^ItemStack stack ^WirelessNode wireless-node]
+
+(defn- update-charge-in! [^ItemStack stack ^WirelessNode wireless-node]
   (when (imag-energy-item? stack)
-    (let [item ^ImagEnergyItem (.getItem stack)
-          bandwidth (min (.getBandwidth wireless-node) (.getBandwidth item))
-          trans-energy (min bandwidth
-                         (.getEnergy item)
-                         (- (.getMaxEnergy wireless-node) (.getEnergy wireless-node)))]
-      (when (> trans-energy 0)
-        (.setEnergy item (- (.getEnergy item) trans-energy))
-        (.setEnergy wireless-node (+ trans-energy (.getEnergy wireless-node)))))))
+    (let [item ^ImagEnergyItem (.getItem stack)]
+      (update-charge! item wireless-node))))
 
-(defn update-charge-out [^ItemStack stack ^WirelessNode wireless-node]
+(defn- update-charge-out! [^ItemStack stack ^WirelessNode wireless-node]
   (let [energy (.getEnergy wireless-node)]
     (when (and (imag-energy-item? stack) (> energy 0))
-      (let [item ^ImagEnergyItem (.getItem stack)
-            bandwidth (min (.getBandwidth wireless-node) (.getBandwidth item))
-            trans-energy (min bandwidth
-                           (.getEnergy wireless-node)
-                           (- (.getMaxEnergy item) (.getEnergy item)))]
-        (when (> trans-energy 0)
-          (.setEnergy wireless-node (- (.getEnergy wireless-node) trans-energy))
-          (.setEnergy item (+ trans-energy (.getEnergy item))))))))
+      (let [item ^ImagEnergyItem (.getItem stack)]
+        (update-charge! wireless-node item)))))
 
 (defn rebuild-block-state [^World world ^BlockPos pos ^WirelessNode wireless-node]
   (let [block-state ^BlockState (.getBlockState world pos)
         block (.getBlock block-state)
-        connected (.get block-state (get-block-states :connected))
-        energy (.get block-state (get-block-states :energy))
+        connected (.get block-state connected                        ;(get-block-states :connected)
+                    )
+        energy (.get block-state energy                           ;(get-block-states :energy)
+                 )
         pct (min 4 (Math/round (* 4 (/ (.getEnergy wireless-node) (.getMaxEnergy wireless-node)))))
-        block-state ^BlockState (.with block-state (get-block-states :connected) true)
-        block-state ^BlockState (.with block-state (get-block-states :energy) pct)]
+        block-state ^BlockState (.with block-state connected true         ;(get-block-states :connected) true
+                                  )
+        block-state ^BlockState (.with block-state energy pct         ;(get-block-states :energy) pct
+                                  )]
     (.setBlockState world pos block-state 0)))
 
 (deftilerntity tile-node
@@ -242,8 +243,8 @@
                             (let [slots ^ItemStackHandler (.orElse ^LazyOptional (:slots this) nil)
                                   wireless-node (.orElse ^LazyOptional (:wireless-node this) nil)]
                               (when (and slots wireless-node)
-                                (update-charge-in (.getStackInSlot slots 0) wireless-node)
-                                (update-charge-out (.getStackInSlot slots 1) wireless-node)
+                                (update-charge-in! (.getStackInSlot slots 0) wireless-node)
+                                (update-charge-out! (.getStackInSlot slots 1) wireless-node)
                                 (rebuild-block-state (.world this) (.getPos this) wireless-node))))
               :createMenu (fn [this, i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
                             (construct container-node i playerInventory playerEntity))
