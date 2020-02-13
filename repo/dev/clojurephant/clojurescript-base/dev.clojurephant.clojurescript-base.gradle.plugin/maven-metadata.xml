@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>dev.clojurephant.clojurescript-base</groupId>
+  <artifactId>dev.clojurephant.clojurescript-base.gradle.plugin</artifactId>
+  <versioning>
+    <latest>0.6.0-alpha.0.0+20200203T123251Z</latest>
+    <release>0.6.0-alpha.0.0+20200203T123251Z</release>
+    <versions>
+      <version>0.6.0-alpha.0.0+20200203T123251Z</version>
+    </versions>
+    <lastUpdated>20200203123252</lastUpdated>
+  </versioning>
+</metadata>

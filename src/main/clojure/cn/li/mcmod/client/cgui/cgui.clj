@@ -1,4 +1,4 @@
-(ns cn.li.mcmod.cgui.cgui
+(ns cn.li.mcmod.client.cgui.cgui
   (:import (com.mojang.blaze3d.platform GlStateManager GlStateManager$SourceFactor GlStateManager$DestFactor)))
 
 

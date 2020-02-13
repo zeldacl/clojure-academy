@@ -1,4 +1,4 @@
-(ns cn.li.mcmod.cgui.component)
+(ns cn.li.mcmod.client.cgui.component)
 
 
 (defmacro defcomponent [name])

@@ -9,9 +9,10 @@
     [cn.li.mcmod.item :as item]
     [cn.li.mcmod.registry :as registry]
     [cn.li.academy.energy.blocks.node :as node]
-    [cn.li.academy.client.ac-registry :refer [init]]
+    ;[cn.li.academy.client.ac-registry]
     [cn.li.academy.ac-registry :refer [init-registry]]
-    [cn.li.mcmod.client.registry :refer [on-screens-registry]])
+    ;[cn.li.mcmod.client.registry :refer [on-screens-registry]]
+    )
   (:import (net.minecraftforge.fml.common Mod Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
     ;(cn.test BlockRegistryEvent BlockRegistryEvent$Rrr)
@@ -75,8 +76,8 @@
         (proxy [Supplier] []
           (get []
             (log/info "HELLO FROM PREINIT cljacademy client 1111111111111111111")
-            (init)
-            (on-screens-registry)
+            ;(cn.li.academy.client.ac-registry/init)
+            ;(on-screens-registry)
             ))))
     (proxy [Supplier] []
       (get []

@@ -21,7 +21,7 @@
                 ;CompoundNBT (.getCompound nbt k)
                 (condp instance? default-v
                   INBTSerializable (let [vv (.getCompound nbt k)]
-                                     (.deserializeNBT default-v vv)
+                                     (.deserializeNBT ^INBTSerializable default-v vv)
                                      default-v)
                   (throw (RuntimeException. (str k v)))))]
     value))

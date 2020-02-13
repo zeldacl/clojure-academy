@@ -68,9 +68,9 @@
      (def ~name p#)))
 
 
-(defn getfield
-  [this key]
-  (@(.-state this) key))
+;(defn getfield
+;  [this key]
+;  ((.-state @this) key))
 
 (defmacro defblock [block-name & args]
   (let [blockdata (apply hash-map args)

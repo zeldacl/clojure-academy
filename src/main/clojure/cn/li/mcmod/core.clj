@@ -37,7 +37,9 @@
           :extends ~super-class
           ~@class-data)
         (def ~class-name ~fullname)
-        (import ~fullname)))))
+        (comment (compile ~name-ns))
+        (import ~fullname)
+        ))))
 
 (defmacro defobj [super-class]
   nil)
