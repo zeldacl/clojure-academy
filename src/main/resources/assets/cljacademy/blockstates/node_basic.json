@@ -42,15 +42,7 @@
           "side": "cljacademy:block/node_basic_side_4"
         }
       }
-    },
-    "inventory": [
-      {
-        "textures": {
-          "side": "cljacademy:block/node_basic_side_0",
-          "vert": "cljacademy:block/node_top_0"
-        }
-      }
-    ]
+    }
   },
   "__xconfgen": true
 }
