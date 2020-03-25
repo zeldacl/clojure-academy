@@ -9,7 +9,9 @@
            (net.minecraft.util SoundEvents)
            (net.minecraftforge.registries GameData)
            (net.minecraftforge.common.util NonNullSupplier LazyOptional)
-           (net.minecraftforge.fml.common.thread SidedThreadGroups)))
+           (net.minecraftforge.fml.common.thread SidedThreadGroups)
+           (net.minecraftforge.fml DistExecutor)
+           (java.util.function Supplier)))
 
 
 (defn ->NonNullSupplier [create-fn]
@@ -30,17 +32,12 @@
 (def client? (= (.getThreadGroup (Thread/currentThread)) SidedThreadGroups/CLIENT))
 (defn vec->map [v] (into {} (map vec (partition 2 v))))
 
-(defn handle-inner-classes
-  "Helper function for gen-classname to handle changing '.'s into '$'s"
-  [s]
+(defn handle-inner-classes [s]
   (let [class-name (string/split s #"\.")
         second-part (apply str (string/capitalize (first (second class-name))) (rest (second class-name)))]
     (str (first class-name) "$" second-part)))
 
-(defn gen-classname
-  "Given a symbol, returns a symbol representing a class name for java by capitalizing all words.
-  Also turns '.'s into '$'s (in other words a '.' is used for inner classes)."
-  [s]
+(defn gen-classname [s]
   (let [s (str s)
         words (string/split s #"-")
         class-name (apply str (map string/capitalize words))
@@ -50,34 +47,22 @@
     (symbol class-name)))
 
 (defn get-fullname
-  "Given a namespace name and a class name, returns a fully qualified package name for
-  a java class by using gen-classname on the class name and turning '-'s into '_'s in the package."
   [name-ns class-name]
   (symbol (str (string/replace name-ns #"-" "_") "." (gen-classname class-name))))
 
-(defn gen-method
-  "Given a key word, returns a java method as a symbol by capitalizing all but the first word."
-  [k]
+(defn gen-method [k]
   (let [key-name (name k)
         words (string/split key-name #"-")
         method-name (apply str (first words) (map string/capitalize (rest words)))]
     (symbol method-name)))
 
-(defn update-map-keys
-  "Utility function. Given a map and a function, applies that function to all keys in the map."
-  [func m]
+(defn update-map-keys [func m]
   (into {} (map #(vector (func (key %1)) (val %1)) m)))
 
-(defn construct
-  "Given a class and any arguments to the constructor, makes an instance of that class.
-  Not a macro like Clojure's new keyword, so can be used with class names that are stored in symbols."
-  [klass & args]
+(defn construct [klass & args]
   (clojure.lang.Reflector/invokeConstructor klass (into-array Object args)))
 
-(defmacro with-prefix
-  "Useful macro that takes a prefix (both strings and symbols work) and any number of statements.
-  For each def/defn/def-/defn- statement within the macro, adds the prefix onto the name in each statement."
-  [prefix & defs]
+(defmacro with-prefix [prefix & defs]
   (let [per-def (fn [possible-def]
                   (if (or
                         (= (first possible-def) 'def)
@@ -122,5 +107,19 @@
     (.openContainer player inamedcontainerprovider)
     ;(.addStat player (.getOpenStat block))
     ))
+
+(defmacro run-for-dist [client-fn sever-fn]
+  `(DistExecutor/runForDist
+    (proxy [Supplier] []
+      (get []
+        (proxy [Supplier] []
+          (get []
+            (~client-fn)
+            ))))
+    (proxy [Supplier] []
+      (get []
+        (proxy [Supplier] []
+          (get []
+            (~sever-fn)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
