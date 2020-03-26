@@ -1,7 +1,7 @@
 (ns cn.li.mcmod.client.ui
-  (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix construct]]
+  (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix construct defclass]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.core :refer [defclass]]
+    ;[cn.li.mcmod.core :refer [defclass]]
             [clojure.string :as str])
   (:import (com.mojang.blaze3d.platform GlStateManager GlStateManager$SourceFactor GlStateManager$DestFactor)
            (net.minecraft.client.gui.screen.inventory ContainerScreen)

@@ -123,3 +123,25 @@
             (~sever-fn)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defmacro defclass
+  ([class-name super-class class-data]
+   (let [name-ns (get class-data :ns *ns*)
+         prefix (str class-name "-")
+         fullname (get class-data :fullname (get-fullname name-ns class-name))
+         class-data (dissoc class-data :fullname)
+         class-data (reduce concat [] (into [] class-data))]
+     `(do
+        (gen-class
+          :name   ~fullname                                        ;~(with-meta fullname `{Mod "ddd"})
+          :prefix ~prefix
+          :extends ~super-class
+          ~@class-data)
+        (def ~class-name ~fullname)
+        (comment (compile ~name-ns))
+        (import ~fullname)
+        ))))
+
+(defmacro defobj [super-class]
+  nil)

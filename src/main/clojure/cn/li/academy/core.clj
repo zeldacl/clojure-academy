@@ -8,6 +8,7 @@
     [cn.li.academy.global]
     [cn.li.mcmod.item :as item]
     [cn.li.mcmod.registry :as registry]
+    [cn.li.mcmod.network :as network]
     [cn.li.academy.energy.blocks.node :as node]
     ;[cn.li.academy.client.ac-registry]
     [cn.li.academy.ac-registry :refer [init-registry]]
@@ -23,7 +24,8 @@
     ;(EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap)
            (net.minecraft.block Blocks)
            (net.minecraftforge.fml DistExecutor)
-           (java.util.function Supplier)))
+           (java.util.function Supplier)
+           (net.minecraft.util ResourceLocation)))
 
 ;(defmod aaa)
 
@@ -70,20 +72,21 @@
   (.println System/out "777777777777777777777777777777777777777777")
   (.println System/err "888888888888888888888888888888888888888888")
 
-  (DistExecutor/runForDist
-    (proxy [Supplier] []
-      (get []
-        (proxy [Supplier] []
-          (get []
-            (log/info "HELLO FROM PREINIT cljacademy client 1111111111111111111")
-            ;(cn.li.academy.client.ac-registry/init)
-            ;(on-screens-registry)
-            ))))
-    (proxy [Supplier] []
-      (get []
-        (proxy [Supplier] []
-          (get []
-            (log/info "HELLO FROM PREINIT cljacademy server 22222222222222222222222"))))))
+  (network/init-networks (ResourceLocation. "cljacademy" "cljacademy"))
+  ;(DistExecutor/runForDist
+  ;  (proxy [Supplier] []
+  ;    (get []
+  ;      (proxy [Supplier] []
+  ;        (get []
+  ;          (log/info "HELLO FROM PREINIT cljacademy client 1111111111111111111")
+  ;          ;(cn.li.academy.client.ac-registry/init)
+  ;          ;(on-screens-registry)
+  ;          ))))
+  ;  (proxy [Supplier] []
+  ;    (get []
+  ;      (proxy [Supplier] []
+  ;        (get []
+  ;          (log/info "HELLO FROM PREINIT cljacademy server 22222222222222222222222"))))))
   (log/info "HELLO FROM PREINIT cljacademy" (.name log/*logger-factory*))
   (log/info "HELLO FROM PREINIT cljacademy")
   (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT))

@@ -1,7 +1,7 @@
 (ns cn.li.mcmod.ui
-  (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix construct]]
+  (:require [cn.li.mcmod.utils :refer [defclass get-fullname with-prefix construct]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.core :refer [defclass]]
+    ;[cn.li.mcmod.core :refer [defclass]]
             [clojure.string :as str])
   (:import (net.minecraftforge.common.extensions IForgeContainerType)
            (net.minecraft.inventory.container Container Slot)
