@@ -35,6 +35,8 @@
 
 
 (defonce ^:dynamic *default-network* nil)
+
+(defonce ^:dynamic *message-handles* (atom {}))
 ;(.writeCompoundTag PacketBuffer)
 (defn create-network
   ([^ResourceLocation network-name networkProtocolVersion clientAcceptedVersions serverAcceptedVersions]
@@ -71,6 +73,9 @@
   ([index message-type message-consumer]
    (register-message *default-network* index message-type write-packet read-packet message-consumer)))
 
+(defn listen [channel topic handles]
+  (swap! *message-handles* update-in [(keyword channel) (keyword topic)] (fn [a] (conj (or a []) handles))))
+
 (defn send-to-server
   [channel topic payload]
   (let [nbt-map {:c channel :t topic :p payload}
@@ -87,8 +92,12 @@
 (defn init-networks [network-name]
   (let [network (create-network network-name)]
     (alter-var-root #'*default-network* network)
-    (register-message network 0 nbt-packet write-packet read-packet (fn [] [])))
-  )
+    (register-message network 0 nbt-packet write-packet read-packet
+      (fn [^NbtPacket message ^NetworkEvent$Context ctx]
+        (let [{:keys [c t p]} (deref (.-data message))]
+          (when-let [handles (get-in *message-handles* [c t])]
+            (doseq [handle handles]
+              (handle p ctx))))))))
 
 
 (defmacro defnetwork [network-name]
