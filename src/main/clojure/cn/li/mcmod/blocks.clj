@@ -124,7 +124,7 @@
                                                                          ;:state-properties (sanitize-state-properties ~(:state-properties blockdata))
                                                                          })]))
          (defn ~'post-initialize [~(with-meta x {:tag `Block}) ~'& ~'args]
-           (log/info "^^^^^^^^^^^^^^^^^^" ~x ~'args)
+           ;(log/info "^^^^^^^^^^^^^^^^^^" ~x ~'args)
            ~(when registry-name
               ;`(.setRegistryName ~x ~registry-name)
               `(set-registry-name ~x ~registry-name)
@@ -132,10 +132,10 @@
            ;(.setRegistryName ~'obj ~registry-name)
            )
          (defn ~'fillStateContainer [~'this ~'builder]
-           (log/info ~'this ~'builder)
-           (log/info "qqqq" *block-states* "eeeee" ~(:state-properties blockdata))
+           ;(log/info ~'this ~'builder)
+           ;(log/info "qqqq" *block-states* "eeeee" ~(:state-properties blockdata))
            ;(apply '.add ~'builder (mapv #(second %1) @~state-properties ))
-           (log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata)))
+           ;(log/info "2222" '.add "3333" ~'builder "4444" (mapv #(get-block-states %1) ~(:state-properties blockdata)))
            ;(map #('.add ~'builder (get-block-states %1)) ~state-property-names)
            ;(.add ~'builder (into-array IProperty (mapv #(get-block-states %1) ~state-property-names)))
            (.add ~'builder (into-array IProperty ~(:state-properties blockdata)))

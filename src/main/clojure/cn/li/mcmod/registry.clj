@@ -19,7 +19,7 @@
 
 
 (defn set-registry-name [^IForgeRegistryEntry block-instance ^String registry-name]
-  (log/info "*******************  " *mod-id* registry-name)
+  ;(log/info "*******************  " *mod-id* registry-name)
   (let [registry-name (if (instance? ResourceLocation registry-name)
                         registry-name
                         (ResourceLocation. *mod-id* registry-name))]

@@ -34,7 +34,7 @@
     (read-tag-data! (.-data packet) nbt-data)))
 
 
-(defonce ^:dynamic *default-network* nil)
+(defonce ^:dynamic ^SimpleChannel *default-network* nil)
 
 (defonce ^:dynamic *message-handles* (atom {}))
 ;(.writeCompoundTag PacketBuffer)
