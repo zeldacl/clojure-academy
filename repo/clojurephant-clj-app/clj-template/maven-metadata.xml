@@ -3,11 +3,11 @@
   <groupId>clojurephant-clj-app</groupId>
   <artifactId>clj-template</artifactId>
   <versioning>
-    <latest>0.6.0-alpha.0.0+20200203T123251Z</latest>
-    <release>0.6.0-alpha.0.0+20200203T123251Z</release>
+    <latest>0.6.0-alpha.4.25+20200621T144024Z</latest>
+    <release>0.6.0-alpha.4.25+20200621T144024Z</release>
     <versions>
-      <version>0.6.0-alpha.0.0+20200203T123251Z</version>
+      <version>0.6.0-alpha.4.25+20200621T144024Z</version>
     </versions>
-    <lastUpdated>20200203123259</lastUpdated>
+    <lastUpdated>20200621144025</lastUpdated>
   </versioning>
 </metadata>
