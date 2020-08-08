@@ -64,7 +64,7 @@
 ;                   )))
 (def logger (LogManager/getLogger))
 
-(mcmodlog/init-log)
+;(mcmodlog/init-log)
 (item/init-item-group "cljacademy" "logo")
 (init-registry)
 

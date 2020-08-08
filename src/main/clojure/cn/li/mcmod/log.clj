@@ -2,9 +2,10 @@
   (:require [clojure.tools.logging :as log])
   (:import (org.apache.logging.log4j LogManager)))
 
+;(defn init-log []
+;  (alter-var-root #'log/*logger-factory* (constantly (or (clojure.tools.logging.impl/log4j2-factory) log/*logger-factory*) ) ))
 
-(defn init-log []
-  (alter-var-root #'log/*logger-factory* (constantly (or (clojure.tools.logging.impl/log4j2-factory) log/*logger-factory*) ) ))
+
 ;(def ^{:dynamic true} *log* (.getLogger LogManager))
 ;
 ;(defn log [& form]

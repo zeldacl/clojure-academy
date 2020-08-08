@@ -18,6 +18,8 @@
 ;  ;:constructors {[] [Block$Properties]}
 ;  )
 
+;(ReflectionHelper)
+
 
 (defn create-block-properties [properties]
   (let [block-properties (Block$Properties/create (:material properties))]

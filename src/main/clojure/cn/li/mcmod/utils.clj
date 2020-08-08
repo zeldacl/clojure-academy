@@ -11,7 +11,9 @@
            (net.minecraftforge.common.util NonNullSupplier LazyOptional)
            (net.minecraftforge.fml.common.thread SidedThreadGroups)
            (net.minecraftforge.fml DistExecutor)
-           (java.util.function Supplier)))
+           (java.util.function Supplier)
+           (net.minecraftforge.eventbus.api SubscribeEvent)
+           (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)))
 
 
 (defn ->NonNullSupplier [create-fn]
@@ -123,7 +125,7 @@
             (~sever-fn)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;core
 
 (defmacro defclass
   ([class-name super-class class-data]
@@ -143,5 +145,30 @@
         (import ~fullname)
         ))))
 
-(defmacro defobj [super-class]
-  nil)
+;(defmacro defobj [super-class]
+;  nil)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; forge
+
+(defmacro listen-forge-bus [event fn]
+  (let [class-name "listen"
+        prefix (str class-name "-")
+        ;name-ns (get options-map :ns *ns*)
+        fullname (get-fullname *ns* class-name)]
+    `(do
+       (gen-class
+         :name ~(with-meta fullname `{Mod$EventBusSubscriber {:bus Mod$EventBusSubscriber$Bus/MOD}})
+         :prefix ~(symbol prefix)
+         ;:extends BaseMod
+         ;:init ~'initialize
+         ;:post-init ~'post-initialize
+         :constructors {[] []}
+         :methods [~(with-meta [(with-meta 'onListen `{SubscribeEvent []}) [event] 'void] {:static true})])
+       (with-prefix ~prefix
+         (defn ~'onListen [~'this ~'event]
+           (~fn ~'event)))))
+  )
+
+

@@ -154,7 +154,7 @@
   (with-prefix prefix
     (defn onBlocksRegistry [^net.minecraftforge.event.RegistryEvent$Register event]
       (log/info "ddddddddddddddddddd123123   " (str (.getName event)))
-      (condp = (str (.getName event))
+      (case (str (.getName event))
         "minecraft:block" (on-blocks-registry event)
         "minecraft:item" (on-items-registry event)
         "minecraft:entity_type" nil
