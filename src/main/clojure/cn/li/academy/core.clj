@@ -66,7 +66,7 @@
 
 ;(mcmodlog/init-log)
 (item/init-item-group "cljacademy" "logo")
-(init-registry)
+;(init-registry)
 
 (defn setup-fn [^FMLCommonSetupEvent e]
   (.println System/out "777777777777777777777777777777777777777777")

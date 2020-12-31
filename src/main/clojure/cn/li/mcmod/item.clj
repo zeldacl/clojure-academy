@@ -1,6 +1,8 @@
 (ns cn.li.mcmod.item
   (:require [cn.li.mcmod.utils :refer [get-fullname with-prefix]]
-            [cn.li.mcmod.registry :refer [set-registry-name registry-item *item-group*]])
+            [cn.li.mcmod.global :refer [*item-group*]]
+    ;[cn.li.mcmod.registry :refer [registry-item]]
+            )
   (:import (net.minecraft.item Item Item$Properties ItemGroup ItemStack)))
 
 (defmacro defitem [name & args]
@@ -33,15 +35,16 @@
          (defn ~'post-initialize [~'this ~'& ~'args]
            ~(when registry-name
               ;`(.setRegistryName ~x ~registry-name)
-              `(set-registry-name ~'this ~registry-name)
+              ;`(set-registry-name ~'this ~registry-name)
               ))))))
 
 
 
 (defn create-item-group [label icon]
   (let [item (proxy [Item] [(Item$Properties.)])
-        item (set-registry-name item icon)]
-    (registry-item item)
+        ;item (set-registry-name item icon)
+        ]
+    ;(registry-item item)
     (proxy [ItemGroup] [label]
       (createIcon []
         (ItemStack. item)))))

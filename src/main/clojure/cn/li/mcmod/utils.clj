@@ -24,6 +24,11 @@
 (defn ->LazyOptional [create-fn]
   (LazyOptional/of (->NonNullSupplier create-fn)))
 
+(defn ->Supplier [create-fn]
+  (reify Supplier
+    (get [this]
+      (create-fn))))
+
 (defn ensure-registered []
   (let [_ SoundEvents/AMBIENT_CAVE]
     (GameData/init)))

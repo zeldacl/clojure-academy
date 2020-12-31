@@ -1,5 +1,5 @@
 (ns cn.li.academy.energy.blocks.node
-  (:require [cn.li.mcmod.blocks :refer [defblock instance-block defblockstate get-block-states]]
+  (:require [cn.li.mcmod.blocks :refer [defblock instance-block instance-tile-entity defblockstate get-block-states]]
             [cn.li.mcmod.utils :refer [get-tile-entity-at-world blockstate->block drop-inventory-items same-block? open-gui ->LazyOptional construct]]
     ;[cn.li.academy.energy.tileentites.node :refer [set-placer]]
             [cn.li.academy.energy.common :refer [node-type connected energy get-node-attr]]
@@ -75,7 +75,7 @@
   ;:creative-tab CreativeTabs/tabBlock
   )
 
-(def block-node-instance (instance-block block-node))
+;(def block-node-instance (instance-block block-node))
 ;(instance-block block-node)
 
 
@@ -271,7 +271,7 @@
                                      )
               })
 
-(defcontainertype block-node-container-type block-node-instance (.getRegistryName ^Block block-node-instance))
+;(defcontainertype block-node-container-type block-node-instance (.getRegistryName ^Block block-node-instance))
 
 
 
@@ -281,9 +281,15 @@
 
 (def node-struct {
                   :block block-node
-                  :block-instance block-node-instance
+                  :registry-name "block-node"
+                  ;:block-instance block-node-instance
+                  :instance-fn (fn [] (construct block-node))
+                  :registry-item? true
                   :tile-entity tile-node
+                  :tile-entity-create-fn (fn [] (construct tile-node))
                   :container container-node
-                  :container-type block-node-container-type
+                  :container-create-fn (fn [container-type window-id world pos inv player]
+                                         (construct container-node container-type window-id inv player))
+                  ;:container-type block-node-container-type
                   ;:screen node-screen
                   })

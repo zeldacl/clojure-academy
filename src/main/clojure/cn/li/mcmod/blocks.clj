@@ -1,7 +1,7 @@
 (ns cn.li.mcmod.blocks
   (:require [cn.li.mcmod.utils :refer [with-prefix get-fullname construct update-map-keys gen-method ensure-registered]]
             [clojure.tools.logging :as log]
-            [cn.li.mcmod.registry :refer [set-registry-name]]
+            ;[cn.li.mcmod.registry :refer [set-registry-name]]
             [clojure.string :as str])
   (:import (net.minecraft.block Block Block$Properties)
            (net.minecraft.state IProperty BooleanProperty IntegerProperty)
@@ -129,7 +129,7 @@
            ;(log/info "^^^^^^^^^^^^^^^^^^" ~x ~'args)
            ~(when registry-name
               ;`(.setRegistryName ~x ~registry-name)
-              `(set-registry-name ~x ~registry-name)
+              ;`(set-registry-name ~x ~registry-name)
               )
            ;(.setRegistryName ~'obj ~registry-name)
            )
@@ -160,6 +160,11 @@
 
 
 (defn instance-block [class-name & constructor-args]
+  (apply construct class-name constructor-args)
+  ;(apply construct (resolve class-name) constructor-args)
+  )
+
+(defn instance-tile-entity [class-name & constructor-args]
   (apply construct class-name constructor-args)
   ;(apply construct (resolve class-name) constructor-args)
   )
