@@ -7,9 +7,9 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 
-public class CapabilityEnergy {
+public class CapabilityWirelessNode {
     @CapabilityInject(IWirelessNode.class)
-    public static Capability<IWirelessNode> ENERGY = null;
+    public static Capability<IWirelessNode> NODE = null;
 
     public static void register()
     {
@@ -39,6 +39,6 @@ public class CapabilityEnergy {
                         instance.setPlacerName(compound.getString("placer"));
                     }
                 },
-                () -> new WirelessNode());
+                WirelessNode::new);
     }
 }

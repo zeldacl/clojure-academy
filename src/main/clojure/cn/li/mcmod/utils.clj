@@ -69,6 +69,9 @@
 (defn construct [klass & args]
   (clojure.lang.Reflector/invokeConstructor klass (into-array Object args)))
 
+;(defn new-instance [class & args]
+;  (.newInstance ^Class class))
+
 (defmacro with-prefix [prefix & defs]
   (let [per-def (fn [possible-def]
                   (if (or
@@ -117,17 +120,8 @@
 
 (defmacro run-for-dist [client-fn sever-fn]
   `(DistExecutor/runForDist
-    (proxy [Supplier] []
-      (get []
-        (proxy [Supplier] []
-          (get []
-            (~client-fn)
-            ))))
-    (proxy [Supplier] []
-      (get []
-        (proxy [Supplier] []
-          (get []
-            (~sever-fn)))))))
+     (->Supplier (->Supplier ~client-fn))
+     (->Supplier (->Supplier ~sever-fn))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;core
