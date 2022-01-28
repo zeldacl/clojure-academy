@@ -1,6 +1,9 @@
 package cn.li.academy.api.energy.capability;
 
-public class WirelessNode implements IWirelessNode {
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraftforge.common.util.INBTSerializable;
+
+public class WirelessNode implements IWirelessNode, INBTSerializable<CompoundNBT> {
     protected double energy = 0;
     protected String placerName = "";
     protected String password = "";
@@ -63,5 +66,23 @@ public class WirelessNode implements IWirelessNode {
     @Override
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @Override
+    public CompoundNBT serializeNBT() {
+        CompoundNBT compound = new CompoundNBT();
+        compound.putDouble("energy", this.getEnergy());
+        compound.putString("nodeName", this.getNodeName());
+        compound.putString("password", this.getPassword());
+        compound.putString("placer", this.getPlacerName());
+        return compound;
+    }
+
+    @Override
+    public void deserializeNBT(CompoundNBT nbt) {
+        this.setEnergy(nbt.getDouble("energy"));
+        this.setNodeName(nbt.getString("nodeName"));
+        this.setPassword(nbt.getString("password"));
+        this.setPlacerName(nbt.getString("placer"));
     }
 }

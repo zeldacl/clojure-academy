@@ -5,7 +5,7 @@
            (net.minecraft.util.math BlockPos)
            (net.minecraft.inventory IInventory InventoryHelper)
            (net.minecraft.block BlockState ContainerBlock)
-           (net.minecraft.entity.player PlayerEntity)
+           (net.minecraft.entity.player PlayerEntity ServerPlayerEntity)
            (net.minecraft.util SoundEvents)
            (net.minecraftforge.registries GameData)
            (net.minecraftforge.common.util NonNullSupplier LazyOptional)
@@ -13,7 +13,9 @@
            (net.minecraftforge.fml DistExecutor)
            (java.util.function Supplier)
            (net.minecraftforge.eventbus.api SubscribeEvent)
-           (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)))
+           (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
+           (net.minecraft.inventory.container INamedContainerProvider)
+           (net.minecraftforge.fml.network NetworkHooks)))
 
 
 (defn ->NonNullSupplier [create-fn]
@@ -112,11 +114,13 @@
 (defn get-container [^ContainerBlock block ^BlockState state, ^World worldIn, ^BlockPos pos]
   (.getContainer block state worldIn pos))
 
-(defn open-gui [^PlayerEntity player ^BlockState state, ^World worldIn, ^BlockPos pos ^ContainerBlock block]
-  (when-let [inamedcontainerprovider (get-container block state worldIn pos)]
-    (.openContainer player inamedcontainerprovider)
-    ;(.addStat player (.getOpenStat block))
-    ))
+;(defn open-gui [^PlayerEntity player ^BlockState state, ^World worldIn, ^BlockPos pos ^ContainerBlock block]
+;  (when-let [inamedcontainerprovider (get-container block state worldIn pos)]
+;    (.openContainer player inamedcontainerprovider)
+;    ;(.addStat player (.getOpenStat block))
+;    ))
+(defn open-gui [^ServerPlayerEntity player, ^INamedContainerProvider container-provider, ^BlockPos pos]
+  (NetworkHooks/openGui player container-provider pos))
 
 (defmacro run-for-dist [client-fn sever-fn]
   `(DistExecutor/runForDist

@@ -52,25 +52,25 @@
                ;:step-sound Block/soundTypeStone
 
                :harvest-level ["pickaxe", 1]}
+  ;:exposes-methods ["onReplaced"]
   :overrides {;:create-new-tile-entity new-tile-block-entity
               ;:on-block-activated     on-tile-block-click
-              :onBlockPlacedBy  (fn [^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
+              :onBlockPlacedBy  (fn [this ^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                     (set-placer tile placer)))
-              :onReplaced       (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+              :onReplaced       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
                                   (when-not (same-block? state newState)
                                     (let [this ^Block this]
                                       (drop-inventory-items worldIn pos this)
-                                      (proxy-super onReplaced state worldIn pos newState isMoving))))
-              :onBlockActivated (fn [^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
+                                      (.supperOnReplaced this state worldIn pos newState isMoving))))
+              :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                   (let [this ^Block this]
                                     (open-gui player state worldIn pos this)))
               ;:getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
               ;                    3)
               :hasTileEntity    (constantly true)
-              :createTileEntity (fn [^BlockState state, ^IBlockReader world] (construct tile-node))
+              :createTileEntity (fn [this ^BlockState state, ^IBlockReader world] (construct tile-node))
               }
-
 
   ;:creative-tab CreativeTabs/tabBlock
   )
@@ -223,7 +223,9 @@
                     )
         energy (.get block-state energy                           ;(get-block-states :energy)
                  )
-        pct (min 4 (Math/round (* 4 (/ (.getEnergy wireless-node) (.getMaxEnergy wireless-node)))))
+        pct (min
+              4
+              (Math/round (* 4 (/ (.getEnergy wireless-node) (.getMaxEnergy wireless-node)))))
         block-state ^BlockState (.with block-state connected true         ;(get-block-states :connected) true
                                   )
         block-state ^BlockState (.with block-state energy pct         ;(get-block-states :energy) pct
