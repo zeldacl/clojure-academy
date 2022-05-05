@@ -213,9 +213,9 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.14.4-28.2.26'
 //    minecraft 'net.minecraftforge:forge:1.15.2-31.2.0'
 
-    implementation  'org.clojure:clojure:1.10.3'
+    implementation  'org.clojure:clojure:1.11.1'
 
-    implementation  'org.clojure:tools.logging:1.2.3'
+    implementation  'org.clojure:tools.logging:1.2.4'
 
 //    testImplementation 'junit:junit:4.12'
 
@@ -250,11 +250,11 @@ jar {
     manifest {
         attributes([
                 "Specification-Title": "cljacademy",
-                "Specification-Vendor": "examplemodsareus",
+                "Specification-Vendor": "li-dev",
                 "Specification-Version": "1", // We are version 1 of ourselves
                 "Implementation-Title": project.name,
                 "Implementation-Version": "${version}",
-                "Implementation-Vendor" :"examplemodsareus",
+                "Implementation-Vendor" :"zeldacl",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
@@ -270,38 +270,16 @@ task apiJar(type: Jar) {
 artifacts {
     archives apiJar
 }
-// Example configuration to allow publishing using the maven-publish task
-// This is the preferred method to reobfuscate your jar file
-jar.finalizedBy('reobfJar')
-// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
-//publish.dependsOn('reobfJar')
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifact jar
-        }
-    }
-    repositories {
-        maven {
-            url "file:///${project.projectDir}/mcmodsrepo"
-        }
-    }
-}
-
 //// Example configuration to allow publishing using the maven-publish task
-//// we define a custom artifact that is sourced from the reobfJar output task
-//// and then declare that to be published
-//// Note you'll need to add a repository here
-//def reobfFile = file("$buildDir/reobfJar/output.jar")
-//def reobfArtifact = artifacts.add('default', reobfFile) {
-//    type 'jar'
-//    builtBy 'reobfJar'
-//}
+//// This is the preferred method to reobfuscate your jar file
+//jar.finalizedBy('reobfJar')
+//// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
+////publish.dependsOn('reobfJar')
+//
 //publishing {
 //    publications {
 //        mavenJava(MavenPublication) {
-//            artifact reobfArtifact
+//            artifact jar
 //        }
 //    }
 //    repositories {
@@ -310,3 +288,25 @@ publishing {
 //        }
 //    }
 //}
+
+// Example configuration to allow publishing using the maven-publish task
+// we define a custom artifact that is sourced from the reobfJar output task
+// and then declare that to be published
+// Note you'll need to add a repository here
+def reobfFile = file("$buildDir/reobfJar/output.jar")
+def reobfArtifact = artifacts.add('default', reobfFile) {
+    type 'jar'
+    builtBy 'reobfJar'
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact reobfArtifact
+        }
+    }
+    repositories {
+        maven {
+            url "file:///${project.projectDir}/mcmodsrepo"
+        }
+    }
+}

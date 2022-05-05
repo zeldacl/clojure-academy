@@ -22,7 +22,8 @@
            (cn.li.academy.api.energy.capability WirelessNode)
            (cn.li.academy.api.energy ImagEnergyItem)
            (net.minecraftforge.common.util LazyOptional)
-           (net.minecraft.inventory.container Container)))
+           (net.minecraft.inventory.container Container)
+           (net.minecraft.state BooleanProperty IntegerProperty)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -31,6 +32,9 @@
 (declare set-placer)                                        ;
 ;(defblock vvv :properties {:material      Material/ROCK})
 (declare tile-node)
+
+(def state-connected (BooleanProperty/create "connected"))
+(def state-energy (IntegerProperty/create "energy" 0 4))
 
 (defblock block-node
   ;:container? true
@@ -44,7 +48,8 @@
   ;             :connected [:bool]
   ;             :energy [:integer 0 4]
   ;             }
-  :state-properties [node-type connected energy]
+  ;:state-properties [node-type connected energy]
+  :state-properties [state-connected state-energy]
   :registry-name "node_basic"
   :properties {;:creative-tab ""
                :material      Material/ROCK
