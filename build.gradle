@@ -41,6 +41,11 @@ group = 'cn.li.cljacademy' // http://maven.apache.org/guides/mini/guide-naming-c
 archivesBaseName = 'cljacademy'
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+//Print out JVM information so that we know what version is running. Extreamly useful for people to know when helping you.
+println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+
+compileJava.options.encoding = "UTF-8"
+//compileClojure.options.encoding = "UTF-8"
 
 minecraft {
     // The mappings can be changed at any time, and must be in the following format.
@@ -51,7 +56,7 @@ minecraft {
     // http://export.mcpbot.bspk.rs/
 //    mappings channel: 'snapshot', version: '20191108-1.14.3'
 //    mappings channel: 'snapshot', version: '20200119-1.14.4'
-    mappings channel: 'stable', version: '58-1.14.4'
+    mappings channel: 'snapshot', version: '20200514-1.15.1'
 //        mappings channel: 'snapshot', version: '20201118-1.15.1'
     // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
 
@@ -210,7 +215,7 @@ dependencies {
     // Specify the version of Minecraft to use, If this is any group other then 'net.minecraft' it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
-    minecraft 'net.minecraftforge:forge:1.14.4-28.2.26'
+    minecraft 'net.minecraftforge:forge:1.15.2-31.2.57'
 //    minecraft 'net.minecraftforge:forge:1.15.2-31.2.0'
 
     implementation  'org.clojure:clojure:1.11.1'
