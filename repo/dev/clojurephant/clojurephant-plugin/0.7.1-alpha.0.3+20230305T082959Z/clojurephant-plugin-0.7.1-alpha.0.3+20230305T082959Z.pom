@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>dev.clojurephant</groupId>
+  <artifactId>clojurephant-plugin</artifactId>
+  <version>0.7.1-alpha.0.3+20230305T082959Z</version>
+  <scm>
+    <connection>https://github.com/clojurephant/clojurephant.git</connection>
+    <developerConnection>git@github.com:clojurephant/clojurephant.git</developerConnection>
+    <url>https://github.com/clojurephant/clojurephant</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>us.bpsm</groupId>
+      <artifactId>edn-java</artifactId>
+      <version>0.7.1</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+      <version>1.9</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>

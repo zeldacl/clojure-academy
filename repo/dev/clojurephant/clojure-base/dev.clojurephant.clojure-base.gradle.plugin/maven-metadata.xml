@@ -3,11 +3,12 @@
   <groupId>dev.clojurephant.clojure-base</groupId>
   <artifactId>dev.clojurephant.clojure-base.gradle.plugin</artifactId>
   <versioning>
-    <latest>0.6.0-alpha.4.25+20200621T144024Z</latest>
-    <release>0.6.0-alpha.4.25+20200621T144024Z</release>
+    <latest>0.7.1-alpha.0.3+20230305T082959Z</latest>
+    <release>0.7.1-alpha.0.3+20230305T082959Z</release>
     <versions>
       <version>0.6.0-alpha.4.25+20200621T144024Z</version>
+      <version>0.7.1-alpha.0.3+20230305T082959Z</version>
     </versions>
-    <lastUpdated>20200621144024</lastUpdated>
+    <lastUpdated>20230305082959</lastUpdated>
   </versioning>
 </metadata>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>dev.clojurephant.clojurescript-base</groupId>
+  <artifactId>dev.clojurephant.clojurescript-base.gradle.plugin</artifactId>
+  <version>0.7.1-alpha.0.3+20230305T082959Z</version>
+  <packaging>pom</packaging>
+  <name>ClojureScript base language plugin for Gradle</name>
+  <scm>
+    <connection>https://github.com/clojurephant/clojurephant.git</connection>
+    <developerConnection>git@github.com:clojurephant/clojurephant.git</developerConnection>
+    <url>https://github.com/clojurephant/clojurephant</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>dev.clojurephant</groupId>
+      <artifactId>clojurephant-plugin</artifactId>
+      <version>0.7.1-alpha.0.3+20230305T082959Z</version>
+    </dependency>
+  </dependencies>
+</project>
