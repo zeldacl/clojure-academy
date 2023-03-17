@@ -114,7 +114,7 @@
            ([~'world-id ~'player-inventory ~'packet-buffer]
             [[~'world-id ~'player-inventory ~'packet-buffer]
              (atom {:player-inventory ~'player-inventory
-                    :tileentity (.readBlockPos ~'packet-buffer)})]))
+                    :tileentity (.readBlockPos ~(with-meta 'packet-buffer {:tag `PacketBuffer}))})]))
          (defn ~'post-initialize
            ([~this-sym]
             nil)

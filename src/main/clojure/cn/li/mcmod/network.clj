@@ -26,10 +26,10 @@
 (defn write-packet [^NbtPacket packet ^PacketBuffer buffer]
   (let [converted-data (deref (.-data packet))
         nbt-data (map->nbt converted-data (CompoundNBT.))]
-    (.writeCompoundTag buffer nbt-data)))
+    (.writeNbt buffer nbt-data)))
 
 (defn read-packet [^PacketBuffer buffer]
-  (let [nbt-data (.readCompoundTag buffer)
+  (let [nbt-data (.readNbt buffer)
         packet (NbtPacket.)]
     (read-tag-data! (.-data packet) nbt-data)))
 
@@ -91,7 +91,7 @@
 
 (defn init-networks [network-name]
   (let [network (create-network network-name)]
-    (alter-var-root #'*default-network* network)
+    (alter-var-root #'*default-network* (constantly network))
     (register-message network 0 nbt-packet write-packet read-packet
       (fn [^NbtPacket message ^NetworkEvent$Context ctx]
         (let [{:keys [c t p]} (deref (.-data message))]

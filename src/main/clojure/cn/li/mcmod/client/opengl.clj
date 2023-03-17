@@ -3,17 +3,18 @@
            (org.lwjgl.opengl GL11)))
 
 (defn bind-texture [texture]
-  (GlStateManager/bindTexture texture))
+  (GlStateManager/_bindTexture texture))
 
 (defn glColor [color]
-  (GlStateManager/color4f
+  (GlStateManager/_color4f
     (:r color)
     (:g color)
     (:b color)
     (:a color)))
 
 (defn glTexCoord2f [u v]
-  (GlStateManager/texCoord2f u v))
+  ;(GlStateManager/texCoord2f u v)
+  (GL11/glTexCoord2f u v))
 
 (defn glVertex2f [x y]
   (GL11/glVertex2f x y))

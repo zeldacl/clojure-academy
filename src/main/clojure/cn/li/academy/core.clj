@@ -18,7 +18,7 @@
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
     ;(cn.test BlockRegistryEvent BlockRegistryEvent$Rrr)
            (net.minecraftforge.event RegistryEvent$Register)
-           (org.apache.logging.log4j LogManager)
+           (org.apache.logging.log4j LogManager Logger)
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
            (net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent InterModEnqueueEvent InterModProcessEvent FMLClientSetupEvent)
     ;(EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap)
@@ -62,7 +62,7 @@
 ;                   ; here the impl
 ;                   (log/info "###############################-------------   " t)
 ;                   )))
-(def logger (LogManager/getLogger))
+(def ^Logger logger (LogManager/getLogger))
 
 ;(mcmodlog/init-log)
 (item/init-item-group "cljacademy" "logo")
@@ -87,7 +87,7 @@
   ;      (proxy [Supplier] []
   ;        (get []
   ;          (log/info "HELLO FROM PREINIT cljacademy server 22222222222222222222222"))))))
-  (log/info "HELLO FROM PREINIT cljacademy" (.name log/*logger-factory*))
+  ;(log/info "HELLO FROM PREINIT cljacademy" (.name log/*logger-factory*))
   (log/info "HELLO FROM PREINIT cljacademy")
   (log/info "DIRT BLOCK >> {}" (.getRegistryName Blocks/DIRT))
   (.info logger "rrrrrrrrrrrrrrrrrrrrrrr22222")

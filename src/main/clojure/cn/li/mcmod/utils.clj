@@ -1,21 +1,26 @@
 (ns cn.li.mcmod.utils
   ;(:import (net.minecraftforge.fml.common FMLCommonHandler))
-  (:require [clojure.string :as string])
-  (:import (net.minecraft.world World)
+  (:require [clojure.string :as string]
+            [clojure.tools.logging :as log])
+  (:import (net.minecraft.util SoundEvents)
+           (net.minecraft.util.registry Bootstrap Registry)
+           (net.minecraft.world World)
            (net.minecraft.util.math BlockPos)
            (net.minecraft.inventory IInventory InventoryHelper)
-           (net.minecraft.block BlockState ContainerBlock)
+           (net.minecraft.block Block BlockState Blocks ContainerBlock)
            (net.minecraft.entity.player PlayerEntity ServerPlayerEntity)
-           (net.minecraft.util SoundEvents)
-           (net.minecraftforge.registries GameData)
+    ;(net.minecraft.util SoundEvents)
+    ;(net.minecraftforge.registries GameData)
            (net.minecraftforge.common.util NonNullSupplier LazyOptional)
+           (net.minecraftforge.event RegistryEvent$Register)
            (net.minecraftforge.fml.common.thread SidedThreadGroups)
            (net.minecraftforge.fml DistExecutor)
            (java.util.function Supplier)
            (net.minecraftforge.eventbus.api SubscribeEvent)
            (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraft.inventory.container INamedContainerProvider)
-           (net.minecraftforge.fml.network NetworkHooks)))
+           (net.minecraftforge.fml.network NetworkHooks)
+           (net.minecraftforge.registries ForgeRegistries GameData)))
 
 
 (defn ->NonNullSupplier [create-fn]
@@ -32,10 +37,24 @@
       (create-fn))))
 
 (defn ensure-registered []
-  (let [_ SoundEvents/AMBIENT_CAVE]
-    (GameData/init)))
+  (let [_ Registry/SOUND_EVENT]
+    (GameData/init)
+    ;(Bootstrap/bootStrap)
+    ))
 
 (ensure-registered)
+
+;System.getProperty("forge.disableVanillaGameData", "false")
+;(System/setProperty "forge.disableVanillaGameData", "true")
+(log/info "111111111111111111111111111")
+;(Block)
+(log/info "222222222222222222222222222")
+;(GameData/init)
+(log/info "333333333333333333333333333333")
+;(Bootstrap/bootStrap)
+(log/info "444444444444444444444444444444444")
+
+;(def aaqwe ForgeRegistries/BLOCKS)
 
 
 (def client? (= (.getThreadGroup (Thread/currentThread)) SidedThreadGroups/CLIENT))
@@ -95,7 +114,7 @@
 
 (defn get-tile-entity-at-world
   ([^World world pos]
-   (.getTileEntity world pos))
+   (.getBlockEntity world pos))
   ([^World world x y z]
    (get-tile-entity-at-world world (BlockPos. (int x) (int y) (int z)))))
 
@@ -108,11 +127,11 @@
 (defn drop-inventory-items [world pos, block-obj]
   (let [tileentity (get-tile-entity-at-world world pos)]
     (when (instance? IInventory tileentity)
-      (InventoryHelper/dropInventoryItems ^World world ^BlockPos pos ^IInventory tileentity)
-      (.updateComparatorOutputLevel ^World world pos block-obj))))
+      (InventoryHelper/dropContents ^World world ^BlockPos pos ^IInventory tileentity)
+      (.updateNeighbourForOutputSignal ^World world pos block-obj))))
 
 (defn get-container [^ContainerBlock block ^BlockState state, ^World worldIn, ^BlockPos pos]
-  (.getContainer block state worldIn pos))
+  (.getMenuProvider block state worldIn pos))
 
 ;(defn open-gui [^PlayerEntity player ^BlockState state, ^World worldIn, ^BlockPos pos ^ContainerBlock block]
 ;  (when-let [inamedcontainerprovider (get-container block state worldIn pos)]
@@ -143,8 +162,9 @@
           :prefix ~prefix
           :extends ~super-class
           ~@class-data)
+        ;(comment (compile ~name-ns))
         (def ~class-name ~fullname)
-        (comment (compile ~name-ns))
+        ;(comment (compile ~name-ns))
         (import ~fullname)
         ))))
 

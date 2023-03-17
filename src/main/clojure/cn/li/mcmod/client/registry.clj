@@ -17,7 +17,7 @@
   (log/info "qqqqqqqqqqqqqqqqqqq5556666  " *registry-screens*)
   (dorun (map (fn [{                                        ;container :container
                     container-type :container-type screen :screen}]
-                (ScreenManager/registerFactory ^ContainerType container-type
+                (ScreenManager/register ^ContainerType container-type
                   (reify ScreenManager$IScreenFactory
                     (create [this container inv name]
                       (construct screen container inv name)))))
