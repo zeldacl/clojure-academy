@@ -22,8 +22,9 @@
            (cn.li.academy.api.energy.capability WirelessNode)
            (cn.li.academy.api.energy ImagEnergyItem)
            (net.minecraftforge.common.util LazyOptional)
-           (net.minecraft.inventory.container Container)
-           (net.minecraft.state BooleanProperty IntegerProperty)))
+           (net.minecraft.inventory.container Container INamedContainerProvider)
+           (net.minecraft.state BooleanProperty IntegerProperty)
+           (net.minecraft.util.text TranslationTextComponent)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -32,6 +33,7 @@
 (declare set-placer)                                        ;
 ;(defblock vvv :properties {:material      Material/ROCK})
 (declare tile-node)
+(declare create-container)
 
 (def state-connected (BooleanProperty/create "connected"))
 (def state-energy (IntegerProperty/create "energy" 0 4))
@@ -69,8 +71,14 @@
                                       (drop-inventory-items worldIn pos this)
                                       (.supperOnReplaced this state worldIn pos newState isMoving))))
               :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
-                                  (let [this ^Block this]
-                                    (open-gui player state worldIn pos this)))
+                                  ;(let [this ^Block this
+                                  ;      container-provider (reify INamedContainerProvider
+                                  ;                           (getDisplayName [this]
+                                  ;                             (TranslationTextComponent. "screen.mytutorial.firstbloc" []))
+                                  ;                           (createMenu [this i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
+                                  ;                             (create-container )))]
+                                  ;  (open-gui player container-provider pos))
+                                  )
               ;:getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
               ;                    3)
               :hasTileEntity    (constantly true)
@@ -278,6 +286,8 @@
                                      )
               })
 
+(defn create-container [container-type window-id world pos inv player]
+  (construct container-node container-type window-id inv player))
 ;(defcontainertype block-node-container-type block-node-instance (.getRegistryName ^Block block-node-instance))
 
 
@@ -295,8 +305,7 @@
                   :tile-entity tile-node
                   :tile-entity-create-fn (fn [] (construct tile-node))
                   :container container-node
-                  :container-create-fn (fn [container-type window-id world pos inv player]
-                                         (construct container-node container-type window-id inv player))
+                  :container-create-fn create-container
                   ;:container-type block-node-container-type
                   ;:screen node-screen
                   })
