@@ -1,5 +1,6 @@
 (ns cn.li.mcmod.core
-  (:require [cn.li.mcmod.network :refer [init-networks]]
+  (:require
+    ;[cn.li.mcmod.network :refer [init-networks]]
     ;[cn.li.mcmod.common :refer [vec->map]]
             [cn.li.mcmod.utils :refer [get-fullname with-prefix vec->map]]
             [clojure.tools.logging :as log]
@@ -17,8 +18,8 @@
     (net.minecraftforge.common MinecraftForge)
     (cn.li.mcmod EventWrap$FMLClientSetupEventWrap EventWrap$FMLCommonSetupEventWrap EventWrap$InterModEnqueueEventWrap EventWrap$InterModProcessEventWrap)))
 
-(set! *warn-on-reflection* true)
-(set! *unchecked-math* true)
+;(set! *warn-on-reflection* true)
+;(set! *unchecked-math* true)
 ;(set! *unchecked-math* :warn-on-boxed)
 
 ;(defmacro create-obj-with-proxy [klass]

@@ -40,7 +40,7 @@
                 java.lang.Short (.putShort nbt k v)
                 java.lang.Integer (.putInt nbt k v)
                 java.lang.Long (.putLong nbt k v)
-                java.util.UUID (.putUniqueId nbt k v)
+                java.util.UUID (.putUUID nbt k v)
                 java.lang.Float (.putFloat nbt k v)
                 java.lang.Double (.putDouble nbt k v)
                 java.lang.String (.putString nbt k v)

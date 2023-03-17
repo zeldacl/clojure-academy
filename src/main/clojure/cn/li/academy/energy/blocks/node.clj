@@ -52,7 +52,7 @@
   :state-properties [state-connected state-energy]
   :registry-name "node_basic"
   :properties {;:creative-tab ""
-               :material      Material/ROCK
+               :material      Material/STONE
                :hardness      (float 2.5)
                ;:step-sound Block/soundTypeStone
 
@@ -63,11 +63,12 @@
               :onBlockPlacedBy  (fn [this ^World worldIn, ^BlockPos pos, ^BlockState state, ^LivingEntity placer, ^ItemStack stack]
                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                     (set-placer tile placer)))
-              :onReplaced       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+              ;onReplaced
+              :onRemove       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
                                   (when-not (same-block? state newState)
-                                    (let [this ^Block this]
+                                    (let [this this]
                                       (drop-inventory-items worldIn pos this)
-                                      (.supperOnReplaced this state worldIn pos newState isMoving))))
+                                      (.supperOnRemove this state worldIn pos newState isMoving))))
               :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
                                   (let [this ^Block this]
                                     (open-gui player state worldIn pos this)))
@@ -183,16 +184,16 @@
 ;; tileentity
 
 (defn create-slots [tile size]
-  (proxy [ItemStackHandler] [size]
+  (proxy [ItemStackHandler] [^int size]
     (onContentsChanged [slot]
-      (.markDirty ^TileEntity tile))
+      (.setChanged ^TileEntity tile))
     (isItemValid [slot, stack]
       (imag-energy-item? stack))))
 
-(defn create-wireless-node [tile]
+(defn create-wireless-node [^TileEntity tile]
   (let [node-attr-fn (fn [attr-key]
                        (let [block-state (.getBlockState tile)
-                             node-type-id (.get ^BlockState block-state (get-block-states :node-type))]
+                             node-type-id (.getValue ^BlockState block-state (get-block-states :node-type))]
                          (get-node-attr node-type-id attr-key)))]
     (proxy [WirelessNode] []
       (getMaxEnergy [] (node-attr-fn :max-energy))
@@ -224,18 +225,18 @@
 (defn rebuild-block-state [^World world ^BlockPos pos ^WirelessNode wireless-node]
   (let [block-state ^BlockState (.getBlockState world pos)
         block (.getBlock block-state)
-        connected (.get block-state connected                        ;(get-block-states :connected)
+        connected (.getValue block-state connected                        ;(get-block-states :connected)
                     )
-        energy (.get block-state energy                           ;(get-block-states :energy)
+        energy (.getValue block-state energy                           ;(get-block-states :energy)
                  )
         pct (min
               4
               (Math/round (* 4 (/ (.getEnergy wireless-node) (.getMaxEnergy wireless-node)))))
-        block-state ^BlockState (.with block-state connected true         ;(get-block-states :connected) true
+        block-state ^BlockState (.setValue block-state connected true         ;(get-block-states :connected) true
                                   )
-        block-state ^BlockState (.with block-state energy pct         ;(get-block-states :energy) pct
+        block-state ^BlockState (.setValue block-state energy pct         ;(get-block-states :energy) pct
                                   )]
-    (.setBlockState world pos block-state 0)))
+    (.setBlock world pos block-state 0)))
 
 (deftilerntity tile-node
   :fields {

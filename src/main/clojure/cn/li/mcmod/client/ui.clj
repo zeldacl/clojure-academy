@@ -49,8 +49,8 @@
            )
          ;(defn ~'drawGuiContainerForegroundLayer [~'this ~'mouseX ~'mouseY])
          (defn ~'drawGuiContainerBackgroundLayer [~'this ~'partialTicks ~'mouseX ~'mouseY]
-           (GlStateManager/enableBlend)
-           (GlStateManager/blendFunc GlStateManager$SourceFactor/SRC_ALPHA GlStateManager$DestFactor/ONE_MINUS_SRC_ALPHA)
+           (GlStateManager/_enableBlend)
+           (GlStateManager/_blendFunc GlStateManager$SourceFactor/SRC_ALPHA GlStateManager$DestFactor/ONE_MINUS_SRC_ALPHA)
            ;gui.resize(width, height);
            ;        gui.draw(var2, var3);
            )

@@ -46,7 +46,7 @@
         ]
     ;(registry-item item)
     (proxy [ItemGroup] [label]
-      (createIcon []
+      (makeIcon []
         (ItemStack. item)))))
 
 (defn init-item-group [label icon]

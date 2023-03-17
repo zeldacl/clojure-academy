@@ -24,8 +24,8 @@
   ([gui mouse-x mouse-y]
    ;frameUpdate();
    ;        updateMouse(mx, my);
-   (GlStateManager/disableAlphaTest)
-   (GlStateManager/blendFunc GlStateManager$SourceFactor/SRC_ALPHA GlStateManager$DestFactor/ONE_MINUS_SRC_ALPHA)
+   (GlStateManager/_disableAlphaTest)
+   (GlStateManager/_blendFunc GlStateManager$SourceFactor/SRC_ALPHA GlStateManager$DestFactor/ONE_MINUS_SRC_ALPHA)
    ;drawTraverse(mx, my, null, this, getTopWidget(mx, my));
    ;if (debug) {
    ;            Widget hovering = getHoveringWidget();
@@ -39,5 +39,5 @@
    ;            }
    ;
    ;        }
-   (GlStateManager/enableAlphaTest)
+   (GlStateManager/_enableAlphaTest)
    ))

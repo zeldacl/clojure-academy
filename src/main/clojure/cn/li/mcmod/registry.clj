@@ -5,7 +5,8 @@
             [cn.li.mcmod.global :refer [*mod-id* *blocks* *tile-entities* *block-items* *containers* *item-group*]]
     ;[cn.li.academy.energy.blocks.node :refer [block-node]]
             )
-  (:import (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
+  (:import (net.minecraftforge.fml RegistryObject)
+           (net.minecraftforge.fml.common Mod$EventBusSubscriber Mod$EventBusSubscriber$Bus)
            (net.minecraftforge.eventbus.api SubscribeEvent EventPriority)
            (net.minecraftforge.event RegistryEvent$Register)
            (net.minecraft.block Block)
@@ -13,7 +14,7 @@
            (net.minecraft.util ResourceLocation)
            (net.minecraft.tileentity TileEntityType TileEntityType$Builder)
            (java.util.function Supplier)
-           (net.minecraftforge.registries IForgeRegistryEntry DeferredRegister ForgeRegistries)
+           (net.minecraftforge.registries IForgeRegistry IForgeRegistryEntry DeferredRegister ForgeRegistries)
            (net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext)
            (net.minecraftforge.common.extensions IForgeContainerType)
            (net.minecraftforge.fml.network IContainerFactory)
@@ -64,28 +65,28 @@
 (def ^:dynamic *deferred-registers*
   (atom {
          :blocks        {
-                         :type ForgeRegistries/BLOCKS
-                         :registers         {}
+                         :type      ForgeRegistries/BLOCKS
+                         :registers {}
                          }
          :items         {
-                         :type ForgeRegistries/ITEMS
-                         :registers         {}
+                         :type      ForgeRegistries/ITEMS
+                         :registers {}
                          }
          :tile_entities {
-                         :type ForgeRegistries/TILE_ENTITIES
-                         :registers         {}
+                         :type      ForgeRegistries/TILE_ENTITIES
+                         :registers {}
                          }
          :containers    {
-                         :type ForgeRegistries/CONTAINERS
-                         :registers         {}
+                         :type      ForgeRegistries/CONTAINERS
+                         :registers {}
                          }
          :entities      {
-                         :type ForgeRegistries/ENTITIES
-                         :registers         {}
+                         :type      ForgeRegistries/ENTITIES
+                         :registers {}
                          }
          :dimensions    {
-                         :type ForgeRegistries/MOD_DIMENSIONS
-                         :registers         {}
+                         :type      ForgeRegistries/MOD_DIMENSIONS
+                         :registers {}
                          }
          }))
 
@@ -99,7 +100,7 @@
 
 (defn init-deferred-register [^String mod-id]
   (doseq [name (keys @*deferred-registers*)]
-    (let [register (DeferredRegister. (get-in @*deferred-registers* [name :type]) mod-id)]
+    (let [register (DeferredRegister/create ^IForgeRegistry (get-in @*deferred-registers* [name :type]) mod-id)]
       (swap! *deferred-registers* update-in [name :deferred-register] (constantly register))))
   ;(alter-var-root #'*deferred-register-blocks* (constantly (DeferredRegister. ForgeRegistries/BLOCKS mod-id)))
   ;(alter-var-root #'*deferred-register-items* (constantly (DeferredRegister. ForgeRegistries/ITEMS mod-id)))
@@ -148,11 +149,11 @@
   (register-obj :containers registry-name instance-fn))
 
 (defn register-block-item [registry-name]
-  (let [block-instance (get-instance :blocks registry-name)
+  (let [^RegistryObject block-instance (get-instance :blocks registry-name)
         instance-fn (fn []
                       (BlockItem.
-                        (.get block-instance)
-                        (.group (Item$Properties.) *item-group*)))]
+                        ^Block (.get block-instance)
+                        (.tab (Item$Properties.) *item-group*)))]
     (register-item registry-name instance-fn)))
 
 (defn registry-block-struct [block-struct]
@@ -177,11 +178,11 @@
     ;; tile-entity
     (when-let [tile-entity (:tile-entity block-struct)]
       (let [tile-entity-create-fn (:tile-entity-create-fn block-struct)
-            block-instance (get-instance :blocks registry-name)
+            ^RegistryObject block-instance (get-instance :blocks registry-name)
             entity-instance-fn (fn []
-                                 (.build (TileEntityType$Builder/create
+                                 (.build (TileEntityType$Builder/of
                                            (->Supplier tile-entity-create-fn)
-                                           (.get block-instance)) nil))
+                                           ^Block (.get block-instance)) nil))
             ;entity-instance (register-obj *deferred-register-tiles* registry-name entity-instance-fn)
             ]
         (register-tileentity registry-name entity-instance-fn)
@@ -195,7 +196,7 @@
                                     (IForgeContainerType/create (proxy [IContainerFactory] []
                                                                   (create [window-id ^PlayerInventory inv ^PacketBuffer data]
                                                                     (let [^BlockPos pos (.readBlockPos data)
-                                                                          ^World world (.getEntityWorld (.-player inv))
+                                                                          ^World world (.getCommandSenderWorld (.-player inv))
                                                                           container-type (get-instance :containers registry-name)]
                                                                       (container-create-fn container-type window-id world pos inv (.-player inv)))))))
             ;container-instance (register-obj *deferred-register-containers* registry-name container-instance-fn)

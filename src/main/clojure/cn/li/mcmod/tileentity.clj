@@ -23,8 +23,8 @@
          :post-init ~'post-initialize
          :state ~'data
          :exposes-methods {
-                           ~'write ~'superWrite,
-                           ~'read  ~'superRead
+                           ~'save ~'superSave,
+                           ~'load  ~'superLoad
                            })
        (def ~name ~fullname)
        (import ~fullname)
@@ -35,12 +35,12 @@
          (defn ~'post-initialize [~'this ~'& ~'args]
            (when ~post-init
              (~post-init ~'this ~'args)))
-         (defn ~'read [~'this ~'compound]
-           (~'.superRead ~this-sym ~'compound)
+         (defn ~'load [~'this ~'compound]
+           (~'.superLoad ~this-sym ~'compound)
            (read-tag-data! (~'.-data ~this-sym) ~'compound)
            ;(~on-load ~this-sym)
            )
-         (defn ~'write [~'this ~'compound]
-           (~'.superWrite ~this-sym ~'compound)
+         (defn ~'save [~'this ~'compound]
+           (~'.superSave ~this-sym ~'compound)
            ;(~on-save ~this-sym)
            (write-tag-data! (~'.-data ~this-sym) ~'compound))))))
