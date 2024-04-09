@@ -14,15 +14,22 @@
   )
 
 ;(System/setProperty "forge.disableVanillaGameData", "true")
-;(gen-class
-;  :name "ttt"
-;  :extends cn.li.mcmod.BaseBlock
-;  ;:init ~'initialize
-;  ;:constructors {[] [Block$Properties]}
-;  )
-
-;(ReflectionHelper)
-
+(defmacro gen-block-class [block-name & args]
+  `(gen-class
+     :name ~(get-fullname (get args :ns *ns*) (symbol block-name))
+     :prefix ~(str block-name "-")
+     :extends Block
+     :init initialize
+     :constructors {[] [Block$Properties]}
+     :post-init post-initialize
+     :state state
+     :exposes-methods ~(into {} (map (fn [k]
+                                       (let [key-name (name (key k))
+                                             supper-name (apply str "supper" (str/capitalize (first key-name)) (rest key-name))
+                                             ]
+                                         (vector (key k) (symbol supper-name)))) (:overrides (apply hash-map args))))
+     )
+  )
 
 (defn create-block-properties [properties]
   (let [block-properties (Block$Properties/of (:material properties))]
@@ -121,16 +128,7 @@
     ;      `(with-prefix ~(str block-name "-")
     ;         ~@overrides)))
     `(do
-       (gen-class
-         :name ~fullname
-         :prefix ~(symbol prefix)
-         :extends ~Block
-         :init ~'initialize
-         :constructors {[] [Block$Properties]}
-         :post-init ~'post-initialize
-         :state ~'state
-         :exposes-methods ~exposes-methods
-         )
+       (gen-block-class ~block-name ~@args)
        ;(comment (compile ~name-ns))
        (def ~class-name ~fullname)
        ;(def ~class-name (eval '~fullname))
@@ -186,5 +184,3 @@
   (apply construct class-name constructor-args)
   ;(apply construct (resolve class-name) constructor-args)
   )
-
-
