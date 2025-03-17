@@ -1,21 +1,25 @@
 buildscript {
     repositories {
-        maven { url = 'https://maven.minecraftforge.net/' }
         mavenCentral()
+        maven { url = 'https://files.minecraftforge.net/maven' }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
     }
 }
 
+plugins {
+    id 'clojure'
+}
+
 apply plugin: 'net.minecraftforge.gradle.forge'
-apply plugin: 'dev.clojurephant.clojure'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
+apply plugin: 'net.minecraftforge.gradle'
 
 version = "1.0"
 group = "cn.academy"
-archivesBaseName = "clojure-academy-1.12.2"
+archivesBaseName = "academy-forge-1.12.2"
 
 sourceCompatibility = targetCompatibility = '1.8'
 compileJava {
@@ -25,16 +29,34 @@ compileJava {
 minecraft {
     version = "1.12.2-14.23.5.2855"
     runDir = "run"
-    mappings = "snapshot_20171003"
+    mappings = "stable_39"
     
     makeObfSourceJar = false
+    
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+            args '--username', 'Dev'
+        }
+        
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+        }
+    }
 }
 
 checkClojure.enabled = false
 
 dependencies {
     implementation project(':acmod')
+    implementation 'org.clojure:clojure:1.10.1'
     implementation project(':common')
+    testImplementation 'org.clojure:test.check:1.1.1'
+    testImplementation 'org.mockito:mockito-core:3.12.4'
 }
 
 sourceSets {
@@ -59,10 +81,13 @@ processResources {
         include 'mcmod.info'
         expand 'version':project.version, 'mcversion':project.minecraft.version
     }
-        
+
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
     }
+    
+    from project(':acmod').sourceSets.main.resources
+    from project(':common').sourceSets.main.resources
 }
 
 jar {

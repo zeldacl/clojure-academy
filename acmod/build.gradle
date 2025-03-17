@@ -14,16 +14,19 @@ checkClojure.enabled = false
 repositories {
     mavenCentral()
     maven {
-        name = 'Clojars'
-        url = 'https://repo.clojars.org/'
+        name = 'ClojarsRepo'
+        url = 'https://repo.clojars.org'
     }
     maven { url = 'https://plugins.gradle.org/m2' }
 }
 
 dependencies {
     implementation project(':common')
-    implementation 'org.clojure:clojure:1.12.0'
+    implementation 'org.clojure:clojure:1.10.1'
     implementation 'org.clojure:tools.logging:1.2.4'
+    implementation 'org.clojure:data.json:2.4.0'
+    testImplementation 'org.clojure:test.check:1.1.1'
+    testImplementation 'org.mockito:mockito-core:3.12.4'
 }
 
 sourceSets {
@@ -32,12 +35,26 @@ sourceSets {
         clojure.srcDirs = ['src/main/clojure']
         resources.srcDirs = ['src/main/resources']
     }
+    test {
+        clojure {
+            srcDirs = ['src/test/clojure']
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
 }
 
 clojure {
     builds.main.reflection = 'warn'
     builds.main.aotAll()
     builds.main.compiler.directLinking = true
+    builds {
+        test {
+            reflection = 'warn'
+            aotNamespaces = ['cn.academy.core.test.*']
+        }
+    }
 }
 
 jar {
@@ -61,3 +78,11 @@ task createDirectoryStructure {
 }
 
 build.dependsOn createDirectoryStructure
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

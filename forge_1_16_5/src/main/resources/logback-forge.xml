@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="FORGE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/forge-1.16.5-academy.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/forge-1.16.5-academy-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} MC:%X{minecraft} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="cn.academy" level="DEBUG">
+        <appender-ref ref="FORGE" />
+    </logger>
+
+    <logger name="cn.academy.forge_1_16_5" level="DEBUG">
+        <appender-ref ref="FORGE" />
+    </logger>
+</configuration>

@@ -1,4 +1,21 @@
-include ':acmod'
-//include ':forge_v1_15'
-rootProject.name = 'my-minecraft-mod'
-include 'common', 'forge_1_12_2', 'forge_1_15_2', 'forge_1_16_5'
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url = 'https://maven.minecraftforge.net/' }
+        maven { url = 'https://repo.clojars.org/' }
+    }
+}
+
+rootProject.name = 'clojure-academy'
+
+include 'acmod'
+include 'common'
+include 'forge_1_12_2'
+include 'forge_1_15_2'
+include 'forge_1_16_5'
+
+project(':acmod').projectDir = file('acmod')
+project(':common').projectDir = file('common')
+project(':forge_1_12_2').projectDir = file('forge_1_12_2')
+project(':forge_1_15_2').projectDir = file('forge_1_15_2')
+project(':forge_1_16_5').projectDir = file('forge_1_16_5')

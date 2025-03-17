@@ -1,3 +1,7 @@
+plugins {
+    id 'dev.clojurephant.clojure' version '0.6.0' apply false
+}
+
 buildscript {
     repositories {
         maven { url uri('./repo') }
@@ -60,17 +64,33 @@ allprojects {
             url = 'https://maven.minecraftforge.net/'
         }
         maven { url = 'https://libraries.minecraft.net/' }  // Add Minecraft libraries
+        mavenCentral()
+        maven {
+            name = 'ClojarsRepo'
+            url = 'https://repo.clojars.org'
+        }
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net'
+        }
     }
 }
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'maven-publish'
     
     compileJava.options.encoding = "UTF-8"
     
     dependencies {
         implementation 'org.clojure:clojure:1.12.0'
         implementation 'org.clojure:tools.logging:1.2.4'
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
+        }
     }
 }
 

@@ -42,8 +42,60 @@
   (create-item-stack [this block count meta]
     "Create an ItemStack"))
 
-;; Dynamic var to hold the current factory instance
+;; Dynamic var to hold the current Forge factory implementation
 (def ^:dynamic *forge-factory* nil)
+
+;; Core API functions that will be implemented by each Forge version
+(defn create-tile-entity [factory]
+  ((:create-tile-entity factory)))
+
+(defn add-capability-provider! [tile-entity provider]
+  ((:add-capability! *forge-factory*) tile-entity provider))
+
+(defn mark-dirty! [tile-entity]
+  ((:mark-dirty! *forge-factory*) tile-entity))
+
+(defn get-world-time []
+  ((:get-world-time *forge-factory*)))
+
+(defn put-double! [compound key value]
+  ((:put-double! *forge-factory*) compound key value))
+
+(defn put-boolean! [compound key value]
+  ((:put-boolean! *forge-factory*) compound key value))
+
+(defn put-int! [compound key value]
+  ((:put-int! *forge-factory*) compound key value))
+
+(defn get-double [compound key default]
+  ((:get-double *forge-factory*) compound key default))
+
+(defn get-boolean [compound key default]
+  ((:get-boolean *forge-factory*) compound key default))
+
+(defn get-int [compound key default]
+  ((:get-int *forge-factory*) compound key default))
+
+(defn get-tile-entity [world pos]
+  ((:get-tile-entity *forge-factory*) world pos))
+
+(defn is-cat-engine? [tile-entity]
+  ((:is-cat-engine? *forge-factory*) tile-entity))
+
+(defn is-remote? [world]
+  ((:is-remote? *forge-factory*) world))
+
+(defn send-message [player message & args]
+  (apply (:send-message *forge-factory*) player message args))
+
+(defn on-tile-entity-tick! [tile-entity callback]
+  ((:on-tile-entity-tick! *forge-factory*) tile-entity callback))
+
+(defn on-save-nbt! [tile-entity callback]
+  ((:on-save-nbt! *forge-factory*) tile-entity callback))
+
+(defn on-load-nbt! [tile-entity callback]
+  ((:on-load-nbt! *forge-factory*) tile-entity callback))
 
 (defn set-forge-factory!
   "Set the active Forge block factory implementation"

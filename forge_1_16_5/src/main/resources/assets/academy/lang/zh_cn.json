@@ -1,0 +1,6 @@
+{
+  "block.academy.cat_engine": "猫引擎",
+  "ac.cat_engine.linked": "已连接到 %s",
+  "ac.cat_engine.unlink": "已解除连接",
+  "ac.cat_engine.notfound": "范围内未找到无线节点"
+}

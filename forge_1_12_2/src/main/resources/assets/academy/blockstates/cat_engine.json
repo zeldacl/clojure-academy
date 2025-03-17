@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "normal": { "model": "academy:cat_engine" }
+  }
+}

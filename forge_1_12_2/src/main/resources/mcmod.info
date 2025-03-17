@@ -1,0 +1,14 @@
+[{
+  "modid": "academy",
+  "name": "Clojure Academy",
+  "description": "Academy Craft reimplemented in Clojure",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Academy Team"],
+  "credits": "Original AcademyCraft Team",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]

@@ -1,93 +1,53 @@
 (ns cn.academy.block.block.block-node
-  (:require [clojure.tools.logging :as log]
+  (:require [cn.academy.block.node :as node]
             [cn.academy.api.block :as block-api])
-  (:import [cn.academy.api.block IForgeBlockFactory IBlockProperties IBlockContainer]))
+  (:import [net.minecraft.block.material Material]))
 
-;; Get the factory instance
-(def forge-factory (atom nil))
+(def node-types
+  {:basic {:name "basic"
+           :max-energy 15000
+           :bandwidth 150
+           :range 9
+           :capacity 5}
+   :standard {:name "standard"
+              :max-energy 50000
+              :bandwidth 300
+              :range 12
+              :capacity 10}
+   :advanced {:name "advanced"
+              :max-energy 200000
+              :bandwidth 900
+              :range 19
+              :capacity 20}})
 
-(defn set-forge-factory! [factory]
-  (reset! forge-factory factory))
+(defprotocol INodeBlock
+  (create-tile-entity [this world meta])
+  (get-node-properties [this])
+  (get-container [this player world pos]))
 
-;; Get properties system
-(def block-properties (atom nil))
+(defrecord NodeBlock [properties type]
+  INodeBlock
+  (create-tile-entity [_ world meta]
+    (block-api/create-tile-entity 
+      (merge 
+        {:node-type type
+         :max-energy (get-in node-types [type :max-energy])
+         :bandwidth (get-in node-types [type :bandwidth])
+         :range (get-in node-types [type :range])
+         :capacity (get-in node-types [type :capacity])}
+        properties)))
+  
+  (get-node-properties [_]
+    (get node-types type))
+  
+  (get-container [_ player world pos]
+    (when-let [tile (.getTileEntity world pos)]
+      (when (instance? cn.academy.block.tileentity.TileNode tile)
+        (block-api/create-container {:tile tile :player player})))))
 
-(defn init-properties! []
-  (when-let [factory @forge-factory]
-    (reset! block-properties (.createBlockProperties factory))))
-
-;; Define the properties using abstraction
-(def connected (atom nil))
-(def energy (atom nil))
-
-(defn init-block-properties! []
-  (when-let [props @block-properties]
-    (reset! connected (.createBooleanProperty props "connected"))
-    (reset! energy (.createIntegerProperty props "energy" 0 4))))
-
-;; Define the NodeType record
-(defrecord NodeType [name max-energy bandwidth range capacity]
-  Object
-  (toString [_] name))
-
-;; Define the node types
-(def node-types 
-  {:basic (->NodeType "basic" 15000 150 9 5)
-   :standard (->NodeType "standard" 50000 300 12 10)
-   :advanced (->NodeType "advanced" 200000 900 19 20)})
-
-;; Create block using abstraction
-(defn create-block-node []
-  (let [material (-> (block-api/*forge-factory* :create-block-properties)
-                    (block-api/get-block-material "rock"))
-        container (-> (block-api/*forge-factory* :create-block-container material))]
-    
-    ;; Set basic block properties
-    (block-api/set-hardness! container 3.0)
-    (block-api/set-harvest-level! container "pickaxe" 1)
-    
-    ;; Add our custom properties
-    (doto container
-      (block-api/add-property node-active)
-      (block-api/add-property node-level))
-    
-    container))
-
-(defn get-node-level [state]
-  (block-api/get-property state node-level))
-
-(defn set-node-level [state level]
-  (block-api/with-property state node-level level))
-
-(defn is-node-active? [state]
-  (block-api/get-property state node-active))
-
-(defn set-node-active [state active]
-  (block-api/with-property state node-active active))
-
-;; Factory function to create block instances
-(defn block-node [node-type]
-  (create-block-node node-type))
-
-;; Export the constructor functions for Java interop
-(gen-class
-  :name cn.academy.block.block.BlockNode$Factory
-  :methods [^:static [createBasic [] Object]
-            ^:static [createStandard [] Object]
-            ^:static [createAdvanced [] Object]
-            ^:static [setForgeFactory [cn.academy.api.block.IForgeBlockFactory] void]]
-  :prefix "block-factory-")
-
-(defn block-factory-setForgeFactory [factory]
-  (set-forge-factory! factory)
-  (init-properties!)
-  (init-block-properties!))
-
-(defn block-factory-createBasic []
-  (block-node :basic))
-
-(defn block-factory-createStandard []
-  (block-node :standard))
-
-(defn block-factory-createAdvanced []
-  (block-node :advanced))
+(defn create-node-block [type]
+  (->NodeBlock 
+    {:material Material/ROCK
+     :hardness 2.5
+     :harvest-level ["pickaxe" 1]}
+    type))
