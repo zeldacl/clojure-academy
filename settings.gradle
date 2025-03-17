@@ -1,0 +1,4 @@
+include ':acmod'
+//include ':forge_v1_15'
+rootProject.name = 'my-minecraft-mod'
+include 'common', 'forge_1_12_2', 'forge_1_15_2', 'forge_1_16_5'

@@ -1,0 +1,54 @@
+apply plugin: 'java-library'
+apply plugin: "dev.clojurephant.clojure"
+apply plugin: 'java'
+
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+
+version = '1.0'
+group = 'cn.academy'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.minecraftforge.net/' }
+}
+
+sourceSets {
+    main {
+        java { srcDirs = ['src/main/java'] }
+        clojure { srcDirs = ['src/main/clojure'] }
+        resources { srcDirs = ['src/main/resources'] }
+    }
+}
+
+dependencies {
+    api 'org.clojure:clojure:1.12.0'
+    api 'org.clojure:tools.logging:1.2.4'
+    compileOnly 'net.minecraftforge:forge:1.12.2-14.23.5.2855'
+    implementation 'org.clojure:clojure:1.10.1'
+    // Add other common dependencies here
+}
+
+checkClojure.enabled = false
+
+clojure.builds {
+    main {
+        reflection = 'warn'
+        aotAll()
+        
+        compiler {
+            directLinking = true
+        }
+    }
+}
+
+// Create directories for each module
+task createDirectoryStructure {
+    doLast {
+        // Common module directories
+        mkdir "src/main/java"
+        mkdir "src/main/clojure"
+        mkdir "src/main/resources"
+    }
+}
+
+build.dependsOn createDirectoryStructure

@@ -1,0 +1,124 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'dev.clojurephant.clojure'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+
+version = '1.0'
+group = 'cn.academy'
+archivesBaseName = 'clojure-academy-1.15.2'
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+
+minecraft {
+    version = '1.15.2-31.2.0'
+    runDir = 'run'
+    mappings channel: 'snapshot', version: '20200225-1.15.1'
+    
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                clojureacademy {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                clojureacademy {
+                    source sourceSets.main
+                }
+            }
+        }
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+            args '--mod', 'cljacademy', '--all', '--output', file('src/generated/resources/')
+            mods {
+                clojureacademy {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+checkClojure.enabled = false
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.15.2-31.2.0'
+    implementation project(':acmod')
+    implementation project(':common')
+}
+
+sourceSets {
+    main {
+        java { srcDirs = ['src/main/java'] }
+        clojure { srcDirs = ['src/main/clojure'] }
+        resources { srcDirs = ['src/main/resources'] }
+    }
+}
+
+clojure {
+    builds.main.reflection = 'warn'
+    builds.main.aotAll()
+    builds.main.compiler.directLinking = true
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", '1.15.2'
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'META-INF/mods.toml'
+        expand 'version':project.version, 'mcversion':'1.15.2'
+    }
+        
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'META-INF/mods.toml'
+    }
+}
+
+jar {
+    from sourceSets.main.output
+    manifest {
+        attributes([
+            "Specification-Title": "ClojureAcademy",
+            "Specification-Vendor": "clojure-academy",
+            "Specification-Version": "1",
+            "Implementation-Title": "ClojureAcademy",
+            "Implementation-Version": project.version,
+            "Implementation-Vendor" :"clojure-academy",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+task createDirectoryStructure {
+    doLast {
+        mkdir "src/main/java"
+        mkdir "src/main/clojure"
+        mkdir "src/main/resources"
+        mkdir "src/main/resources/META-INF"
+        mkdir "src/main/resources/assets/${archivesBaseName}"
+        mkdir "run"
+    }
+}
+
+build.dependsOn createDirectoryStructure

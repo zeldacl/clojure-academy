@@ -1,0 +1,63 @@
+apply plugin: 'java'
+apply plugin: 'dev.clojurephant.clojure'
+apply plugin: 'maven-publish'
+
+archivesBaseName = "${modid}-common"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+checkClojure.enabled = false
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Clojars'
+        url = 'https://repo.clojars.org/'
+    }
+    maven { url = 'https://plugins.gradle.org/m2' }
+}
+
+dependencies {
+    implementation project(':common')
+    implementation 'org.clojure:clojure:1.12.0'
+    implementation 'org.clojure:tools.logging:1.2.4'
+}
+
+sourceSets {
+    main {
+        java.srcDirs = ['src/main/java']
+        clojure.srcDirs = ['src/main/clojure']
+        resources.srcDirs = ['src/main/resources']
+    }
+}
+
+clojure {
+    builds.main.reflection = 'warn'
+    builds.main.aotAll()
+    builds.main.compiler.directLinking = true
+}
+
+jar {
+    from sourceSets.main.output
+    manifest {
+        attributes([
+            'Implementation-Title': 'Clojure Academy',
+            'Implementation-Version': '1.0',
+            'Implementation-Vendor' : 'academy',
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+task createDirectoryStructure {
+    doLast {
+        mkdir "src/main/java"
+        mkdir "src/main/clojure"
+        mkdir "src/main/resources"
+    }
+}
+
+build.dependsOn createDirectoryStructure
