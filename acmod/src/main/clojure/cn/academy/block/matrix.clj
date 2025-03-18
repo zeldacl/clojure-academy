@@ -1,87 +1,119 @@
 (ns cn.academy.block.matrix
-  (:require [cn.academy.block.matrix-state :as state]
-            [cn.academy.block.matrix-inventory :as inv]
-            [cn.academy.block.matrix-energy :as energy]
-            [cn.academy.block.matrix-config :as config]))
+  (:require [cn.academy.block.core :as block]
+            [cn.academy.energy.core :as energy]))
 
-(defprotocol IMatrix
-  "Main protocol for matrix functionality"
-  (get-state [this]
-    "Get matrix state")
-  (get-inventory [this]
-    "Get matrix inventory")
-  (get-energy-storage [this]
-    "Get energy storage")
-  (get-config [this]
-    "Get matrix configuration")
-  (update! [this]
-    "Update matrix logic")
-  (is-valid-core? [this item]
-    "Check if item can be used as core")
-  (is-valid-plate? [this item]
-    "Check if item can be used as plate"))
+(def matrix-properties
+  (block/create-properties
+    :hardness 3.0
+    :resistance 3.0
+    :light-level 15
+    :material :stone))
 
-(defrecord Matrix [state inventory energy config]
-  IMatrix
-  (get-state [_] state)
+(def ^:private matrix-structure
+  [[-1 0 -1] [0 0 -1] [1 0 -1]
+   [-1 0 0]  [0 0 0]  [1 0 0]
+   [-1 0 1]  [0 0 1]  [1 0 1]])
+
+(defrecord MatrixBlock [position id owner storage]
+  block/IBlock
+  (get-position [_] position)
   
-  (get-inventory [_] inventory)
+  (get-properties [_] matrix-properties)
   
-  (get-energy-storage [_] energy)
+  (on-placed [this pos placer data]
+    (assoc this 
+           :position pos
+           :owner (:id placer)))
   
-  (get-config [_] config)
+  (on-removed [_ pos]
+    (when-let [structure (get-structure pos)]
+      (break-structure! structure)))
   
-  (update! [_]
-    (when (state/is-formed? state)
-      (energy/update-energy! energy)))
+  (on-activated [this pos activator data]
+    (when-not (:sneaking? activator)
+      (when-let [center (get-center-pos pos)]
+        {:action :open-gui
+         :pos center})))
   
-  (is-valid-core? [_ item]
-    (and item
-         (= (:type item) :matrix_core)
-         (pos? (:level item))))
+  (can-place? [_ pos]
+    (valid-placement? pos))
   
-  (is-valid-plate? [_ item]
-    (and item
-         (= (:type item) :matrix_plate))))
+  (can-remove? [_ pos]
+    true)
 
-(def matrix-structure
-  "Define the 3x3x3 matrix structure"
-  (for [x [-1 0 1]
-        y [-1 0 1]
-        z [-1 0 1]]
-    [x y z]))
+  block/IBlockEntity  
+  (load-data [this data]
+    (assoc this
+           :id (:id data)
+           :owner (:owner data)
+           :storage (:storage data)))
+  
+  (save-data [this]
+    {:id id
+     :owner owner
+     :storage storage})
+  
+  (get-capabilities [_]
+    [{:type :energy
+      :handler (energy/create-handler storage)}])
+  
+  (mark-dirty [this]
+    this)
+  
+  (on-load [this]
+    (when-let [structure (try-form-structure position)]
+      (register-structure! structure)))
+  
+  (on-unload [_]
+    nil))
 
-(defn create-matrix []
-  (let [config (config/create-config)
-        inventory (inv/create-matrix-inventory #(is-valid-core? % nil)
-                                             #(is-valid-plate? % nil))
-        state (state/create-matrix-state inventory)
-        energy (energy/create-matrix-energy state config)]
-    (->Matrix state inventory energy config)))
+(defn create-matrix
+  "Create a new matrix block instance"
+  [& {:keys [position id owner]
+      :or {position nil
+           id (random-uuid)
+           owner nil}}]
+  (->MatrixBlock position id owner (atom {:energy 0
+                                         :capacity 100000
+                                         :max-transfer 1000})))
 
-(defn get-core-level [matrix]
-  (state/get-core-level (:state matrix)))
+(defn get-structure
+  "Get matrix structure positions relative to center"
+  []
+  matrix-structure)
 
-(defn get-plate-count [matrix]
-  (state/get-plate-count (:state matrix)))
+(defn- valid-placement?
+  "Check if matrix can be placed at position"
+  [pos]
+  (every? #(can-replace-block? (offset-pos pos %))
+          matrix-structure))
 
-(defn get-energy-stored [matrix]
-  (energy/get-energy-stored (:energy matrix)))
+(defn- try-form-structure
+  "Attempt to form matrix structure at position"
+  [pos]
+  (when (valid-placement? pos)
+    (for [offset matrix-structure]
+      (offset-pos pos offset))))
 
-(defn get-energy-capacity [matrix]
-  (energy/get-energy-capacity (:energy matrix)))
+(defn break-structure!
+  "Break matrix multiblock structure"
+  [structure]
+  (doseq [pos structure]
+    (remove-block! pos)))
 
-(defn get-position [matrix]
-  (state/get-position (:state matrix)))
+(defn get-energy-level
+  "Get current energy level 0-1"
+  [matrix]
+  (let [storage (:storage matrix)]
+    (/ (:energy @storage)
+       (:capacity @storage))))
 
-(defn set-position! [matrix pos]
-  (state/set-position! (:state matrix) pos))
+(defn get-energy-stored
+  "Get stored energy amount"
+  [matrix]
+  (get-in @(:storage matrix) [:energy]))
 
-(defn is-formed? [matrix]
-  (state/is-formed? (:state matrix)))
-
-(defn try-form! [matrix validator]
-  (state/try-form! (:state matrix) validator))
-
-(defn break! [matrix]
-  (state/break! (:state matrix)))
+(defn get-energy-capacity
+  "Get maximum energy capacity"
+  [matrix]
+  (get-in @(:storage matrix) [:capacity]))
