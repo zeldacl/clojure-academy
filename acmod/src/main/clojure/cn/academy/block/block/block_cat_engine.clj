@@ -1,7 +1,8 @@
 (ns cn.academy.block.block.block-cat-engine
   (:require [cn.academy.api.block :as block-api]
-            [cn.academy.energy.api.wireless-helper :as wireless]
-            [cn.academy.energy.api.block.wireless-node :as wireless-node]
+            [cn.academy.energy.api.wireless :as wireless]
+            [cn.academy.energy.api.wireless-helper :as wireless-helper]
+            [cn.academy.block.tileentity.tile-cat-engine :as tile-engine]
             [cn.lambdalib2.util.rand-utils :as rand-utils])
   (:import [net.minecraft.block.material Material]))
 
@@ -23,16 +24,17 @@
     (when-let [tile-entity (block-api/get-tile-entity world pos)]
       (when (block-api/is-cat-engine? tile-entity)
         (when-not (block-api/is-remote? world)
-          (if (wireless/generator-linked? tile-entity)
+          (if (wireless-helper/is-generator-linked? tile-entity)
             (do 
-              (wireless/unlink-generator! tile-entity)
+              (wireless-helper/unlink-generator! tile-entity)
               (block-api/send-message player "ac.cat_engine.unlink"))
-            (let [nodes (wireless/get-nodes-in-range world pos)]
+            (let [nodes (wireless-helper/get-nodes-in-range world pos)]
               (if (empty? nodes)
                 (block-api/send-message player "ac.cat_engine.notfound")
-                (let [node (rand-utils/rand-nth nodes)]
-                  (block-api/send-message player "ac.cat_engine.linked" [(wireless-node/get-node-name node)])
-                  (wireless/link-generator! tile-entity node))))))
+                (let [node (rand-nth nodes)]
+                  (wireless-helper/link-generator! tile-entity node)
+                  (block-api/send-message player "ac.cat_engine.linked" 
+                                        [(wireless/get-network-name node)]))))))
         true)))
   
   (is-opaque-cube? [_ _]
@@ -41,6 +43,6 @@
   (get-render-type [_ _]
     :invisible))
 
-(defn create-cat-engine []
+(defn create []
   (->CatEngineBlock
     {:material Material/ROCK}))

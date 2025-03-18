@@ -1,117 +1,104 @@
 (ns cn.academy.block.tileentity.tile-cat-engine
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
-            [clojure.tools.logging :as log]
-            [cn.academy.energy.api.wireless-helper :as wireless]
-            [cn.academy.energy.api.tile-entity :as energy-tile]))
+            [cn.academy.energy.api.wireless :as wireless]
+            [clojure.tools.logging :as log])
+  (:import [net.minecraft.nbt NBTTagCompound]))
 
-;; Cat Engine TileEntity constants
+;; Constants
 (def ^:const ENERGY_MAX 100000.0)
 (def ^:const ENERGY_GEN_PER_TICK 5.0)
+(def ^:const ENERGY_BANDWIDTH 200.0)
 
-;; Cat Engine TileEntity state
-(defrecord CatEngineState [energy active facing])
+;; State record
+(defrecord CatEngineState [energy rotation last-render this-tick-gen active])
 
-(defn create-cat-engine-state []
-  (->CatEngineState 0.0 false 0))
+(defn create-initial-state []
+  (->CatEngineState 0.0 0.0 0 0.0 false))
 
 (defn tick-engine [state]
   (if (:active state)
-    (update state :energy #(min (+ % ENERGY_GEN_PER_TICK) ENERGY_MAX))
-    state))
+    (-> state
+        (update :energy #(min (+ % ENERGY_GEN_PER_TICK) ENERGY_MAX))
+        (assoc :this-tick-gen ENERGY_GEN_PER_TICK))
+    (assoc state :this-tick-gen 0.0)))
 
-;; TileEntity implementation for Forge
-(defn create-cat-engine-tile []
-  (let [factory @block-api/*forge-factory*
-        tile-entity (block-api/create-tile-entity factory)
-        state-atom (atom (create-cat-engine-state))]
-    
-    ;; Register capability provider for energy
-    (block-api/add-capability-provider! 
-      tile-entity 
-      (energy-api/create-energy-storage 
-        ENERGY_MAX 
-        (fn [] (:energy @state-atom))
-        (fn [amount] (swap! state-atom assoc :energy amount))))
-    
-    ;; Register tick method
-    (block-api/on-tile-entity-tick! 
-      tile-entity 
-      (fn []
-        (swap! state-atom tick-engine)
-        (when (zero? (mod (block-api/get-world-time) 20))
-          (block-api/mark-dirty! tile-entity))))
-    
-    ;; Implement NBT serialization
-    (block-api/on-save-nbt! 
-      tile-entity 
-      (fn [compound]
-        (let [state @state-atom]
-          (doto compound
-            (block-api/put-double! "energy" (:energy state))
-            (block-api/put-boolean! "active" (:active state))
-            (block-api/put-int! "facing" (:facing state))))))
-    
-    ;; Implement NBT deserialization
-    (block-api/on-load-nbt! 
-      tile-entity 
-      (fn [compound]
-        (reset! state-atom
-                (->CatEngineState
-                  (block-api/get-double compound "energy" 0.0)
-                  (block-api/get-boolean compound "active" false)
-                  (block-api/get-int compound "facing" 0)))))
-    
-    tile-entity))
-
-;; Export the constructor function for Java interop
-(gen-class
-  :name cn.academy.block.tileentity.TileCatEngine$Factory
-  :methods [^:static [create [] Object]]
-  :prefix "tile-factory-")
-
-(defn tile-factory-create []
-  (create-cat-engine-tile))
-
-(defprotocol ICatEngine
+(defprotocol ICatEngineTile
   (tick [this])
-  (get-energy-stored [this])
-  (add-energy [this amount])
-  (get-max-energy [this])
-  (can-receive-energy? [this])
-  (get-node [this]))
-
-(defrecord TileCatEngine [properties]
-  ICatEngine
-  (tick [_]
-    (when (wireless/has-node? properties)
-      (let [gen-amount (+ 3 (rand-int 2))]
-        (wireless/receive-energy (:node properties) gen-amount))))
-  
-  (get-energy-stored [_]
-    0)  ; Cat engine doesn't store energy, transfers directly
-  
-  (add-energy [_ _]
-    0)  ; Cannot receive energy
-  
-  (get-max-energy [_]
-    0)  ; No energy storage
-  
-  (can-receive-energy? [_]
-    false)  ; Only generates, doesn't receive
-  
-  (get-node [_]
-    (:node properties))
-
-  energy-tile/IEnergyTile
-  (energy-stored [this]
-    (get-energy-stored this))
-  
-  (max-energy [this]
-    (get-max-energy this))
-  
-  (receive-energy [this amount]
-    (add-energy this amount)))
+  (get-energy [this])
+  (set-energy! [this amount])
+  (get-rotation [this])
+  (set-rotation! [this rot])
+  (get-last-render [this])
+  (set-last-render! [this time])
+  (get-this-tick-gen [this])
+  (set-this-tick-gen! [this gen])
+  (get-active [this])
+  (set-active! [this active]))
 
 (defn create []
-  (->TileCatEngine {:node nil}))
+  (let [state-atom (atom (create-initial-state))]
+    (reify 
+      ICatEngineTile
+      (tick [_]
+        (swap! state-atom tick-engine))
+      
+      (get-energy [_]
+        (:energy @state-atom))
+      
+      (set-energy! [_ amount]
+        (swap! state-atom assoc :energy amount))
+      
+      (get-rotation [_]
+        (:rotation @state-atom))
+      
+      (set-rotation! [_ rot]
+        (swap! state-atom assoc :rotation rot))
+      
+      (get-last-render [_]
+        (:last-render @state-atom))
+      
+      (set-last-render! [_ time]
+        (swap! state-atom assoc :last-render time))
+      
+      (get-this-tick-gen [_]
+        (:this-tick-gen @state-atom))
+      
+      (set-this-tick-gen! [_ gen]
+        (swap! state-atom assoc :this-tick-gen gen))
+      
+      (get-active [_]
+        (:active @state-atom))
+      
+      (set-active! [_ active]
+        (swap! state-atom assoc :active active))
+      
+      block-api/INBTSerializable
+      (write-to-nbt [_ tag]
+        (let [state @state-atom]
+          (doto tag
+            (.setDouble "energy" (:energy state))
+            (.setDouble "rotation" (:rotation state))
+            (.setLong "lastRender" (:last-render state))
+            (.setDouble "thisTickGen" (:this-tick-gen state))
+            (.setBoolean "active" (:active state)))))
+      
+      (read-from-nbt [_ tag]
+        (reset! state-atom
+          (->CatEngineState
+            (.getDouble tag "energy")
+            (.getDouble tag "rotation")
+            (.getLong tag "lastRender")
+            (.getDouble tag "thisTickGen")
+            (.getBoolean tag "active"))))
+      
+      wireless/IWirelessGenerator
+      (generate-energy [this amount]
+        (let [current (get-energy this)
+              generated (min amount (- ENERGY_MAX current))]
+          (when (pos? generated)
+            (set-energy! this (+ current generated)))
+          generated))
+      
+      (get-generation-rate [_]
+        ENERGY_GEN_PER_TICK))))

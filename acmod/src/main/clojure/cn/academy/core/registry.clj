@@ -17,7 +17,7 @@
   (get-in @registry-state [:tile-entities tile-id]))
 
 (defn init-registry! []
-  (register-block! "cat_engine" (cat-engine/create-cat-engine))
+  (register-block! "cat_engine" (cat-engine/create))
   (register-tile-entity! "cat_engine" tile-cat-engine/create))
 
 (defn clear-registry! []

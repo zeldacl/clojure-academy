@@ -22,4 +22,4 @@
       EnumBlockRenderType/MODEL)))
 
 (defn create []
-  (->ForgeCatEngine112 (core/create-cat-engine)))
+  (->ForgeCatEngine112 (core/create)))

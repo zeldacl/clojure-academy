@@ -22,4 +22,4 @@
       BlockRenderType/MODEL)))
 
 (defn create []
-  (->ForgeCatEngine116 (core/create-cat-engine)))
+  (->ForgeCatEngine116 (core/create)))
