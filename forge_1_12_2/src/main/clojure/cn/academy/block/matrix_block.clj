@@ -1,11 +1,13 @@
 (ns cn.academy.block.matrix-block
   (:require [cn.academy.block.matrix :as matrix]
-            [cn.academy.block.multi-block :as multi])
-  (:import [net.minecraft.block.material Material]
-           [net.minecraft.util EnumFacing EnumHand]
-           [net.minecraft.util.math BlockPos]
-           [net.minecraft.world World]
-           [net.minecraft.entity.player EntityPlayer]))
+            [cn.academy.block.matrix-energy :as energy]
+            [cn.academy.energy.energy-adapter :as energy-adapter]
+            [cn.academy.block.matrix-structure :as structure])
+  (:import [net.minecraft.block Block BlockState]
+           [net.minecraft.tileentity TileEntity]
+           [net.minecraft.util Direction]
+           [net.minecraftforge.common.capabilities Capability CapabilityInject ICapabilityProvider]
+           [net.minecraftforge.energy CapabilityEnergy IEnergyStorage]))
 
 (defprotocol IForgeMatrix
   (create-tile-entity [this world meta])

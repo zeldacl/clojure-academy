@@ -1,7 +1,7 @@
 (ns cn.academy.block.matrix-block
   (:require [cn.academy.block.matrix :as matrix]
             [cn.academy.block.matrix-energy :as energy]
-            [cn.academy.block.matrix-energy-adapter :as energy-adapter]
+            [cn.academy.energy.energy-adapter :as energy-adapter]
             [cn.academy.block.matrix-structure :as structure])
   (:import [net.minecraft.block Block BlockState]
            [net.minecraft.tileentity TileEntity]
