@@ -24,3 +24,33 @@
   (render-background [this] "Render background")
   (render-foreground [this] "Render foreground")
   (render-tooltips [this x y] "Render tooltips"))
+
+(defprotocol IScreen
+  "Core screen functionality"
+  (init [this] "Initialize the screen")
+  (render [this state data] "Render the screen")
+  (tick [this] "Update screen state")
+  (on-close [this] "Handle screen closing"))
+
+(defprotocol IContainer
+  "Container functionality"
+  (get-slots [this] "Get container slots")
+  (can-interact? [this player] "Check if player can interact")
+  (transfer-stack [this slot player] "Transfer stack between container and player"))
+
+(defprotocol IScreenFactory
+  "Screen factory functionality"
+  (create-screen [this container player] "Create screen instance")
+  (get-screen-id [this] "Get unique screen identifier"))
+
+(defprotocol IContainerFactory
+  "Container factory functionality"
+  (create-container [this id player pos] "Create container instance")
+  (get-container-id [this] "Get unique container identifier"))
+
+(defprotocol IGuiRegistry
+  "GUI registry functionality"
+  (register-screen [this factory] "Register screen factory")
+  (register-container [this factory] "Register container factory")
+  (create-menu [this id player pos] "Create menu for given ID")
+  (open-screen [this screen player] "Open screen for player"))

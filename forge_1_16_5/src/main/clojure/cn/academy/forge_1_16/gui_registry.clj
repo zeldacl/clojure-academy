@@ -1,33 +1,28 @@
 (ns cn.academy.forge-1-16.gui-registry
-  (:require [cn.academy.forge-1-16.gui-bridge :as bridge])
-  (:import [net.minecraft.inventory.container ContainerType]
-           [net.minecraft.client.gui.ScreenManager]
-           [net.minecraftforge.fml.event.lifecycle FMLClientSetupEvent]
-           [net.minecraftforge.eventbus.api SubscribeEvent]))
+  (:require [cn.academy.gui.core :as gui]
+            [cn.academy.forge-1-16.gui-bridge :as bridge])
+  (:import [net.minecraftforge.fml.event.lifecycle FMLClientSetupEvent]
+           [net.minecraftforge.common.extensions IForgeContainerType]
+           [net.minecraft.inventory.container ContainerType]
+           [net.minecraft.util ResourceLocation]))
 
-(def ^:private gui-bridge (bridge/create-bridge))
-(def ^:private container-types (atom {}))
+(def registry (bridge/create-registry))
 
-(defn register-gui 
-  "Register a GUI with provided ID and factory function"
-  [registry id factory]
-  (let [type (bridge/register-type gui-bridge registry id
-               (fn [window-id player world pos]
-                 (when-let [gui (factory world pos)]
-                   (bridge/create-container gui-bridge gui player))))]
-    (swap! container-types assoc id type)
-    type))
+(defn register-screen-factory [factory]
+  (gui/register-screen registry factory))
 
-(defn register-screen
-  "Register screen for container type"
-  [^FMLClientSetupEvent event container-type]
-  (.enqueueWork event
-    #(ScreenManager/registerFactory
-       container-type
-       (fn [container _]
-         (bridge/create-screen gui-bridge container)))))
+(defn register-container-factory [factory]
+  (gui/register-container registry factory))
 
-(defn get-container-type
-  "Get registered container type by ID"
-  [id]
-  (get @container-types id))
+(defn create-container [id player pos]
+  (gui/create-menu registry id player pos))
+
+(defn open-screen [container player]
+  (gui/open-screen registry container player))
+
+(defn register-container-type [id factory]
+  (ContainerType/register 
+    (str "academy:" id)
+    (reify IForgeContainerType
+      (create [_ windowId player data]
+        (create-container id player nil)))))
