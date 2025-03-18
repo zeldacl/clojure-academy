@@ -1,0 +1,17 @@
+# 方块和物品
+tile.cljacademy.cat_engine.name=猫猫引擎
+
+# 猫猫引擎界面和消息
+ac.cat_engine.linked=已连接到%s
+ac.cat_engine.unlink=已断开连接
+ac.cat_engine.notfound=范围内未找到无线节点
+gui.cat_engine.energy=能量：%d / %d
+gui.cat_engine.gen_rate=发电速率：%s IF/t
+gui.cat_engine.linked_to=已连接到：%s
+gui.cat_engine.not_linked=未连接到网络
+
+# 无线网络
+ac.wireless.node.basic=基础无线节点
+ac.wireless.node.improved=改进无线节点
+ac.wireless.node.advanced=高级无线节点
+ac.wireless.matrix=无线矩阵

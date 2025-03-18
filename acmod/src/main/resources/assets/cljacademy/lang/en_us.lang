@@ -1,0 +1,17 @@
+# Blocks and Items
+tile.cljacademy.cat_engine.name=Cat Engine
+
+# Cat Engine GUI and messages
+ac.cat_engine.linked=Linked to %s
+ac.cat_engine.unlink=Unlinked
+ac.cat_engine.notfound=No wireless node found in range
+gui.cat_engine.energy=Energy: %d / %d
+gui.cat_engine.gen_rate=Generation Rate: %s IF/t
+gui.cat_engine.linked_to=Connected to: %s
+gui.cat_engine.not_linked=Not connected to network
+
+# Wireless Network
+ac.wireless.node.basic=Basic Wireless Node
+ac.wireless.node.improved=Improved Wireless Node
+ac.wireless.node.advanced=Advanced Wireless Node
+ac.wireless.matrix=Wireless Matrix
