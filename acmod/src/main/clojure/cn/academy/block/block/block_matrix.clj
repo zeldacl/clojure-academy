@@ -15,5 +15,6 @@
                                     ;; TODO: Implement matrix block placement logic
                                     nil)}})
 
-(defn register! [registration mod-id]
-  (reg/register-block! registration block-matrix-def mod-id "matrix"))
+(defn register! [registration mod-id block-id block-def]
+  "Register the matrix block with the given registration implementation"
+  (reg/register-block! registration block-def mod-id block-id))

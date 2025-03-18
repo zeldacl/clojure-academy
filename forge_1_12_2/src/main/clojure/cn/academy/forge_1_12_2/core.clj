@@ -1,40 +1,34 @@
 (ns cn.academy.forge-1-12-2.core
-  (:require [cn.academy.core.registry :as registry]
-            [cn.academy.block.block.forge-cat-engine-1-12 :as cat-engine]
-            [cn.academy.client.render.cat-engine-renderer :as cat-renderer])
+  (:require [cn.academy.forge-1-12-2.registration :as registration])
   (:import [net.minecraftforge.fml.common Mod Mod$EventHandler]
-           [net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent]
-           [net.minecraftforge.event RegistryEvent$Register]
-           [net.minecraft.block Block]
-           [net.minecraft.item Item ItemBlock]
-           [net.minecraft.util ResourceLocation]))
+           [net.minecraftforge.fml.common.event FMLPreInitializationEvent FMLInitializationEvent FMLPostInitializationEvent]))
 
-(def MOD-ID "cljacademy")
+(gen-class
+  :name cn.academy.forge_1_12_2.AcademyCraft
+  :state state
+  :init init
+  :constructors {[] []}
+  :prefix "mod-"
+  :methods []
+  :annotations [[net.minecraftforge.fml.common.Mod 
+                {:modid "academy" 
+                 :name "Academy Craft" 
+                 :version "1.0.0"
+                 :acceptedMinecraftVersions "[1.12.2]"}]])
 
-(defn register-blocks [^RegistryEvent$Register event]
-  (let [cat-engine (cat-engine/create)
-        cat-engine-block (doto (.setRegistryName (ResourceLocation. MOD-ID "cat_engine"))
-                              (.setUnlocalizedName "cat_engine"))]
-    (.register (.getRegistry event) cat-engine-block)
-    (registry/register-block! "cat_engine" cat-engine)))
+(defn mod-init []
+  (let [registration-handler (registration/create-handler)]
+    (.register-deferred! registration-handler nil) ; nil since we don't use mod-bus in 1.12.2
+    [[] (atom {:registration registration-handler})]))
 
-(defn register-items [^RegistryEvent$Register event]
-  (let [cat-engine-block (registry/get-block "cat_engine")
-        cat-engine-item (doto (ItemBlock. cat-engine-block)
-                             (.setRegistryName (ResourceLocation. MOD-ID "cat_engine")))]
-    (.register (.getRegistry event) cat-engine-item)))
+(defn ^Mod$EventHandler mod-preInit [this ^FMLPreInitializationEvent event]
+  (-> (registration/create-registration)
+      (.setup-common!)))
 
-(defn register-tile-entities []
-  (registry/init-registry!))
+(defn ^Mod$EventHandler mod-init [this ^FMLInitializationEvent event]
+  (-> (registration/create-registration)
+      (.register-all!)))
 
-@Mod(modid = MOD-ID)
-(deftype CljAcademyMod []
-  Object
-  @Mod$EventHandler
-  (preInit [this event]
-    (register-tile-entities))
-  
-  @Mod$EventHandler
-  (init [this event]
-    (when (.isClient (FMLCommonHandler/instance))
-      (cat-renderer/register))))
+(defn ^Mod$EventHandler mod-postInit [this ^FMLPostInitializationEvent event]
+  (-> (registration/create-registration)
+      (.setup-client!)))

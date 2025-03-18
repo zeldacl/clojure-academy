@@ -1,47 +1,41 @@
 (ns cn.academy.forge-1-15-2.core
-  (:require [cn.academy.core.registry :as registry]
-            [cn.academy.block.block.forge-cat-engine-1-15 :as cat-engine]
-            [cn.academy.client.render.cat-engine-renderer :as cat-renderer])
-  (:import [net.minecraftforge.fml.common.Mod]
-           [net.minecraftforge.fml.event.lifecycle FMLClientSetupEvent FMLCommonSetupEvent]
-           [net.minecraftforge.registries ForgeRegistries]
-           [net.minecraft.block Block]
-           [net.minecraft.item Item BlockItem]
-           [net.minecraft.util ResourceLocation]))
-
-(def MOD-ID "cljacademy")
-
-(defn register-blocks []
-  (let [cat-engine (cat-engine/create)
-        cat-engine-block (doto (.setRegistryName (ResourceLocation. MOD-ID "cat_engine")))]
-    (.register ForgeRegistries/BLOCKS cat-engine-block)
-    (registry/register-block! "cat_engine" cat-engine)))
-
-(defn register-items []
-  (let [cat-engine-block (registry/get-block "cat_engine")
-        cat-engine-item (doto (BlockItem. cat-engine-block (Item$Properties.))
-                             (.setRegistryName (ResourceLocation. MOD-ID "cat_engine")))]
-    (.register ForgeRegistries/ITEMS cat-engine-item)))
-
-(defn register-tile-entities []
-  (registry/init-registry!))
-
-(defn setup-client [^FMLClientSetupEvent event]
-  (cat-renderer/register))
+  (:require [cn.academy.forge-1-15-2.registration :as registration])
+  (:import [net.minecraftforge.fml.common Mod]
+           [net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent FMLClientSetupEvent]
+           [net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext]
+           [java.util.function Consumer]))
 
 (defn setup-common [^FMLCommonSetupEvent event]
-  (register-blocks)
-  (register-items)
-  (register-tile-entities))
+  (-> (registration/create-registration)
+      (.setup-common!)))
 
-@Mod(MOD-ID)
-(deftype CljAcademyMod []
-  Object
-  (constructor [this]
-    (let [mod-bus (-> (FMLJavaModLoadingContext/get) .getModEventBus)]
-      (.addListener mod-bus (reify Consumer
-                             (accept [_ event]
-                               (setup-common event))))
-      (.addListener mod-bus (reify Consumer
-                             (accept [_ event]
-                               (setup-client event)))))))
+(defn setup-client [^FMLClientSetupEvent event]
+  (-> (registration/create-registration)
+      (.setup-client!)))
+
+(gen-class
+  :name cn.academy.forge_1_15_2.AcademyCraft
+  :state state
+  :init init
+  :constructors {[] []}
+  :prefix "mod-"
+  :methods [[setup [net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent] void]
+            [setupClient [net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent] void]]
+  :annotations [[net.minecraftforge.fml.common.Mod "academy"]])
+
+(defn mod-init []
+  (let [mod-bus (-> (FMLJavaModLoadingContext/get)
+                    .getModEventBus)
+        registration-handler (registration/create-handler)]
+    (.addListener mod-bus 
+                 (reify Consumer
+                   (accept [_ event]
+                     (setup-common event))))
+    (.addListener mod-bus
+                 (reify Consumer
+                   (accept [_ event]
+                     (setup-client event))))
+    ;; Register content
+    (.register-deferred! registration-handler mod-bus)
+    (.register-all! (registration/create-registration)))
+  [[] (atom {})])
