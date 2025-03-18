@@ -86,3 +86,19 @@ test {
         exceptionFormat "full"
     }
 }
+
+processResources {
+    from project(':importcode').file('AcademyCraft/src/main/resources/assets/academy/models/matrix.obj')
+    from project(':importcode').file('AcademyCraft/src/main/resources/assets/academy/textures/blocks/matrix.png')
+    from project(':importcode').file('AcademyCraft/src/main/resources/assets/academy/textures/models/matrix.png')
+    
+    rename 'matrix.obj', 'assets/cljacademy/models/block/wireless_matrix.obj'
+    rename 'matrix.png', 'assets/cljacademy/textures/blocks/wireless_matrix.png'
+    rename { fileName ->
+        if (fileName.endsWith('models/matrix.png')) {
+            'assets/cljacademy/textures/models/wireless_matrix.png'
+        } else {
+            fileName
+        }
+    }
+}

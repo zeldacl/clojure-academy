@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "crc",
+    "cmc",
+    "cec"
+  ],
+  "key": {
+    "c": {
+      "item": "cljacademy:constraint_plate"
+    },
+    "r": {
+      "item": "cljacademy:reso_crystal"
+    },
+    "m": {
+      "item": "cljacademy:machine_frame"
+    },
+    "e": {
+      "item": "cljacademy:energy_unit"
+    }
+  },
+  "result": {
+    "item": "cljacademy:wireless_matrix",
+    "count": 1
+  }
+}

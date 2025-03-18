@@ -1,5 +1,6 @@
 (ns cn.academy.block.registry
-  (:require [cn.academy.block.node-types :as types]))
+  (:require [cn.academy.block.node-types :as types]
+            [cn.academy.block.block.block-matrix :as matrix]))
 
 (defprotocol IBlockRegistration
   (register-block! [this block-id block])
@@ -14,3 +15,7 @@
     (let [block-id (str "node_" (name type-key))
           block (create-node-block forge-version type-key block-properties)]
       (register-block! registry block-id block))))
+
+(defn register-matrix! [registry]
+  (let [matrix-def (matrix/create-matrix)]
+    (register-block! registry "matrix" matrix-def)))

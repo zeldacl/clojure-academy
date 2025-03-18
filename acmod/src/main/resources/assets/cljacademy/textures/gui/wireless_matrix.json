@@ -1,0 +1,6 @@
+{
+  "textures": {
+    "background": "cljacademy:textures/gui/container/wireless_matrix.png",
+    "energy_bar": "cljacademy:textures/gui/container/energy_bar.png"
+  }
+}

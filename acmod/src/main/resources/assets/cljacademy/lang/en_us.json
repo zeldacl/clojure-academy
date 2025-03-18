@@ -11,5 +11,10 @@
   "block.cljacademy.wireless.node.basic": "Basic Wireless Node",
   "block.cljacademy.wireless.node.improved": "Improved Wireless Node",
   "block.cljacademy.wireless.node.advanced": "Advanced Wireless Node",
-  "block.cljacademy.wireless.matrix": "Wireless Matrix"
+  "block.cljacademy.wireless.matrix": "Wireless Matrix",
+  "block.cljacademy.wireless_matrix": "Wireless Matrix",
+  "container.cljacademy.wireless_matrix": "Wireless Matrix",
+  "gui.cljacademy.wireless_matrix.energy": "Energy: %d / %d",
+  "gui.cljacademy.wireless_matrix.core": "Core",
+  "gui.cljacademy.wireless_matrix.plates": "Plates"
 }
