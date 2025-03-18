@@ -2,52 +2,100 @@
   (:require [cn.academy.block.matrix :as matrix]))
 
 (defprotocol IBlockAdapter
-  "Protocol for platform-specific block implementation"
-  (create-block [this properties]
-    "Create a block with given properties")
-  (register-block! [this block block-id]
-    "Register a block with the platform"))
+  "Platform-independent block adapter"
+  (create-block [this config]
+    "Create a block with given config")
+  (get-block-properties [this config]
+    "Get platform-agnostic block properties")
+  (handle-block-activated [this world pos state player]
+    "Handle block activation")
+  (handle-block-placed [this world pos state placer stack]
+    "Handle block placement"))
 
 (defprotocol ITileEntityAdapter
-  "Protocol for platform-specific tile entity implementation"
-  (create-tile-entity-type [this block]
-    "Create a tile entity type for the block")
-  (register-tile-entity! [this tile-type tile-id]
-    "Register a tile entity type with the platform")
-  (create-tile-entity-instance [this tile-type pos]
-    "Create a tile entity instance"))
+  "Platform-independent tile entity adapter"
+  (create-tile-entity [this matrix world pos]
+    "Create a tile entity for given matrix and position")
+  (get-tile-position [this tile]
+    "Get position of tile entity")
+  (get-tile-world [this tile]
+    "Get world of tile entity")
+  (mark-tile-dirty! [this tile]
+    "Mark tile entity as needing save")
+  (invalidate-tile! [this tile]
+    "Invalidate tile entity"))
 
 (defprotocol IWorldAdapter
-  "Protocol for platform-specific world interaction"
-  (get-block-pos [this x y z]
-    "Create a block position")
+  "Platform-independent world interaction adapter"
+  (get-tile-at [this world pos]
+    "Get tile entity at position")
+  (set-tile-at! [this world pos tile]
+    "Set tile entity at position")
   (get-block-state [this world pos]
     "Get block state at position")
-  (set-block-state! [this world pos state]
-    "Set block state at position")
-  (get-tile-entity [this world pos]
-    "Get tile entity at position")
-  (schedule-tick [this world pos ticks]
-    "Schedule a block tick"))
+  (set-block-state! [this world pos state notify]
+    "Set block state at position"))
+
+(defprotocol IPositionAdapter
+  "Platform-independent position adapter"
+  (create-pos [this x y z]
+    "Create a position")
+  (get-x [this pos]
+    "Get x coordinate")
+  (get-y [this pos]
+    "Get y coordinate")
+  (get-z [this pos]
+    "Get z coordinate"))
+
+(defprotocol IMatrixStructureAdapter
+  "Platform-independent matrix structure adapter"
+  (create-structure [this]
+    "Create matrix structure")
+  (validate-structure [this world pos]
+    "Validate matrix structure at position")
+  (get-block-positions [this center]
+    "Get block positions in structure"))
 
 (defprotocol IPlayerAdapter
-  "Protocol for platform-specific player interaction"
+  "Platform-independent player adapter"
   (get-player-name [this player]
-    "Get player's name")
-  (can-break-block? [this player pos]
-    "Check if player can break block")
+    "Get player name")
+  (can-interact? [this player pos range]
+    "Check if player can interact")
+  (get-player-inventory [this player]
+    "Get player inventory")
   (send-message [this player message]
     "Send message to player"))
 
-(defprotocol INbtAdapter
-  "Protocol for platform-specific NBT handling"
-  (create-compound []
-    "Create a new NBT compound")
-  (put-boolean [this key value]
-    "Put boolean value")
-  (put-int [this key value]
-    "Put integer value")
-  (put-string [this key value]
-    "Put string value")
-  (put-compound [this key compound]
-    "Put compound value"))
+(defprotocol IMatrixGuiAdapter
+  "Platform-independent GUI adapter"
+  (open-gui [this player world pos]
+    "Open matrix GUI")
+  (create-container [this player tile]
+    "Create container for GUI")
+  (get-slot-positions [this]
+    "Get slot positions for GUI layout"))
+
+(defprotocol IMatrixDataAdapter
+  "Platform-independent data adapter" 
+  (serialize-matrix [this matrix]
+    "Serialize matrix data")
+  (deserialize-matrix! [this matrix data]
+    "Deserialize matrix data")
+  (create-data-tag []
+    "Create new data tag"))
+
+(defrecord MatrixBlockConfig [material hardness resistance light-level])
+
+(defn create-config
+  "Create standard matrix block config"
+  []
+  (->MatrixBlockConfig :rock 3.0 3.0 1))
+
+(defn create-matrix-structure
+  "Create standard matrix structure points"
+  []
+  [[0 0 0] [1 0 0]
+   [0 1 0] [1 1 0]
+   [0 0 1] [1 0 1]
+   [0 1 1] [1 1 1]])
