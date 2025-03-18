@@ -1,121 +1,87 @@
 (ns cn.academy.block.matrix
-  (:require [clojure.spec.alpha :as s]
+  (:require [cn.academy.block.matrix-state :as state]
+            [cn.academy.block.matrix-inventory :as inv]
             [cn.academy.block.matrix-energy :as energy]
-            [cn.academy.block.matrix-structure :as structure]))
-
-(def matrix-structure
-  [[0 0 0] [1 0 0]
-   [0 1 0] [1 1 0]
-   [0 0 1] [1 0 1]
-   [0 1 1] [1 1 1]])
+            [cn.academy.block.matrix-config :as config]))
 
 (defprotocol IMatrix
-  "Core matrix functionality"
-  (is-formed? [this])
-  (form! [this])
-  (break! [this])
-  (get-energy-handler [this])
-  (save-to-nbt [this])
-  (load-from-nbt! [this nbt]))
+  "Main protocol for matrix functionality"
+  (get-state [this]
+    "Get matrix state")
+  (get-inventory [this]
+    "Get matrix inventory")
+  (get-energy-storage [this]
+    "Get energy storage")
+  (get-config [this]
+    "Get matrix configuration")
+  (update! [this]
+    "Update matrix logic")
+  (is-valid-core? [this item]
+    "Check if item can be used as core")
+  (is-valid-plate? [this item]
+    "Check if item can be used as plate"))
 
-(defprotocol IMatrixBlock
-  "Matrix block behavior"
-  (on-activated [this pos state player]
-    "Handle block activation")
-  (on-placed [this pos state placer]
-    "Handle block placement")
-  (get-properties [this]
-    "Get block properties")
-  (create-tile-entity [this pos]
-    "Create a new tile entity"))
-
-(defprotocol IMatrixTileEntity
-  "Matrix tile entity behavior"
-  (tick [this]
-    "Update tile entity state")
-  (get-matrix [this]
-    "Get associated matrix")
-  (get-capability [this capability side]
-    "Get capability interface")
-  (invalidate [this]
-    "Handle tile entity invalidation"))
-
-(defrecord Matrix [energy-handler formed? state]
+(defrecord Matrix [state inventory energy config]
   IMatrix
-  (is-formed? [_] @formed?)
+  (get-state [_] state)
   
-  (form! [_] 
-    (reset! formed? true))
+  (get-inventory [_] inventory)
   
-  (break! [_]
-    (reset! formed? false))
+  (get-energy-storage [_] energy)
   
-  (get-energy-handler [_]
-    energy-handler)
+  (get-config [_] config)
   
-  (save-to-nbt [_]
-    {"formed" @formed?
-     "energy" (energy/save-to-nbt energy-handler)
-     "state" @state})
+  (update! [_]
+    (when (state/is-formed? state)
+      (energy/update-energy! energy)))
   
-  (load-from-nbt! [this nbt]
-    (reset! formed? (get nbt "formed"))
-    (reset! state (get nbt "state"))
-    (energy/load-from-nbt! energy-handler (get nbt "energy")))
+  (is-valid-core? [_ item]
+    (and item
+         (= (:type item) :matrix_core)
+         (pos? (:level item))))
+  
+  (is-valid-plate? [_ item]
+    (and item
+         (= (:type item) :matrix_plate))))
 
-  IMatrixBlock
-  (on-activated [_ pos state player]
-    (when @formed?
-      {:success true
-       :should-consume true}))
-  
-  (on-placed [this pos state placer]
-    (swap! state assoc :placer-name (str placer))
-    {:success true})
-  
-  (get-properties [_]
-    {:material :rock
-     :hardness 3.0
-     :resistance 3.0
-     :light-level 1
-     :has-tile-entity true})
-  
-  (create-tile-entity [this pos]
-    {:matrix this
-     :position pos
-     :capabilities #{:energy :inventory}}))
-
-(defrecord MatrixTileEntity [matrix pos capabilities]
-  IMatrixTileEntity
-  (tick [_]
-    (when (is-formed? matrix)
-      (energy/update! (get-energy-handler matrix))))
-  
-  (get-matrix [_] matrix)
-  
-  (get-capability [_ capability _]
-    (when (contains? capabilities capability)
-      (case capability
-        :energy (get-energy-handler matrix)
-        :inventory nil)))
-  
-  (invalidate [_]
-    (break! matrix)))
-
-(s/def ::core-level (s/and number? #(>= % 0)))
-(s/def ::plate-count (s/and number? #(<= % 3)))
-(s/def ::position (s/keys :req [:x :y :z]))
-(s/def ::matrix-state (s/keys :req-un [::core-level ::plate-count ::position]))
+(def matrix-structure
+  "Define the 3x3x3 matrix structure"
+  (for [x [-1 0 1]
+        y [-1 0 1]
+        z [-1 0 1]]
+    [x y z]))
 
 (defn create-matrix []
-  "Create a new matrix instance"
-  (->Matrix (energy/create-energy-handler) 
-           (atom false)
-           (atom {:core-level 0
-                 :plate-count 0
-                 :position nil
-                 :placer-name nil})))
+  (let [config (config/create-config)
+        inventory (inv/create-matrix-inventory #(is-valid-core? % nil)
+                                             #(is-valid-plate? % nil))
+        state (state/create-matrix-state inventory)
+        energy (energy/create-matrix-energy state config)]
+    (->Matrix state inventory energy config)))
 
-(defn create-matrix-tile-entity [matrix pos]
-  "Create a new matrix tile entity"
-  (->MatrixTileEntity matrix pos #{:energy :inventory}))
+(defn get-core-level [matrix]
+  (state/get-core-level (:state matrix)))
+
+(defn get-plate-count [matrix]
+  (state/get-plate-count (:state matrix)))
+
+(defn get-energy-stored [matrix]
+  (energy/get-energy-stored (:energy matrix)))
+
+(defn get-energy-capacity [matrix]
+  (energy/get-energy-capacity (:energy matrix)))
+
+(defn get-position [matrix]
+  (state/get-position (:state matrix)))
+
+(defn set-position! [matrix pos]
+  (state/set-position! (:state matrix) pos))
+
+(defn is-formed? [matrix]
+  (state/is-formed? (:state matrix)))
+
+(defn try-form! [matrix validator]
+  (state/try-form! (:state matrix) validator))
+
+(defn break! [matrix]
+  (state/break! (:state matrix)))

@@ -1,92 +1,103 @@
 (ns cn.academy.block.matrix-render
-  (:require [cn.academy.block.matrix :as matrix]))
+  (:require [cn.academy.block.matrix-state :as state]))
 
-(defprotocol IMatrixRender
-  "Core matrix rendering protocol"
-  (render-base [this] "Render the base model parts")
-  (render-core [this] "Render the matrix core")
-  (render-plates [this] "Render the matrix plates")
-  (render-shields [this time] "Render the shield effects with animation")
-  (get-model-info [this] "Get model and texture information"))
+(defprotocol IRenderer
+  "Protocol for matrix rendering"
+  (get-texture-location [this]
+    "Get texture location")
+  (should-render? [this]
+    "Check if matrix should be rendered")
+  (get-position [this]
+    "Get render position")
+  (get-core-level [this]
+    "Get core energy level")
+  (get-plate-count [this]
+    "Get number of plates")
+  (get-energy-ratio [this]
+    "Get energy fill ratio")
+  (get-scale [this]
+    "Get render scale")
+  (get-rotation [this]
+    "Get render rotation"))
 
-(defprotocol IMatrixRenderState
-  "Matrix render state management"
-  (update-render-state! [this] "Update render state for animations")
-  (sync-client-state! [this plate-count] "Sync render state with client"))
+(defrecord MatrixRenderer [matrix]
+  IRenderer
+  (get-texture-location [_]
+    "academy:textures/blocks/matrix")
+  
+  (should-render? [_]
+    (state/is-formed? (:state matrix)))
+  
+  (get-position [_]
+    (state/get-position (:state matrix)))
+  
+  (get-core-level [_]
+    (state/get-core-level (:state matrix)))
+  
+  (get-plate-count [_]
+    (state/get-plate-count (:state matrix)))
+  
+  (get-energy-ratio [_]
+    (let [stored (energy/get-energy-stored (:energy matrix))
+          capacity (energy/get-energy-capacity (:energy matrix))]
+      (if (pos? capacity)
+        (/ stored capacity)
+        0.0)))
+  
+  (get-scale [this]
+    (let [core-level (get-core-level this)
+          plate-count (get-plate-count this)]
+      (+ 1.0 (* 0.1 core-level plate-count))))
+  
+  (get-rotation [_]
+    (let [tick-time (/ (System/currentTimeMillis) 50.0)]
+      [(* tick-time 0.5)       ; x rotation
+       (* tick-time 0.25)      ; y rotation
+       (* tick-time 0.125)]))) ; z rotation
 
-(defprotocol IMatrixRenderFactory
-  "Factory for creating renderers"
-  (create-renderer [this matrix] "Create a renderer for a matrix"))
+(defrecord RenderEffect [type props]
+  Object
+  (get-type [_] type)
+  (get-properties [_] props))
 
-(defrecord MatrixRenderHandler [matrix model texture render-state]
-  IMatrixRender
-  (render-base [_]
-    {:model model
-     :texture texture
-     :parts ["Main" "Base"]
-     :transform {:translate [0.5 0 0.5]
-                :scale [1.0 1.0 1.0]}})
-  
-  (render-core [_]
-    (when (pos? (matrix/get-core-level matrix))
-      {:model model
-       :texture texture
-       :parts ["Core"]
-       :effects {:glow true
-                :alpha 1.0}}))
-  
-  (render-plates [_]
-    (let [plate-count (matrix/get-plate-count matrix)]
-      {:model model
-       :texture texture
-       :parts ["Plate"]
-       :instances (for [i (range plate-count)]
-                   {:rotation (* (/ 360.0 plate-count) i)
-                    :offset [0 0.25 0]})}))
-  
-  (render-shields [_ time]
-    (let [plate-count (matrix/get-plate-count matrix)
-          has-core? (pos? (matrix/get-core-level matrix))
-          shield-count (if (and (= plate-count 3) has-core?) 3 0)
-          theta (/ 360.0 shield-count)
-          phase (mod (* time 50.0) 360.0)]
-      {:shield-count shield-count
-       :model model
-       :texture texture
-       :parts ["Shield"]
-       :render-info (for [i (range shield-count)]
-                     {:rotation (+ phase (* theta i))
-                      :height (* 0.1 (Math/sin (+ (* time 1.111) (* 40.0 i))))
-                      :phase-offset 40.0
-                      :effects {:alpha 0.6
-                              :additive true}})}))
-  
-  (get-model-info [_]
-    {:model model
-     :texture texture
-     :animations {:core-spin {:speed 1.0
-                             :axis [0 1 0]}
-                  :shield-pulse {:frequency 0.5
-                               :min-alpha 0.4
-                               :max-alpha 0.8}}})
-  
-  IMatrixRenderState
-  (update-render-state! [_]
-    (swap! render-state update :frame inc))
-  
-  (sync-client-state! [_ plate-count]
-    (swap! render-state assoc :plate-count plate-count)))
+(defn create-renderer [matrix]
+  (->MatrixRenderer matrix))
 
-(defn create-matrix-renderer 
-  "Creates a new matrix renderer with given model and texture"
-  [model texture]
-  (->MatrixRenderHandler nil model texture (atom {:frame 0
-                                                 :plate-count 0})))
+(defn get-core-effect [renderer]
+  (when (should-render? renderer)
+    (->RenderEffect
+      :core
+      {:scale (get-scale renderer)
+       :rotation (get-rotation renderer)
+       :energy-ratio (get-energy-ratio renderer)
+       :level (get-core-level renderer)})))
 
-(defrecord MatrixRenderFactory [resource-manager]
-  IMatrixRenderFactory
-  (create-renderer [_ matrix]
-    (let [model (get-in resource-manager [:models :matrix])
-          texture (get-in resource-manager [:textures :matrix])]
-      (->MatrixRenderHandler matrix model texture (atom {:frame 0
-                                                        :plate-count 0})))))
+(defn get-plate-effects [renderer]
+  (when (should-render? renderer)
+    (let [count (get-plate-count renderer)
+          scale (get-scale renderer)
+          [rx ry rz] (get-rotation renderer)]
+      (for [i (range count)]
+        (->RenderEffect
+          :plate
+          {:index i
+           :scale scale
+           :rotation [(+ rx (* i 0.5))
+                     (+ ry (* i 0.25))
+                     (+ rz (* i 0.125))]})))))
+
+(defn get-shield-effect [renderer time]
+  (when (should-render? renderer)
+    (->RenderEffect
+      :shield
+      {:scale (get-scale renderer)
+       :alpha (* 0.5 (+ 0.5 (* 0.5 (Math/sin (* time Math/PI 2.0)))))
+       :energy-ratio (get-energy-ratio renderer)})))
+
+(defn get-render-data [renderer time]
+  {:texture (get-texture-location renderer)
+   :position (get-position renderer)
+   :effects (concat
+             [(get-core-effect renderer)]
+             (get-plate-effects renderer)
+             [(get-shield-effect renderer time)])})

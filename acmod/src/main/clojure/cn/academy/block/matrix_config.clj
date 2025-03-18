@@ -1,42 +1,49 @@
 (ns cn.academy.block.matrix-config)
 
 (defprotocol IMatrixConfig
-  (get-base-capacity [this])
-  (get-capacity-multiplier [this])
-  (get-base-bandwidth [this])
-  (get-bandwidth-multiplier [this])
-  (get-base-range [this])
-  (get-range-multiplier [this])
-  (reload-config! [this]))
+  "Protocol for matrix configuration"
+  (get-capacity-multiplier [this]
+    "Get energy capacity multiplier")
+  (get-bandwidth-multiplier [this]
+    "Get bandwidth multiplier")
+  (get-range-multiplier [this]
+    "Get range multiplier")
+  (get-formation-range [this]
+    "Get maximum formation range")
+  (get-base-consumption [this]
+    "Get base energy consumption")
+  (get-transfer-efficiency [this]
+    "Get energy transfer efficiency"))
 
-(defrecord MatrixConfiguration [config-state]
+(defrecord MatrixConfig [config]
   IMatrixConfig
-  (get-base-capacity [_]
-    (get @config-state :base-capacity 1000))
-  
   (get-capacity-multiplier [_]
-    (get @config-state :capacity-multiplier 8.0))
-  
-  (get-base-bandwidth [_]
-    (get @config-state :base-bandwidth 100))
+    (:capacity-multiplier config 10000.0))
   
   (get-bandwidth-multiplier [_]
-    (get @config-state :bandwidth-multiplier 60.0))
-  
-  (get-base-range [_]
-    (get @config-state :base-range 16))
+    (:bandwidth-multiplier config 100.0))
   
   (get-range-multiplier [_]
-    (get @config-state :range-multiplier 24.0))
+    (:range-multiplier config 10.0))
   
-  (reload-config! [_]
-    (reset! config-state
-            {:base-capacity 1000
-             :capacity-multiplier 8.0
-             :base-bandwidth 100
-             :bandwidth-multiplier 60.0
-             :base-range 16
-             :range-multiplier 24.0})))
+  (get-formation-range [_]
+    (:formation-range config 3))
+  
+  (get-base-consumption [_]
+    (:base-consumption config 20.0))
+  
+  (get-transfer-efficiency [_]
+    (:transfer-efficiency config 0.9)))
 
-(defn create-matrix-config []
-  (->MatrixConfiguration (atom {})))
+(def default-config
+  {:capacity-multiplier 10000.0  ; Energy capacity per core level
+   :bandwidth-multiplier 100.0   ; Transfer rate per core level squared
+   :range-multiplier 10.0        ; Range per sqrt of core level
+   :formation-range 3            ; Max blocks between matrix components
+   :base-consumption 20.0        ; Base energy consumption per tick
+   :transfer-efficiency 0.9})    ; Energy transfer efficiency (90%)
+
+(defn create-config 
+  "Create matrix configuration with optional overrides"
+  [& {:as overrides}]
+  (->MatrixConfig (merge default-config overrides)))

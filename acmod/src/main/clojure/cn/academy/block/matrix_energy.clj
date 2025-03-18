@@ -1,93 +1,103 @@
 (ns cn.academy.block.matrix-energy
-  (:require [cn.academy.block.matrix :as matrix]))
+  (:require [cn.academy.block.matrix-state :as state]
+            [cn.academy.block.matrix-config :as config]))
 
-(def ^:const base-capacity 2000.0)
-(def ^:const plate-capacity-multiplier 1.5)
+(defprotocol IEnergyStorage
+  "Protocol for energy storage capabilities"
+  (receive-energy [this amount simulate]
+    "Receive energy into storage")
+  (extract-energy [this amount simulate]
+    "Extract energy from storage")
+  (get-energy-stored [this]
+    "Get current stored energy")
+  (get-energy-capacity [this]
+    "Get maximum energy capacity")
+  (can-receive? [this]
+    "Check if can receive energy")
+  (can-extract? [this]
+    "Check if can extract energy"))
 
-(def ^:const max-energy 100000)
-(def ^:const max-receive 500)
-(def ^:const max-extract 500)
+(defprotocol IEnergyNetwork
+  "Protocol for matrix energy networking"
+  (connect-node [this node]
+    "Connect energy node to network")
+  (disconnect-node [this node]
+    "Disconnect energy node from network")
+  (get-connected-nodes [this]
+    "Get all connected nodes")
+  (transfer-energy [this target amount]
+    "Transfer energy to target")
+  (get-bandwidth [this]
+    "Get current bandwidth"))
 
-(defprotocol IMatrixEnergy
-  (get-capacity [this])
-  (get-energy [this])
-  (add-energy! [this amount])
-  (remove-energy! [this amount])
-  (can-receive? [this amount])
-  (can-extract? [this amount]))
+(defrecord MatrixEnergy [state config energy-atom]
+  IEnergyStorage
+  (receive-energy [this amount simulate]
+    (when (state/is-formed? state)
+      (let [capacity (get-energy-capacity this)
+            stored (get-energy-stored this)
+            space (- capacity stored)
+            accept-amount (min amount space)]
+        (when (pos? accept-amount)
+          (when-not simulate
+            (swap! energy-atom update :stored + accept-amount))
+          accept-amount))))
+  
+  (extract-energy [this amount simulate]
+    (when (state/is-formed? state)
+      (let [stored (get-energy-stored this)
+            extract-amount (min amount stored)]
+        (when (pos? extract-amount)
+          (when-not simulate
+            (swap! energy-atom update :stored - extract-amount))
+          extract-amount))))
+  
+  (get-energy-stored [_]
+    (:stored @energy-atom))
+  
+  (get-energy-capacity [_]
+    (* (state/get-core-level state)
+       (config/get-capacity-multiplier config)))
+  
+  (can-receive? [_]
+    (state/is-formed? state))
+  
+  (can-extract? [_]
+    (state/is-formed? state))
 
-(defprotocol IEnergyHandler
-  (get-stored-energy [this])
-  (get-max-energy [this])
-  (receive-energy [this amount simulate?])
-  (extract-energy [this amount simulate?])
-  (can-receive? [this])
-  (can-extract? [this])
-  (save-to-nbt [this])
-  (load-from-nbt! [this nbt]))
+  IEnergyNetwork  
+  (connect-node [_ node]
+    (swap! energy-atom update :nodes conj node))
+  
+  (disconnect-node [_ node]
+    (swap! energy-atom update :nodes disj node))
+  
+  (get-connected-nodes [_]
+    (:nodes @energy-atom))
+  
+  (transfer-energy [this target amount]
+    (let [bandwidth (get-bandwidth this)
+          efficiency (config/get-transfer-efficiency config)
+          transfer-amount (min amount bandwidth)
+          actual-amount (extract-energy this transfer-amount true)]
+      (when (pos? actual-amount)
+        (let [received (receive-energy target (* actual-amount efficiency) false)]
+          (when (pos? received)
+            (extract-energy this (/ received efficiency) false))))))
+  
+  (get-bandwidth [_]
+    (* (Math/pow (state/get-core-level state) 2)
+       (config/get-bandwidth-multiplier config))))
 
-(defrecord MatrixEnergy [matrix]
-  IMatrixEnergy
-  (get-capacity [_]
-    (let [plates (matrix/get-plate-count matrix)]
-      (* base-capacity (Math/pow plate-capacity-multiplier plates))))
-  
-  (get-energy [_]  
-    (* base-capacity (matrix/get-core-level matrix)))
-  
-  (add-energy! [this amount]
-    (when (can-receive? this amount)
-      (let [current (matrix/get-core-level matrix)
-            max-level (matrix/get-plate-count matrix)
-            new-level (min max-level (+ current (/ amount base-capacity)))]
-        (matrix/set-core-level! matrix new-level))))
-  
-  (remove-energy! [this amount]
-    (when (can-extract? this amount)
-      (let [current (matrix/get-core-level matrix)
-            new-level (max 0 (- current (/ amount base-capacity)))]
-        (matrix/set-core-level! matrix new-level))))
-  
-  (can-receive? [this amount]
-    (let [current (get-energy this)
-          capacity (get-capacity this)]
-      (<= (+ current amount) capacity)))
-  
-  (can-extract? [this amount]
-    (>= (get-energy this) amount)))
+(defn create-matrix-energy [state config]
+  (->MatrixEnergy 
+    state 
+    config
+    (atom {:stored 0.0
+           :nodes #{}})))
 
-(defrecord EnergyHandler [energy]
-  IEnergyHandler
-  (get-stored-energy [_]
-    @energy)
-  
-  (get-max-energy [_]
-    max-energy)
-  
-  (receive-energy [_ amount simulate?]
-    (let [actual (min amount (- max-energy @energy))]
-      (when-not simulate?
-        (swap! energy + actual))
-      actual))
-  
-  (extract-energy [_ amount simulate?]
-    (let [actual (min amount @energy)]
-      (when-not simulate?
-        (swap! energy - actual))
-      actual))
-  
-  (can-receive? [_] true)
-  
-  (can-extract? [_] true)
-  
-  (save-to-nbt [_]
-    {"energy" @energy})
-  
-  (load-from-nbt! [_ nbt]
-    (reset! energy (get nbt "energy" 0))))
-
-(defn create-energy-handler [matrix]
-  (->MatrixEnergy matrix))
-
-(defn create-energy-handler []
-  (->EnergyHandler (atom 0)))
+(defn update-energy! [energy]
+  (let [stored (get-energy-stored energy)
+        base-consumption (config/get-base-consumption (:config energy))]
+    (when (>= stored base-consumption)
+      (extract-energy energy base-consumption false))))
