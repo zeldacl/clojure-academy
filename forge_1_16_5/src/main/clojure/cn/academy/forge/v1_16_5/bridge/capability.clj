@@ -1,9 +1,9 @@
-(ns cn.academy.forge-1-16.capability-adapter
+(ns cn.academy.forge.v1_16_5.bridge.capability
   (:require [cn.academy.capability.core :as cap]
-            [cn.academy.forge-1-16.energy-bridge :as energy-bridge]
-            [cn.academy.forge-1-16.inventory-bridge :as inv-bridge]
             [cn.academy.block.component :as component]
-            [cn.academy.forge-1-16.nbt-bridge :as nbt])
+            [cn.academy.forge.v1_16_5.bridge.energy :as energy-bridge]
+            [cn.academy.forge.v1_16_5.bridge.inventory :as inv-bridge]
+            [cn.academy.forge.v1_16_5.bridge.nbt :as nbt])
   (:import [net.minecraftforge.common.capabilities ICapabilityProvider Capability]
            [net.minecraftforge.items CapabilityItemHandler]
            [net.minecraftforge.energy CapabilityEnergy]
@@ -13,15 +13,15 @@
            [net.minecraft.nbt CompoundNBT]
            [javax.annotation Nullable]))
 
-(defn- create-handler [capability provider bridge]
+(defn- create-handler [capability provider energy-bridge inv-bridge]
   (LazyOptional/of 
     (fn []
       (case (cap/get-type-id capability)
         :energy (energy-bridge/to-forge-energy 
-                  bridge 
+                  energy-bridge 
                   (cap/get-capability provider :energy nil))
         :inventory (inv-bridge/to-forge-item-handler 
-                    bridge
+                    inv-bridge
                     (cap/get-capability provider :inventory nil))
         nil))))
 
@@ -52,18 +52,16 @@
   (reify 
     ICapabilitySerializable
     (serializeNBT [_] 
-      (let [nbt-bridge (nbt/ForgeNbtBridge.)
-            tag (.create-nbt nbt-bridge)]
-        (when (satisfies? :cn.academy.component/NBTSerializable component)
+      (let [tag (CompoundNBT.)]
+        (when (satisfies? component/NBTSerializable component)
           (let [data (.serialize component)]
-            (.write-to-nbt nbt-bridge data tag)))
+            (nbt/write-nbt tag data)))
         tag))
     
     (deserializeNBT [_ ^CompoundNBT nbt]
-      (let [nbt-bridge (nbt/ForgeNbtBridge.)]
-        (when (satisfies? :cn.academy.component/NBTSerializable component)
-          (let [data (.read-from-nbt nbt-bridge nbt)]
-            (.deserialize component data)))))
+      (when (satisfies? component/NBTSerializable component)
+        (let [data (nbt/read-nbt nbt)]
+          (.deserialize component data))))
     
     ICapabilityProvider
     (getCapability [_ ^Capability cap ^Nullable dir]

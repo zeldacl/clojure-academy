@@ -1,36 +1,31 @@
 (ns cn.academy.block.tile-entity-adapter
   (:require [cn.academy.forge-1-16.nbt-bridge :as nbt]
-            [cn.academy.forge-1-16.capability-adapter :as cap])
+            [cn.academy.forge-1-16.capability-adapter :as cap]
+            [cn.academy.block.component :as component])
   (:import [net.minecraft.tileentity TileEntity TileEntityType]
            [net.minecraft.network NetworkManager]
            [net.minecraft.network.play.server SUpdateTileEntityPacket]
            [net.minecraft.util Direction]))
 
-;; Define a protocol for component behavior that tile entities need to interact with
-(defprotocol IEntityComponent
-  (update! [this] "Update the component state")
-  (serialize [this serializer] "Serialize component data")
-  (deserialize! [this serializer data] "Deserialize data into component"))
-
 ;; Generic tile entity record that can work with any component
 (defrecord GenericTileEntity [component serializer nbt-bridge cap-adapter tile-type]
   net.minecraft.tileentity.ITickableTileEntity
   (^void tick [this]
-    (update! component))
+    (component/update! component))
   
   Object
   (save [this tag]
-    (let [data (serialize component serializer)]
+    (let [data (component/serialize serializer component)]
       (nbt/write-to-nbt nbt-bridge data tag))
     tag)
   
   (load [this state tag]
     (let [data (nbt/read-from-nbt nbt-bridge tag)]
-      (deserialize! component serializer data)))
+      (component/deserialize! serializer component data)))
   
   (getUpdatePacket [this]
     (let [tag (nbt/create-nbt nbt-bridge)
-          data (serialize component serializer)]
+          data (component/serialize serializer component)]
       (nbt/write-to-nbt nbt-bridge data tag)
       (SUpdateTileEntityPacket. (.getBlockPos this) -1 tag)))
   
@@ -53,12 +48,12 @@
 
 ;; Factory function to register a tile entity type with a component factory function
 (defn register-type [registry block-type component-factory serializer-factory id]
-  (let [type (TileEntityType/Builder.of
+  (let [type (TileEntityType$Builder/of
                (reify TileEntityType$IFactory
                  (create [_ pos state]
                    (let [component (component-factory)
                          serializer (serializer-factory)
-                         nbt-bridge (nbt/create-nbt-bridge)
+                         nbt-bridge (nbt/->ForgeNbtBridge)
                          cap-adapter (cap/create-adapter component)]
                      (->GenericTileEntity 
                        component
@@ -70,3 +65,7 @@
     (.register registry
                (net.minecraft.util.ResourceLocation. "academy" id)
                type)))
+
+;; Create a tile entity for a specific block type
+(defn create-tile-entity [block-type component-factory serializer-factory registry id]
+  (register-type registry block-type component-factory serializer-factory id))

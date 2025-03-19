@@ -1,26 +1,35 @@
-(ns cn.academy.forge.v1-16-5.core
-  (:require [cn.academy.forge.v1-16-5.block.node :as node])
+(ns cn.academy.forge.v1_16_5.core
+  (:require [cn.academy.core.util.logging :refer [log-info]]
+            [cn.academy.forge.v1_16_5.init :as init]
+            [cn.academy.forge.v1_16_5.bridge.registry :as registry-bridge])
   (:import [net.minecraftforge.fml.common Mod]
-           [net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent]
-           [net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext]))
+           [net.minecraftforge.eventbus.api SubscribeEvent]
+           [net.minecraftforge.event RegistryEvent$Register]
+           [net.minecraft.block Block]
+           [net.minecraft.tileentity TileEntityType]))
 
 (gen-class
-  :name cn.academy.forge.v1_16_5.AcademyForgeMod
-  :prefix "forge-"
+  :name cn.academy.forge.v1_16_5.AcademyCraft
   :state state
   :init init
-  :methods [[setup [net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent] void]]
-  :annotations [[net.minecraftforge.fml.common.Mod "academy"]])
+  :constructors {[] []}
+  :prefix "mod-"
+  :methods [[^:static registerBlocks [net.minecraftforge.event.RegistryEvent$Register] void]
+            [^:static registerTileEntities [net.minecraftforge.event.RegistryEvent$Register] void]]
+  :annotations [[net.minecraftforge.fml.common.Mod "academy"]
+                [net.minecraftforge.fml.common.Mod$EventBusSubscriber {}]])
 
-(defn forge-init []
+(defn mod-init []
+  (log-info "Initializing Academy Mod for Forge 1.16.5")
+  
+  ;; Initialize all components
+  (init/init)
+  
   [[] (atom {})])
 
-(defn forge-setup [this event]
-  ;; Initialize block factory
-  (cn.academy.block.block.BlockNode$Factory/setForgeFactory node/forge-factory))
+;; Static event handlers
+(defn mod-registerBlocks [_ ^RegistryEvent$Register event]
+  (registry-bridge/register-blocks! event))
 
-;; Register setup method to event bus
-(.addListener (FMLJavaModLoadingContext/get) 
-             (reify java.util.function.Consumer
-               (accept [this event]
-                 (forge-setup nil event))))
+(defn mod-registerTileEntities [_ ^RegistryEvent$Register event]
+  (registry-bridge/register-tile-entities! event))

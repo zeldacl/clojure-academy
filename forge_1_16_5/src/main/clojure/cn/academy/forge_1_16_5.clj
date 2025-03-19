@@ -1,23 +1,15 @@
-(ns cn.academy.forge_1_16_5
-  (:require [clojure.tools.logging :as log])
+(ns cn.academy.forge-1-16-5
+  (:require [clojure.tools.logging :as log]
+            [cn.academy.core :as core]
+            [cn.academy.forge.v1_16_5.init :as init])
   (:import [net.minecraftforge.common MinecraftForge]
-           [net.minecraftforge.fml.common.event FMLInitializationEvent FMLPreInitializationEvent FMLPostInitializationEvent FMLServerStartingEvent FMLServerStoppingEvent]
-           [net.minecraftforge.fml.common.network NetworkRegistry]
-           [net.minecraftforge.oredict OreDictionary]))
+           [net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent]))
 
-(defn pre-init [^FMLPreInitializationEvent event]
+(defn setup-common []
   (log/info "Starting AcademyCraft for Forge 1.16.5")
-  (log/info "https://ac.li-dev.cn/"))
+  (log/info "https://ac.li-dev.cn/")
+  (init/setup-common (FMLCommonSetupEvent.)))
 
-(defn init [^FMLInitializationEvent event]
-  (MinecraftForge/EVENT_BUS.register this)
-  (OreDictionary/registerOre "plateIron" (ItemStack. net.minecraft.init.Items/IRON_INGOT)))
-
-(defn post-init [^FMLPostInitializationEvent event]
-  (log/info "Post Initialization for Forge 1.16.5"))
-
-(defn server-starting [^FMLServerStartingEvent event]
-  (log/info "Server Starting for Forge 1.16.5"))
-
-(defn server-stopping [^FMLServerStoppingEvent event]
-  (log/info "Server Stopping for Forge 1.16.5"))
+(defn -init []
+  (log/info "Initializing AcademyCraft Forge 1.16.5 integration")
+  (init/init))
