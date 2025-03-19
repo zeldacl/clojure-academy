@@ -1,28 +1,33 @@
 (ns cn.li.bridge.matrix.capability
-  (:require [cn.li.bridge.matrix.api :as matrix]
-            [cn.li.bridge.matrix.energy :as energy])
+  (:require [cn.academy.block.matrix-energy :as energy]
+            [cn.academy.block.matrix-inventory :as inventory]
+            [cn.academy.block.matrix-state :as state])
   (:import [net.minecraftforge.common.capabilities Capability ICapabilityProvider]
            [net.minecraftforge.energy CapabilityEnergy IEnergyStorage]
-           [net.minecraftforge.common.util LazyOptional]
-           [net.minecraft.util Direction]))
+           [net.minecraftforge.items IItemHandler]
+           [net.minecraft.util Direction]
+           [net.minecraft.nbt CompoundNBT]))
 
-(defrecord MatrixCapabilityProvider [matrix energy-storage energy-optional]
+(defrecord MatrixCapabilityProvider [matrix capabilities]
   ICapabilityProvider
-  (getCapability [_ capability side]
-    (if (= capability (CapabilityEnergy/ENERGY))
-      @energy-optional
-      LazyOptional/EMPTY)))
+  (getCapability [_ cap side]
+    (cond
+      (= cap CapabilityEnergy/ENERGY)
+      (LazyOptional/of #(reify IEnergyStorage
+                         (receiveEnergy [_ amount simulate]
+                           (energy/receive-energy matrix amount simulate))
+                         (extractEnergy [_ amount simulate]
+                           (energy/extract-energy matrix amount simulate))
+                         (getEnergyStored [_]
+                           (energy/get-energy-stored matrix))
+                         (getMaxEnergyStored [_]
+                           (energy/get-energy-capacity matrix))
+                         (canExtract [_]
+                           (energy/can-extract? matrix))
+                         (canReceive [_]
+                           (energy/can-receive? matrix))))
+
+      :else LazyOptional/EMPTY)))
 
 (defn create-capability-provider [matrix]
-  (let [energy-storage (energy/create-energy-storage matrix)
-        energy-optional (atom (LazyOptional/of #(identity energy-storage)))]
-    (->MatrixCapabilityProvider 
-      matrix 
-      energy-storage 
-      energy-optional)))
-
-(defn register-capabilities [registry]
-  ; Register the energy storage capability
-  (.register registry 
-            (CapabilityEnergy/ENERGY) 
-            IEnergyStorage))
+  (->MatrixCapabilityProvider matrix (atom {})))

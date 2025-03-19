@@ -1,9 +1,9 @@
 (ns cn.li.bridge.matrix.bridge
-  (:require [cn.li.bridge.matrix.api :as matrix]
-            [cn.li.bridge.matrix.energy :as energy]
-            [cn.li.bridge.matrix.inventory :as inventory]
-            [cn.li.bridge.matrix.capability :as capability]
-            [cn.li.bridge.matrix.sync :as sync])
+  (:require [cn.academy.block.matrix :as matrix]
+            [cn.academy.block.matrix-energy :as energy]
+            [cn.academy.block.matrix-inventory :as inventory]
+            [cn.academy.block.matrix-network :as network]
+            [cn.academy.block.matrix-state :as state])
   (:import [net.minecraft.block Block AbstractBlock$Properties]
            [net.minecraft.block.material Material]
            [net.minecraft.tileentity TileEntity]
@@ -13,13 +13,8 @@
            [net.minecraftforge.common.util LazyOptional]
            [net.minecraft.util Direction]))
 
-(def ^:private conversion-rates
-  {:rf 4   ; 1 IF = 4 RF
-   :eu 1   ; 1 IF = 1 EU
-   :fe 4}) ; 1 IF = 4 FE (Forge Energy)
-
 (defprotocol IMatrixBridge
-  "Bridge between matrix component and Forge"
+  "Bridge between matrix implementation and Forge"
   (create-matrix-block [this matrix]
     "Create a Forge block for the matrix")
   (create-matrix-tile [this matrix]
@@ -30,34 +25,33 @@
 (deftype ForgeMatrixTile [matrix capabilities]
   TileEntity
   (load [_ nbt]
-    (matrix/deserialize-from-nbt matrix (nbt/from-nbt nbt)))
+    (state/handle-sync! matrix (nbt/from-nbt nbt)))
   
   (save [_ nbt]
-    (nbt/to-nbt nbt (matrix/serialize-to-nbt matrix)))
+    (let [state {:formed? (state/is-formed? matrix)
+                 :energy (state/get-energy-stored matrix)}]
+      (nbt/to-nbt nbt state)))
   
   (getCapability [_ cap side]
-    (let [side-dir (when side (.get side))
-          capability-key [cap side-dir]]
-      (if-let [capability (get @capabilities capability-key)]
-        capability
-        (cond
-          (= cap CapabilityEnergy/ENERGY)
-          (let [lazy-opt (LazyOptional/of 
-                         (fn [] (reify IEnergyStorage
-                                (receiveEnergy [_ amount simulate]
-                                  (matrix/receive-energy matrix amount simulate))
-                                (extractEnergy [_ amount simulate]
-                                  (matrix/extract-energy matrix amount simulate))
-                                (getEnergyStored [_]
-                                  (matrix/get-energy-stored matrix))
-                                (getMaxEnergyStored [_]
-                                  (matrix/get-energy-capacity matrix))
-                                (canExtract [_] true)
-                                (canReceive [_] true)))))]
-            (swap! capabilities assoc capability-key lazy-opt)
-            lazy-opt)
-          :else LazyOptional/EMPTY))))
-  
+    (let [side-dir (when side (.get side))]
+      (cond
+        (= cap CapabilityEnergy/ENERGY)
+        (LazyOptional/of #(reify IEnergyStorage
+                           (receiveEnergy [_ amount simulate]
+                             (energy/receive-energy matrix amount simulate))
+                           (extractEnergy [_ amount simulate]
+                             (energy/extract-energy matrix amount simulate))
+                           (getEnergyStored [_]
+                             (energy/get-energy-stored matrix))
+                           (getMaxEnergyStored [_]
+                             (energy/get-energy-capacity matrix))
+                           (canExtract [_]
+                             (energy/can-extract? matrix))
+                           (canReceive [_]
+                             (energy/can-receive? matrix))))
+        
+        :else LazyOptional/EMPTY)))
+
   ICapabilityProvider
   (invalidateCaps [_]
     (doseq [[_ cap] @capabilities]
@@ -67,8 +61,7 @@
 (deftype ForgeMatrixBlock [matrix]
   Block
   (use [_ state world pos player hand hit]
-    (when-let [result (matrix/on-activated matrix pos {:player player :hand hand})]
-      true))
+    (matrix/on-activated matrix pos {:player player :hand hand}))
   
   (onBlockPlacedBy [_ world pos state placer stack]
     (matrix/on-placed matrix pos {:placer placer :stack stack}))
@@ -89,38 +82,6 @@
           tile (create-matrix-tile matrix)]
       (.register registry id block)
       (.register registry (str id "_tile") tile))))
-
-(defrecord MatrixBridge [matrix]
-  ICapabilityProvider
-  (getCapability [_ cap side]
-    (case cap
-      CapabilityEnergy/ENERGY 
-      (LazyOptional.of #(energy/create-energy-storage matrix))
-      
-      LazyOptional/EMPTY)))
-
-(defn convert-energy-from [amount energy-type]
-  (/ amount (get conversion-rates energy-type 1)))
-
-(defn convert-energy-to [amount energy-type]
-  (* amount (get conversion-rates energy-type 1)))
-
-(defn create-matrix-bridge [matrix]
-  (->MatrixBridge matrix))
-
-;; Registration helper
-(defn register-matrix [registry id matrix]
-  (let [bridge (create-matrix-bridge matrix)
-        cap-provider (capability/create-capability-provider matrix)
-        sync-handler (sync/create-sync-handler matrix)]
-    
-    ;; Register network handlers
-    (sync/register-sync-handlers registry)
-    
-    ;; Register capabilities  
-    (capability/register-capabilities registry)
-    
-    matrix))
 
 (defn create-bridge []
   (->ForgeMatrixBridge))

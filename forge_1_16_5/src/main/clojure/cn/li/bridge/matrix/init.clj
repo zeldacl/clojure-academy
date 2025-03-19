@@ -1,39 +1,30 @@
 (ns cn.li.bridge.matrix.init
-  (:require [cn.li.bridge.matrix.core :as matrix]
+  (:require [cn.academy.block.matrix :as matrix]
+            [cn.academy.block.matrix-state :as state]
             [cn.li.bridge.matrix.bridge :as bridge]
-            [cn.li.bridge.matrix.network :as network]
-            [cn.li.bridge.matrix.container :as container]
-            [cn.li.bridge.matrix.structure :as structure]
-            [cn.li.bridge.registry.api :as registry]
-            [clojure.tools.logging :as log]))
+            [cn.li.bridge.matrix.capability :as capability]
+            [cn.li.bridge.matrix.block-component :as block]
+            [clojure.tools.logging :as log])
+  (:import [net.minecraftforge.common MinecraftForge]))
 
-(def ^:const MATRIX_ID "matrix")
+(def ^:const MATRIX_ID "wireless_matrix")
 
 (defn register-matrix [registry-handler]
-  (log/info "Registering Matrix components...")
+  (log/info "Registering Matrix bridge components...")
   
-  ;; Create core matrix instance
+  ;; Create matrix instance using acmod implementation
   (let [matrix-instance (matrix/create-matrix)
-        matrix-structure (structure/create-structure matrix-instance)
+        block-component (block/create-block-component matrix-instance)
         matrix-bridge (bridge/create-bridge)
-        network-handler (network/create-network-handler matrix-instance)]
+        cap-provider (capability/create-capability-provider matrix-instance)]
     
-    ;; Register blocks and tile entities
-    (bridge/register-matrix matrix-bridge 
-                           registry-handler 
-                           MATRIX_ID 
-                           matrix-instance)
+    ;; Register with Forge
+    (bridge/register-matrix matrix-bridge registry-handler MATRIX_ID matrix-instance)
     
-    ;; Register container type
-    (container/register-container-type registry-handler)
+    ;; Register event handlers
+    (.register MinecraftForge/EVENT_BUS block-component)
     
-    ;; Register network handlers
-    (network/register-network-handlers registry-handler)
-    
-    ;; Return registered components
-    {:matrix matrix-instance
-     :structure matrix-structure
-     :network network-handler}))
+    matrix-instance))
 
 (defn initialize []
   (log/info "Initializing Matrix system..."))

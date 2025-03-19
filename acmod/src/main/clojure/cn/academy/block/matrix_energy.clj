@@ -1,6 +1,12 @@
 (ns cn.academy.block.matrix-energy
   (:require [cn.academy.block.matrix-state :as state]
-            [cn.academy.block.matrix-config :as config]))
+            [cn.academy.block.matrix-config :as config]
+            [cn.academy.block.matrix :as matrix]))
+
+(def ^:private DEFAULT_CAPACITY 100000)
+(def ^:private DEFAULT_TRANSFER 1000)
+(def ^:private CORE_MULTIPLIER 2.0)
+(def ^:private PLATE_MULTIPLIER 1.5)
 
 (defprotocol IEnergyStorage
   "Protocol for energy storage capabilities"
@@ -29,6 +35,14 @@
     "Transfer energy to target")
   (get-bandwidth [this]
     "Get current bandwidth"))
+
+(defprotocol IMatrixEnergy
+  (receive-energy [this amount simulate])
+  (extract-energy [this amount simulate])
+  (get-energy-stored [this])
+  (get-energy-capacity [this])
+  (can-receive? [this])
+  (can-extract? [this]))
 
 (defrecord MatrixEnergy [state config energy-atom]
   IEnergyStorage
@@ -89,12 +103,53 @@
     (* (Math/pow (state/get-core-level state) 2)
        (config/get-bandwidth-multiplier config))))
 
+(defrecord MatrixEnergyHandler [matrix]
+  IMatrixEnergy
+  (receive-energy [_ amount simulate]
+    (when (matrix/is-formed? matrix)
+      (let [space (- (get-energy-capacity matrix) (get-energy-stored matrix))
+            accepted (min amount space)]
+        (when-not simulate
+          (matrix/update-energy! matrix #(+ % accepted)))
+        accepted)))
+  
+  (extract-energy [_ amount simulate]
+    (when (matrix/is-formed? matrix)
+      (let [stored (get-energy-stored matrix)
+            extracted (min amount stored)]
+        (when-not simulate
+          (matrix/update-energy! matrix #(- % extracted)))
+        extracted)))
+  
+  (get-energy-stored [_]
+    (matrix/get-energy-stored matrix))
+  
+  (get-energy-capacity [_]
+    (matrix/get-energy-capacity matrix))
+  
+  (can-receive? [_]
+    (matrix/is-formed? matrix))
+  
+  (can-extract? [_]
+    (matrix/is-formed? matrix)))
+
+(defn calculate-capacity [core-level plate-count]
+  (* DEFAULT_CAPACITY 
+     (Math/pow CORE_MULTIPLIER core-level)
+     (Math/pow PLATE_MULTIPLIER plate-count)))
+
+(defn calculate-transfer-rate [core-level]
+  (* DEFAULT_TRANSFER (Math/pow CORE_MULTIPLIER core-level)))
+
 (defn create-matrix-energy [state config]
   (->MatrixEnergy 
     state 
     config
     (atom {:stored 0.0
            :nodes #{}})))
+
+(defn create-energy-handler [matrix]
+  (->MatrixEnergyHandler matrix))
 
 (defn update-energy! [energy]
   (let [stored (get-energy-stored energy)

@@ -5,7 +5,12 @@
   (sync-plate-count [this])
   (sync-placer-name [this])
   (sync-capabilities [this])
-  (register-listeners [this]))
+  (register-listeners [this])
+  (connect-to-network [this network-id password])
+  (leave-network [this])
+  (get-network-id [this])
+  (sync-network-state [this])
+  (handle-network-sync [this state]))
 
 (defrecord MatrixNetworkHandler [matrix network-state]
   IMatrixNetwork
@@ -26,7 +31,28 @@
   (register-listeners [_]
     {:channels ["matrix.sync" "matrix.update"]
      :handlers {:sync #(handle-sync matrix %)
-               :update #(handle-update matrix %)}}))
+               :update #(handle-update matrix %)}})
+  
+  (connect-to-network [_ network-id password]
+    (when (matrix/is-valid? matrix)
+      (swap! network-state assoc 
+             :id network-id 
+             :password password)
+      true))
+  
+  (leave-network [_]
+    (reset! network-state nil)
+    true)
+  
+  (get-network-id [_]
+    (:id @network-state))
+  
+  (sync-network-state [_]
+    {:type :network-sync
+     :data @network-state})
+  
+  (handle-network-sync [_ state]
+    (reset! network-state state)))
 
 (defn- handle-sync [matrix msg]
   (case (:type msg)
@@ -38,4 +64,4 @@
   (matrix/update! matrix))
 
 (defn create-network-handler [matrix]
-  (->MatrixNetworkHandler matrix (atom {})))
+  (->MatrixNetworkHandler matrix (atom nil)))
