@@ -1,30 +1,23 @@
-(ns forge-impl.block-adapter
-  (:require [mcmod.protocols :refer :all]
-            [forge-impl.capability-impl :as cap-impl])
+(ns forge-impl.adapters.block-adapter
+  (:require [mcmod.protocols :refer :all])
   (:import [net.minecraft.block Block AbstractBlock$Properties]
            [net.minecraft.block.material Material]
            [net.minecraft.util.math BlockPos]
+           [net.minecraft.util ActionResultType]
+           [net.minecraft.block.material.MaterialColor]
+           [net.minecraft.util Direction]
            [net.minecraft.world World]
-           [net.minecraft.entity.player PlayerEntity]
-           [net.minecraft.util Direction Hand ActionResultType]
-           [net.minecraft.block BlockRenderType]))
+           [net.minecraft.entity.player PlayerEntity]))
 
-(def material-map
-  (atom {:stone Material/ROCK
-         :wood Material/WOOD
-         :metal Material/IRON
-         :glass Material/GLASS
-         :air Material/AIR}))
-
-(def render-type-map
-  (atom {:solid BlockRenderType/MODEL
-         :cutout BlockRenderType/CUTOUT
-         :cutout-mipped BlockRenderType/CUTOUT_MIPPED
-         :translucent BlockRenderType/TRANSLUCENT
-         :invisible BlockRenderType/INVISIBLE}))
+(def ^:private material-map
+  {:stone Material/ROCK
+   :wood Material/WOOD
+   :metal Material/IRON
+   :glass Material/GLASS
+   :air Material/AIR})
 
 (defn- create-block-properties [mcmod-block]
-  (let [material (get @material-map (get-material mcmod-block) Material/ROCK)]
+  (let [material (get material-map (get-material mcmod-block) Material/ROCK)]
     (doto (AbstractBlock$Properties/create material)
       (.hardnessAndResistance (float (get-hardness mcmod-block))
                              (float (get-resistance mcmod-block)))
@@ -60,18 +53,10 @@
       (is-opaque? mcmod-block))
     
     (getRenderType [state]
-      (get @render-type-map (get-render-type mcmod-block) BlockRenderType/MODEL))))
-
-(defn init! []
-  ;; Initialize global state
-  (reset! material-map {:stone Material/ROCK
-                       :wood Material/WOOD
-                       :metal Material/IRON
-                       :glass Material/GLASS
-                       :air Material/AIR})
-  
-  (reset! render-type-map {:solid BlockRenderType/MODEL
-                          :cutout BlockRenderType/CUTOUT
-                          :cutout-mipped BlockRenderType/CUTOUT_MIPPED
-                          :translucent BlockRenderType/TRANSLUCENT
-                          :invisible BlockRenderType/INVISIBLE}))
+      (case (get-render-type mcmod-block)
+        :solid net.minecraft.block.BlockRenderType/MODEL
+        :cutout net.minecraft.block.BlockRenderType/CUTOUT
+        :cutout-mipped net.minecraft.block.BlockRenderType/CUTOUT_MIPPED
+        :translucent net.minecraft.block.BlockRenderType/TRANSLUCENT
+        :invisible net.minecraft.block.BlockRenderType/INVISIBLE
+        net.minecraft.block.BlockRenderType/MODEL))))

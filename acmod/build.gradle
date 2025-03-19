@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     implementation project(':common')
-    implementation 'org.clojure:clojure:1.10.1'
+    implementation 'org.clojure:clojure:1.11.1'
     implementation 'org.clojure:tools.logging:1.2.4'
     implementation 'org.clojure:data.json:2.4.0'
     implementation project(':mcmod')

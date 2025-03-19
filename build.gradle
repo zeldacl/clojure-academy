@@ -12,10 +12,13 @@ buildscript {
         mavenLocal()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = 'https://files.minecraftforge.net/maven' }
     }
     dependencies {
         classpath "dev.clojurephant:clojurephant-plugin:0.6.0"
         classpath 'net.minecraftforge.gradle:ForgeGradle:4.+'
+        classpath 'dev.clojurephant:clojurephant-plugin:0.7.0'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
     }
 }
 
@@ -47,15 +50,17 @@ task forge__1_16_2 {
 
 allprojects {
     apply plugin: 'java'
-    apply plugin: 'maven-publish'
-    apply plugin: "dev.clojurephant.clojure"
     
+    group = 'cn.academy'
+    version = '1.0.0'
+
     repositories {
         maven { url uri('./repo') }
         mavenCentral()
         maven { url = 'https://maven.minecraftforge.net/' }
         maven { url = 'https://libraries.minecraft.net/' }
         maven { url = 'https://repo.clojars.org/' }
+        maven { url = 'https://files.minecraftforge.net/maven' }
     }
     
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -80,6 +85,13 @@ subprojects {
     }
     version = '1.0.0'
     group = 'cn.academy'
+
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
 }
 
 tasks.withType(JavaExec) {
@@ -161,3 +173,7 @@ configure(subprojects) { project ->
 // Main project configuration
 group = 'cn.li.cljacademy'
 version = '1.0.0'
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

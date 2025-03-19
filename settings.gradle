@@ -16,15 +16,11 @@ pluginManagement {
 rootProject.name = 'clojure-academy'
 
 include 'mcmod'
-include 'acmod'
 include 'forge_1_16_5'
-include 'forge_1_15_2'
-include 'forge_1_12_2'
+include 'acmod'
 include 'common'
 
+project(':mcmod').projectDir = file('mcmod')
+project(':forge_1_16_5').projectDir = file('forge_1_16_5')
 project(':acmod').projectDir = file('acmod')
 project(':common').projectDir = file('common')
-project(':forge_1_12_2').projectDir = file('forge_1_12_2')
-project(':forge_1_15_2').projectDir = file('forge_1_15_2')
-project(':forge_1_16_5').projectDir = file('forge_1_16_5')
-project(':mcmod').projectDir = file('mcmod')

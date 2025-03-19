@@ -1,14 +1,17 @@
 plugins {
-    id 'java'
     id 'clojure'
+    id 'java-library'
 }
 
 repositories {
     mavenCentral()
+    maven { url = 'https://repo.clojars.org/' }
 }
 
 dependencies {
-    implementation 'org.clojure:clojure:1.10.1'
+    implementation 'org.clojure:clojure:1.11.1'
+    implementation 'org.clojure:tools.logging:1.2.4'
+    testImplementation 'org.clojure:test.check:1.1.1'
 }
 
 sourceSets {
@@ -19,5 +22,19 @@ sourceSets {
         resources {
             srcDirs = ['src/main/resources']
         }
+    }
+    test {
+        clojure {
+            srcDirs = ['src/test/clojure']
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version
+        )
     }
 }

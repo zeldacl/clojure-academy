@@ -1,4 +1,4 @@
-(ns forge-impl.mod-init
+(ns forge-impl.mod-loader
   (:require [forge-impl.registry-scanner :as scanner]
             [forge-impl.block-adapter :as block-adapter]
             [forge-impl.item-adapter :as item-adapter]
@@ -9,36 +9,26 @@
            [net.minecraftforge.eventbus.api SubscribeEvent]
            [net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext]))
 
-;; Mark this class as a Forge mod
-(gen-class
-  :name forge_impl.ModInitializer
-  :prefix "mod-"
-  :methods [[initializeMod [] void]]
-  :implements [net.minecraftforge.fml.common.Mod])
-
 (def ^:private initialized (atom false))
 
-(defn- init-adapters []
-  ;; Initialize all our Forge adapters
-  (block-adapter/init!)
-  (item-adapter/init!)
-  (cap-impl/init!))
-
+;; Initialize our Forge adapters and scan for mcmod content
 (defn- init-mod []
   (when (compare-and-set! initialized false true)
     (log/info "Initializing Forge adapter for mcmod content")
     
-    ;; Initialize adapters first
-    (init-adapters)
+    ;; Set up adapters
+    (block-adapter/init!)
+    (item-adapter/init!)
+    (cap-impl/init!)
     
-    ;; Scan and register content from acmod
+    ;; Scan and register content from mcmod
     (scanner/scan-and-register-mod! "acmod")))
 
 ;; Event handler for mod initialization
 (defn handle-setup [^FMLCommonSetupEvent event]
   (init-mod))
 
-;; Register our event handlers with Forge's mod event bus
+;; Register our event handlers
 (defn register-handlers []
   (let [bus (.get (FMLJavaModLoadingContext/get) "modEventBus")]
     (.addListener bus (reify Consumer
@@ -46,6 +36,11 @@
                          (when (instance? FMLCommonSetupEvent event)
                            (handle-setup event)))))))
 
-;; Implementation of Mod interface method
-(defn mod-initializeMod []
+;; Export a static method for registering mod handlers
+(gen-class
+  :name forge_impl.ModLoader
+  :methods [^:static [registerHandlers [] void]]
+  :prefix "loader-")
+
+(defn loader-registerHandlers []
   (register-handlers))

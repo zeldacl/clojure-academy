@@ -1,25 +1,26 @@
 modLoader="javafml"
 loaderVersion="[36,)"
-license="MIT"
+license="All rights reserved"
 
 [[mods]]
 modId="cljacademy"
 version="1.0.0"
 displayName="ClojureAcademy"
 description='''
-A Minecraft mod written in Clojure demonstrating modular architecture
+A modular Minecraft mod written in Clojure.
+Demonstrates abstraction layer between mod logic and Forge implementation.
 '''
 
 [[dependencies.cljacademy]]
 modId="forge"
 mandatory=true
-versionRange="[36.2.39,)"
+versionRange="[36,)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.cljacademy]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.16.5,1.17)"
+versionRange="[1.16.5]"
 ordering="NONE"
 side="BOTH"

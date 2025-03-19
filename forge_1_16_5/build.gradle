@@ -1,27 +1,23 @@
 buildscript {
     repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://files.minecraftforge.net/maven' }
         mavenCentral()
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '4.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
     }
 }
 
-plugins {
-    id 'java'
-    id 'clojure'
-    id 'net.minecraftforge.gradle'
-    id 'eclipse'
-}
-
 apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'clojure'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
 version = '1.0'
 group = 'cn.academy'
-archivesBaseName = 'academy-forge-1.16.5'
+archivesBaseName = 'forge_1_16_5'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 minecraft {
     mappings channel: 'snapshot', version: '20210309-1.16.5'
@@ -29,14 +25,10 @@ minecraft {
     runs {
         client {
             workingDirectory project.file('run')
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            args '--username', 'Dev'
-            
             mods {
-                academy {
+                forge_1_16_5 {
                     source sourceSets.main
                 }
             }
@@ -44,26 +36,10 @@ minecraft {
 
         server {
             workingDirectory project.file('run')
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            
             mods {
-                academy {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-            property 'forge.logging.console.level', 'debug'
-            args '--mod', 'academy', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-            
-            mods {
-                academy {
+                forge_1_16_5 {
                     source sourceSets.main
                 }
             }
@@ -72,18 +48,19 @@ minecraft {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    maven { url = 'https://repo.clojars.org/' }
 }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.39'
-    implementation project(':acmod')
-    implementation project(':common')
-    implementation 'org.clojure:clojure:1.10.1'
-    implementation project(':mcmod')
+    
+    implementation 'org.clojure:clojure:1.11.1'
+    implementation 'org.clojure:tools.logging:1.2.4'
+    implementation project(':mcmod')  // Add dependency on mcmod project
+    
     testImplementation 'org.clojure:test.check:1.1.1'
-    testImplementation 'org.mockito:mockito-core:3.12.4'
-    annotationProcessor 'org.spongepowered:mixin:0.8.2:processor'
 }
 
 sourceSets {
@@ -92,7 +69,12 @@ sourceSets {
             srcDirs = ['src/main/clojure']
         }
         resources {
-            srcDirs = ['src/main/resources', 'src/generated/resources']
+            srcDirs = ['src/main/resources']
+        }
+    }
+    test {
+        clojure {
+            srcDirs = ['src/test/clojure']
         }
     }
 }
@@ -100,36 +82,13 @@ sourceSets {
 jar {
     manifest {
         attributes([
-            "Specification-Title": "ClojureAcademy",
-            "Specification-Vendor": "clojure-academy",
+            "Specification-Title": "forge_1_16_5",
+            "Specification-Vendor": "academy",
             "Specification-Version": "1",
-            "Implementation-Title": "ClojureAcademy",
+            "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
-            "Implementation-Vendor" :"clojure-academy",
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-            "FMLModType": "LANGPROVIDER"
+            "Implementation-Vendor" :"academy",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
-}
-
-task createDirectoryStructure {
-    doLast {
-        mkdir "src/main/java"
-        mkdir "src/main/clojure"
-        mkdir "src/main/resources"
-        mkdir "src/main/resources/META-INF"
-        mkdir "src/main/resources/assets/${mod_name}"
-        mkdir "run"
-    }
-}
-
-build.dependsOn createDirectoryStructure
-
-mixin {
-    add sourceSets.main, "academy.mixins.refmap.json"
-}
-
-processResources {
-    from project(':acmod').sourceSets.main.resources
-    from project(':common').sourceSets.main.resources
 }

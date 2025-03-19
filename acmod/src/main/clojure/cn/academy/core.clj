@@ -3,7 +3,12 @@
             [clojure.tools.logging :as log]
             [cn.academy.registry :as registry]
             [cn.academy.block.registry :as block-reg]
-            [mcmod.protocols :refer :all])
+            [mcmod.protocols :refer :all]
+            [mcmod.registry :as registry]
+            [cn.academy.block.machine-block :as machine]
+            [cn.academy.block.processor-block :as processor]
+            [cn.academy.registration :as reg]
+            [cn.academy.block.registry-def :as block-defs])
   (:import [net.minecraft.creativetab CreativeTabs]
            [net.minecraft.item ItemStack]
            [net.minecraftforge.fml.common.network NetworkRegistry]
@@ -71,5 +76,23 @@
     (cn.academy.block.block.energy-generator/->EnergyGeneratorTile 
       (atom 0) (atom 10000))))
 
+;; Core mod initialization function
 (defn init! []
-  (load-blocks!))
+  (log/info "Initializing AcademyCraft")
+  
+  ;; Register all blocks defined in registry-def
+  (block-defs/register-all! block-reg/create-block "acmod")
+  
+  ;; Initialize main registration system
+  (reg/init-registration!)
+  
+  (log/info "AcademyCraft initialization complete"))
+
+;; Export Java-accessible initialization method
+(gen-class
+  :name cn.academy.Core
+  :methods [^:static [init [] void]]
+  :prefix "core-")
+
+(defn core-init []
+  (init!))
