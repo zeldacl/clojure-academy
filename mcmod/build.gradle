@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+    id 'clojure'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.clojure:clojure:1.10.1'
+}
+
+sourceSets {
+    main {
+        clojure {
+            srcDirs = ['src/main/clojure']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}

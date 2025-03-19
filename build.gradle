@@ -8,10 +8,7 @@ buildscript {
         maven { url = 'https://maven.minecraftforge.net/' }
         maven { url = 'https://libraries.minecraft.net/' }
         maven { url = 'https://plugins.gradle.org/m2' }
-        maven {
-            name = 'Clojars'
-            url = 'https://repo.clojars.org/'
-        }
+        maven { url = 'https://repo.clojars.org/' }
         mavenLocal()
         mavenCentral()
         gradlePluginPortal()
@@ -49,31 +46,20 @@ task forge__1_16_2 {
 }
 
 allprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+    apply plugin: "dev.clojurephant.clojure"
+    
     repositories {
-        maven {
-            url uri('./repo')
-        }
+        maven { url uri('./repo') }
         mavenCentral()
-        mavenLocal()
-        gradlePluginPortal()
-        maven {
-            name = 'Clojars'
-            url = 'https://repo.clojars.org/'
-        }
-        maven {
-            url = 'https://maven.minecraftforge.net/'
-        }
-        maven { url = 'https://libraries.minecraft.net/' }  // Add Minecraft libraries
-        mavenCentral()
-        maven {
-            name = 'ClojarsRepo'
-            url = 'https://repo.clojars.org'
-        }
-        maven {
-            name = 'MinecraftForge'
-            url = 'https://maven.minecraftforge.net'
-        }
+        maven { url = 'https://maven.minecraftforge.net/' }
+        maven { url = 'https://libraries.minecraft.net/' }
+        maven { url = 'https://repo.clojars.org/' }
     }
+    
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 subprojects {
@@ -92,6 +78,8 @@ subprojects {
             languageVersion = JavaLanguageVersion.of(8)
         }
     }
+    version = '1.0.0'
+    group = 'cn.academy'
 }
 
 tasks.withType(JavaExec) {
@@ -133,6 +121,43 @@ project(':forge_1_15_2') {
 
 project(':forge_1_16_5') {
     dependencies {
+        implementation project(':mcmod')
         implementation 'net.minecraftforge:forge:1.16.5-36.1.0'
+        implementation 'org.clojure:clojure:1.12.0'
+        implementation 'org.clojure:tools.logging:1.2.4'
     }
 }
+
+project(':mcmod') {
+    dependencies {
+        implementation 'org.clojure:clojure:1.12.0'
+        implementation 'org.clojure:tools.logging:1.2.4'
+    }
+}
+
+project(':acmod') {
+    dependencies {
+        implementation project(':mcmod')
+        implementation 'org.clojure:clojure:1.12.0'
+        implementation 'org.clojure:tools.logging:1.2.4'
+    }
+}
+
+// Common build configuration
+configure(subprojects) { project ->
+    apply plugin: "dev.clojurephant.clojure"
+    
+    clojure.builds {
+        main {
+            reflection = 'warn'
+            aotAll()
+            compiler {
+                directLinking = true
+            }
+        }
+    }
+}
+
+// Main project configuration
+group = 'cn.li.cljacademy'
+version = '1.0.0'

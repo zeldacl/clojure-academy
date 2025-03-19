@@ -1,0 +1,8 @@
+{
+  "block.cljacademy.wireless_matrix": "无线矩阵",
+  "itemGroup.cljacademy": "克拉汇学院",
+  "tile.cljacademy.wireless_matrix": "无线矩阵",
+  "gui.cljacademy.wireless_matrix.energy": "能量: %d / %d FE",
+  "block.wireless_matrix.hum": "无线矩阵嗡嗡声",
+  "block.wireless_matrix.transfer": "能量传输"
+}

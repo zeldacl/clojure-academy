@@ -1,8 +1,15 @@
 (ns cn.academy.registry
   (:require [clojure.tools.logging :as log]
-            [cn.academy.core :as core])
+            [cn.academy.core :as core]
+            [mcmod.protocols :refer :all]
+            [mcmod.registry :as mcr]
+            [mcmod.util :as util]
+            [cn.academy.blocks.wireless-matrix :refer [->WirelessMatrix]]
+            [cn.academy.tile-entities.wireless-matrix-te :refer [->WirelessMatrixTE]]))
   (:import [net.minecraft.block Block]
            [net.minecraft.item Item]))
+
+(def MOD-ID "cljacademy")
 
 ;; Registry state atoms
 (def blocks (atom {}))
@@ -48,3 +55,21 @@
     (register-item provider item-id constructor))
   (doseq [[te-id te-class] @tile-entities]
     (register-tile-entity provider te-id te-class)))
+
+(defn register-blocks [registry]
+  (util/register-mod-block registry 
+                          MOD-ID
+                          "wireless_matrix"
+                          (->WirelessMatrix)))
+
+(defn register-tile-entities [registry]
+  (util/register-mod-tile-entity registry
+                                MOD-ID
+                                "wireless_matrix"
+                                (->WirelessMatrixTE)))
+
+(defn register-all []
+  (let [registry (mcr/create-registry)]
+    (register-blocks registry)
+    (register-tile-entities registry)
+    registry))

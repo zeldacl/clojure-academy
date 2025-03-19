@@ -6,5 +6,8 @@
   "gui.cat_engine.energy": "Energy: %d / %d",
   "gui.cat_engine.gen_rate": "Generation Rate: %s IF/t",
   "gui.cat_engine.linked_to": "Connected to: %s",
-  "gui.cat_engine.not_linked": "Not connected to network"
+  "gui.cat_engine.not_linked": "Not connected to network",
+  "block.cljacademy.wireless_matrix": "Wireless Matrix",
+  "itemGroup.cljacademy": "ClojureAcademy",
+  "tile.cljacademy.wireless_matrix": "Wireless Matrix"
 }

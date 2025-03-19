@@ -1,0 +1,16 @@
+{
+  "block.wireless_matrix.hum": {
+    "category": "block",
+    "subtitle": "Wireless Matrix Humming",
+    "sounds": [
+      "cljacademy:block/wireless_matrix_hum"
+    ]
+  },
+  "block.wireless_matrix.transfer": {
+    "category": "block",
+    "subtitle": "Energy Transfer",
+    "sounds": [
+      "cljacademy:block/wireless_matrix_transfer"
+    ]
+  }
+}

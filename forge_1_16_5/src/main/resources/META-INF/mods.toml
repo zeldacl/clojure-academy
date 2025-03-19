@@ -3,24 +3,23 @@ loaderVersion="[36,)"
 license="MIT"
 
 [[mods]]
-modId="academy"
-version="${version}"
-displayName="Clojure Academy"
-authors="Academy Team"
+modId="cljacademy"
+version="1.0.0"
+displayName="ClojureAcademy"
 description='''
-Academy Craft reimplemented in Clojure
+A Minecraft mod written in Clojure demonstrating modular architecture
 '''
 
-[[dependencies.academy]]
-    modId="forge"
-    mandatory=true
-    versionRange="[36,)"
-    ordering="NONE"
-    side="BOTH"
+[[dependencies.cljacademy]]
+modId="forge"
+mandatory=true
+versionRange="[36.2.39,)"
+ordering="NONE"
+side="BOTH"
 
-[[dependencies.academy]]
-    modId="minecraft"
-    mandatory=true
-    versionRange="[1.16.5]"
-    ordering="NONE"
-    side="BOTH"
+[[dependencies.cljacademy]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.16.5,1.17)"
+ordering="NONE"
+side="BOTH"
