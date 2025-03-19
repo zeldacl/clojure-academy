@@ -1,0 +1,16 @@
+{
+  "credit": "Made with Blockbench",
+  "textures": {
+    "0": "li:textures/gui/matrix",
+    "particle": "li:textures/gui/matrix"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [176, 166, 0],
+      "faces": {
+        "north": {"uv": [0, 0, 176, 166], "texture": "#0"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "block.li.matrix": "Energy Matrix",
+  "container.li.matrix": "Matrix Control",
+  "tooltip.li.matrix": "A multi-block structure for wireless energy transfer",
+  "gui.li.matrix.network_id": "Network ID",
+  "gui.li.matrix.password": "Password",
+  "gui.li.matrix.connect": "Connect",
+  "gui.li.matrix.disconnect": "Disconnect",
+  "gui.li.matrix.energy": "Energy: %s / %s",
+  "gui.li.matrix.core_level": "Core Level: %s",
+  "gui.li.matrix.plates": "Plates: %s"
+}

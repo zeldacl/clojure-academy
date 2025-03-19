@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "li:block/matrix"
+    },
+    "formed=true": {
+      "model": "li:block/matrix_formed"
+    }
+  }
+}
