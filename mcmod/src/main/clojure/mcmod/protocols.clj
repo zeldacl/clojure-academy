@@ -190,3 +190,18 @@
   "Protocol for server lifecycle events"
   (on-stopping [this] "Called when server is stopping")
   (on-started [this] "Called when server has started"))
+
+(defprotocol IResourceLocation
+  "Protocol for resource locations"
+  (get-namespace [this] "Get resource namespace")
+  (get-path [this] "Get resource path"))
+
+(defprotocol ISoundCategory
+  "Protocol for sound categories"
+  (get-name [this] "Get category name")
+  (get-volume [this] "Get category volume"))
+
+(defprotocol ISoundEvent
+  "Protocol for sound events"
+  (get-location [this] "Get sound location")
+  (get-category [this] "Get sound category"))
