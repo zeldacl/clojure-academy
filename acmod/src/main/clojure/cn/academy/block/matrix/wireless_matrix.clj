@@ -1,8 +1,9 @@
-(ns cn.academy.blocks.wireless-matrix
+(ns cn.academy.block.matrix.wireless-matrix
   (:require [mcmod.protocols :refer :all]
             [mcmod.capabilities :as cap]
             [mcmod.gui :as gui]
-            [cn.academy.blocks.helpers :refer [create-block-base]])
+            [cn.academy.block.matrix.component :as component]
+            [cn.academy.block.matrix.registry :as registry])
   (:import [net.minecraft.block.material Material]))
 
 (defrecord WirelessMatrix []
@@ -43,17 +44,17 @@
   
   (get-capability [this capability-type side]
     (when (has-capability? this capability-type side)
-      (cap/create-energy-storage 
-        :capacity 100000
-        :max-receive 1000
-        :max-extract 1000)))
+      (component/create-energy 100000)))
   
   (invalidate-capabilities [this]
     nil)
 
   gui/IGuiProvider
   (create-container [this player inv]
-    (->WirelessMatrixContainer this player inv))
+    (registry/get-container-factory "wireless_matrix"))
   
   (get-gui-id [this]
     "wireless_matrix"))
+
+(defn create-wireless-matrix []
+  (->WirelessMatrix))

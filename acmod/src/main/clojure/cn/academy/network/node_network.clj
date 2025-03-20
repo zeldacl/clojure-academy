@@ -1,8 +1,6 @@
 (ns cn.academy.network.node-network
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.tile-node :as tile-node])
-  (:import [net.minecraft.network PacketBuffer]
-           [net.minecraft.util.math BlockPos]))
+            [cn.academy.block.tileentity.tile-node :as tile-node]))
 
 ;; Message types for node network communication
 (defprotocol INodeMessage
@@ -15,57 +13,56 @@
   INodeMessage
   (write-to-buffer [_ buffer]
     (doto buffer
-      (.writeLong (.asLong pos))
-      (.writeDouble energy)))
+      (write-long (pos->long pos))
+      (write-double energy)))
   
   (read-from-buffer [this buffer]
     (assoc this
-           :pos (BlockPos/fromLong (.readLong buffer))
-           :energy (.readDouble buffer)))
+           :pos (long->pos (read-long buffer))
+           :energy (read-double buffer)))
   
   (handle [this world player]
-    (when-let [tile (.getTileEntity world pos)]
-      (when (instance? tile-node/TileNode tile)
-        (.setEnergy tile energy)))))
+    (when-let [tile (get-tile-entity world pos)]
+      (when (node? tile)
+        (set-node-energy! tile energy)))))
 
 ;; Node state message (enabled/disabled)
 (defrecord NodeStateMessage [pos enabled]
   INodeMessage
   (write-to-buffer [_ buffer]
     (doto buffer
-      (.writeLong (.asLong pos))
-      (.writeBoolean enabled)))
+      (write-long (pos->long pos))
+      (write-boolean enabled)))
   
   (read-from-buffer [this buffer]
     (assoc this
-           :pos (BlockPos/fromLong (.readLong buffer))
-           :enabled (.readBoolean buffer)))
+           :pos (long->pos (read-long buffer))
+           :enabled (read-boolean buffer)))
   
   (handle [this world player]
-    (when-let [tile (.getTileEntity world pos)]
-      (when (instance? tile-node/TileNode tile)
-        (.setEnabled tile enabled)))))
+    (when-let [tile (get-tile-entity world pos)]
+      (when (node? tile)
+        (set-node-enabled! tile enabled)))))
 
 ;; Node config message (name/password)
 (defrecord NodeConfigMessage [pos name password]
   INodeMessage
   (write-to-buffer [_ buffer]
     (doto buffer
-      (.writeLong (.asLong pos))
-      (.writeString name)
-      (.writeString password)))
+      (write-long (pos->long pos))
+      (write-string name)
+      (write-string password)))
   
   (read-from-buffer [this buffer]
     (assoc this
-           :pos (BlockPos/fromLong (.readLong buffer))
-           :name (.readString buffer)
-           :password (.readString buffer)))
+           :pos (long->pos (read-long buffer))
+           :name (read-string buffer)
+           :password (read-string buffer)))
   
   (handle [this world player]
-    (when-let [tile (.getTileEntity world pos)]
-      (when (instance? tile-node/TileNode tile)
-        (.setNodeName tile name)
-        (.setPassword tile password)))))
+    (when-let [tile (get-tile-entity world pos)]
+      (when (node? tile)
+        (set-node-config! tile name password)))))
 
 ;; Network handler factory functions
 (defn create-energy-message [pos energy]

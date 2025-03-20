@@ -1,4 +1,5 @@
-(ns cn.academy.block.matrix.network)
+(ns cn.academy.block.matrix.network
+  (:require [mcmod.protocols :refer :all]))
 
 (defprotocol IMatrixNetwork
   (connect-to-network [this network-id password])
