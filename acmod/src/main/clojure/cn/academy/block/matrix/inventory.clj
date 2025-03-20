@@ -1,88 +1,48 @@
 (ns cn.academy.block.matrix.inventory
-  (:require [cn.academy.inventory.core :as inv]))
+  (:require [cn.academy.block.matrix :as matrix]))
 
-(defrecord MatrixInventory [slots dirty-atom]
-  inv/IInventory
-  (get-size [_] (count slots))
-  
-  (get-stack [_ slot]
-    (get slots slot))
-  
-  (set-stack [this slot stack]
-    (reset! dirty-atom true)
-    (assoc slots slot stack))
-  
-  (get-max-stack-size [_] 64)
-  
-  (is-valid-slot [this slot]
-    (and (>= slot 0) 
-         (< slot (inv/get-size this))))
-  
-  (is-empty? [_]
-    (every? nil? (vals slots)))
-  
-  (is-valid-stack? [_ slot stack]
-    true) ; Matrix accepts any item
-  
-  (mark-dirty [_]
-    (reset! dirty-atom true))
-  
-  inv/IItemHandler
-  (get-slots [this]
-    (inv/get-size this))
-  
-  (get-stack-in-slot [this slot]
-    (inv/get-stack this slot))
-  
-  (insert-item [this slot stack simulate?]
-    (if simulate?
-      stack
-      (do
-        (inv/set-stack this slot stack)
-        stack)))
-  
-  (extract-item [this slot amount simulate?]
-    (let [existing (inv/get-stack this slot)]
-      (if simulate?
-        existing
-        (do 
-          (inv/set-stack this slot nil)
-          existing))))
-  
-  (get-slot-limit [_ _]
-    64)
-  
-  (is-item-valid? [this slot stack]
-    (inv/is-valid-stack? this slot stack)))
+(defprotocol IMatrixInventory
+  (get-core-item [this])
+  (set-core-item [this item])
+  (get-plate-item [this index])
+  (set-plate-item [this index item])
+  (get-plate-count [this])
+  (validate-core-item [this item])
+  (validate-plate-item [this item]))
 
-(defrecord MatrixInventoryFactory []
-  inv/IInventoryFactory
-  (create-inventory [_ size]
-    (->MatrixInventory (vec (repeat size nil)) (atom false)))
+(defrecord MatrixInventory [matrix inventory-atom]
+  IMatrixInventory
+  (get-core-item [_]
+    (:core @inventory-atom))
   
-  (load-from-nbt [this nbt]
-    (let [size (get nbt "Size")
-          inv (inv/create-inventory this size)]
-      (doseq [i (range size)]
-        (when-let [stack (get nbt (str "Slot" i))]
-          (inv/set-stack inv i stack)))
-      inv))
+  (set-core-item [_ item]
+    (swap! inventory-atom assoc :core item))
   
-  (save-to-nbt [this]
-    (let [size (inv/get-size this)
-          nbt {"Size" size}]
-      (reduce (fn [acc i]
-                (if-let [stack (inv/get-stack this i)]
-                  (assoc acc (str "Slot" i) stack)
-                  acc))
-              nbt
-              (range size)))))
+  (get-plate-item [_ index]
+    (get-in @inventory-atom [:plates index]))
+  
+  (set-plate-item [_ index item]
+    (swap! inventory-atom assoc-in [:plates index] item))
+  
+  (get-plate-count [_]
+    (count (filter some? (:plates @inventory-atom))))
+  
+  (validate-core-item [_ item]
+    (and item (matrix/is-valid-core? matrix item)))
+  
+  (validate-plate-item [_ item]
+    (and item (matrix/is-valid-plate? matrix item))))
 
-(defn create-factory []
-  (->MatrixInventoryFactory))
+(defn create-inventory [matrix]
+  (->MatrixInventory matrix 
+                     (atom {:core nil
+                           :plates [nil nil nil]})))
 
-(defn is-dirty? [inventory]
-  @(:dirty-atom inventory))
+(defn get-inventory-data [inventory]
+  {:core (get-core-item inventory)
+   :plates (mapv #(get-plate-item inventory %) (range 3))})
 
-(defn clear-dirty! [inventory]
-  (reset! (:dirty-atom inventory) false))
+(defn load-inventory-data! [inventory data]
+  (set-core-item inventory (:core data))
+  (doseq [[i plate] (map-indexed vector (:plates data))]
+    (set-plate-item inventory i plate)))
