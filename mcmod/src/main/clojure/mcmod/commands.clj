@@ -1,13 +1,20 @@
 (ns mcmod.commands
-  (:require [mcmod.logging :as log])
-  (:import [com.mojang.brigadier.builder LiteralArgumentBuilder]
-           [com.mojang.brigadier CommandDispatcher]
-           [net.minecraft.command Commands CommandSource]))
+  (:require [mcmod.logging :as log]))
 
 (defprotocol ICommand
   (get-name [this] "Get the command name")
   (get-permission-level [this] "Get required permission level")
   (execute [this context args] "Execute the command"))
+
+(defprotocol ICommandBuilder
+  (literal [this name] "Create a literal command argument")
+  (requires [this predicate] "Add permission requirement")
+  (executes [this handler] "Set command execution handler")
+  (then [this child] "Add child command"))
+
+(defprotocol ICommandContext
+  (get-source [this] "Get command source")
+  (get-input [this] "Get raw command input"))
 
 (defn create-command-dispatcher []
   (atom {}))
@@ -18,10 +25,10 @@
 (defn build-command-tree [dispatcher]
   (log/with-error-logging
     (reduce (fn [builder [name command]]
-              (.then builder
-                    (.. (LiteralArgumentBuilder/literal name)
-                        (requires #(>= (.hasPermissionLevel ^CommandSource %)
-                                     (get-permission-level command)))
-                        (executes #(execute command % {})))))
-            (LiteralArgumentBuilder/literal "cljacademy")
+              (let [literal-node (literal builder name)]
+                (-> literal-node
+                    (requires #(>= (get-permission-level (get-source %))
+                                 (get-permission-level command)))
+                    (executes #(execute command % {})))))
+            (literal nil "cljacademy")
             @dispatcher)))

@@ -1,10 +1,11 @@
 (ns forge-impl.command-manager
   (:require [mcmod.commands :as cmd]
             [mcmod.logging :as log]
+            [forge-impl.command-adapters :as adapters]
             [cn.academy.commands.wireless-matrix-commands :as matrix-cmds]
             [cn.academy.commands.stats-command :as stats-cmd]
             [cn.academy.commands.reset-stats-command :as reset-cmd])
-  (:import [net.minecraftforge.event.RegisterCommandsEvent]
+  (:import [net.minecraftforge.event RegisterCommandsEvent]
            [net.minecraftforge.eventbus.api SubscribeEvent]
            [net.minecraftforge.fml.common Mod$EventBusSubscriber]))
 
@@ -19,8 +20,9 @@
 
 (defn handle-command-registration [^RegisterCommandsEvent event]
   (let [dispatcher (.getDispatcher event)
-        command-tree (cmd/build-command-tree command-dispatcher)]
-    (.register dispatcher command-tree)))
+        builder (adapters/create-command-builder)
+        command-tree (cmd/build-command-tree builder command-dispatcher)]
+    (.register dispatcher (:builder command-tree))))
 
 (gen-class
   :name forge_impl.CommandManager
