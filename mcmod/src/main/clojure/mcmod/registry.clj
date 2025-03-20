@@ -5,49 +5,61 @@
 ;; Registry state
 (def ^:private registries (atom {}))
 
+;; Core registry protocol
+(defprotocol IRegistry
+  (register-block! [this block-id block] "Register a block")
+  (register-item! [this item-id item] "Register an item")
+  (register-tile-entity! [this te-id te] "Register a tile entity")
+  (register-container! [this container-id container] "Register a container")
+  (get-blocks [this] "Get all registered blocks")
+  (get-items [this] "Get all registered items") 
+  (get-tile-entities [this] "Get all registered tile entities")
+  (get-containers [this] "Get all registered containers"))
+
+;; Base registry record implementing IRegistry
+(defrecord Registry [mod-id registry-data]
+  IRegistry
+  (register-block! [this block-id block]
+    (swap! (:blocks registry-data) assoc block-id block)
+    block)
+  
+  (register-item! [this item-id item]
+    (swap! (:items registry-data) assoc item-id item)
+    item)
+  
+  (register-tile-entity! [this te-id te]
+    (swap! (:tile-entities registry-data) assoc te-id te)
+    te)
+  
+  (register-container! [this container-id container]
+    (swap! (:containers registry-data) assoc container-id container)
+    container)
+  
+  (get-blocks [this]
+    @(:blocks registry-data))
+  
+  (get-items [this]
+    @(:items registry-data))
+  
+  (get-tile-entities [this]
+    @(:tile-entities registry-data))
+  
+  (get-containers [this]
+    @(:containers registry-data)))
+
 ;; Create a new registry instance for a mod
 (defn create-registry [mod-id]
-  (let [registry {:blocks {} 
-                 :items {}
-                 :tile-entities {}
-                 :containers {}
-                 :mod-id mod-id}]
+  (let [registry-data {:blocks (atom {})
+                      :items (atom {})
+                      :tile-entities (atom {})
+                      :containers (atom {})}
+        registry (->Registry mod-id registry-data)]
     (swap! registries assoc mod-id registry)
     registry))
 
 ;; Get an existing registry
 (defn get-registry [mod-id]
   (get @registries mod-id))
-
-;; Register content
-(defn register-block! [registry block-id block]
-  (swap! registries update-in [(:mod-id registry) :blocks] assoc block-id block)
-  block)
-
-(defn register-item! [registry item-id item]
-  (swap! registries update-in [(:mod-id registry) :items] assoc item-id item)
-  item)
-
-(defn register-tile-entity! [registry te-id te]
-  (swap! registries update-in [(:mod-id registry) :tile-entities] assoc te-id te)
-  te)
-
-(defn register-container! [registry container-id container]
-  (swap! registries update-in [(:mod-id registry) :containers] assoc container-id container)
-  container)
-
-;; Get registered content
-(defn get-blocks [registry]
-  (get-in @registries [(:mod-id registry) :blocks]))
-
-(defn get-items [registry]
-  (get-in @registries [(:mod-id registry) :items]))
-
-(defn get-tile-entities [registry]
-  (get-in @registries [(:mod-id registry) :tile-entities]))
-
-(defn get-containers [registry]
-  (get-in @registries [(:mod-id registry) :containers]))
 
 ;; Helper for creating common block types
 (defn create-basic-block [& {:keys [material hardness resistance light-level]

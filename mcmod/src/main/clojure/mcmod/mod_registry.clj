@@ -8,23 +8,23 @@
   (get-mod-items [this mod-id] "Get items registered for a specific mod")
   (get-mod-tile-entities [this mod-id] "Get tile entities registered for a specific mod"))
 
-(defrecord ModSpecificRegistry []
+(defrecord ModSpecificRegistry [registry-state]
   IModRegistry
   (register-mod [this mod-id]
-    (swap! (:mods this) conj mod-id))
+    (swap! registry-state update :mods conj mod-id))
   
   (get-mod-blocks [this mod-id]
-    (get-in @(:mod-blocks this) [mod-id]))
+    (get-in @registry-state [:blocks mod-id]))
   
   (get-mod-items [this mod-id]
-    (get-in @(:mod-items this) [mod-id]))
+    (get-in @registry-state [:items mod-id]))
   
   (get-mod-tile-entities [this mod-id]
-    (get-in @(:mod-tile-entities this) [mod-id])))
+    (get-in @registry-state [:tile-entities mod-id])))
 
 (defn create-mod-registry []
   (->ModSpecificRegistry
-    {:mods (atom #{})
-     :mod-blocks (atom {})
-     :mod-items (atom {})
-     :mod-tile-entities (atom {})}))
+    (atom {:mods #{}
+           :blocks {}
+           :items {}
+           :tile-entities {}})))

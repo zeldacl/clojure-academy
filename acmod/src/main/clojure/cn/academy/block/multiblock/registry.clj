@@ -1,5 +1,8 @@
 (ns cn.academy.block.multiblock.registry
-  (:require [cn.academy.block.multiblock.multiblock-base :as base]
+  (:require [mcmod.protocols :refer [ILifecycle]]
+            [mcmod.lifecycle :as lifecycle]
+            [mcmod.logging :as log]
+            [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.multiblock.multiblock-helper :as helper]))
 
 ;; Registry of multiblock structure validators
@@ -42,3 +45,16 @@
     (when-let [structure (helper/validate-structure world pos validator)]
       (register-active-structure! structure)
       structure)))
+
+(extend-type clojure.lang.Atom
+  ILifecycle
+  (start [this]
+    (log/info "Starting multiblock registry")
+    (reset! this {}))
+  
+  (stop [this]
+    (log/info "Stopping multiblock registry")
+    (reset! this {})))
+
+;; Register for lifecycle management
+(lifecycle/register-lifecycle active-structures)
