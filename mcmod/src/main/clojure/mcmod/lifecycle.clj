@@ -1,9 +1,7 @@
 (ns mcmod.lifecycle
   (:require [mcmod.logging :as log]
             [mcmod.concurrent :as concurrent]
-            [mcmod.cache :as cache])
-  (:import [net.minecraftforge.fml.common Mod$EventBusSubscriber]
-           [net.minecraftforge.fml.event.server ServerStoppingEvent]))
+            [mcmod.protocols :refer [ILifecycle]]))
 
 (defprotocol ILifecycle
   (start [this] "Called when the component starts")

@@ -180,3 +180,13 @@
   (spawn-entity [this entity] "Spawn entity in world")
   (is-remote [this] "Check if world is client side")
   (get-redstone-power [this pos] "Get redstone power level"))
+
+(defprotocol IEventBus
+  "Protocol for platform-independent event bus"
+  (register-handler [this handler] "Register event handler")
+  (post-event [this event] "Post event to bus"))
+
+(defprotocol IServerEvents
+  "Protocol for server lifecycle events"
+  (on-stopping [this] "Called when server is stopping")
+  (on-started [this] "Called when server has started"))
