@@ -1,5 +1,5 @@
 (ns cljacademy.registry
-  (:require [cljacademy.blocks.matrix-tile :as matrix]))
+  (:require [cn.academy.block.matrix.registry :as matrix]))
 
 (def tile-entities
-  {"wireless.matrix" matrix/create-matrix-tile})
+  {"wireless.matrix" (matrix/register-tile-entity)})

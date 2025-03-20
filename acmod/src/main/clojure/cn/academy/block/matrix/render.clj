@@ -1,16 +1,20 @@
 (ns cn.academy.block.matrix.render
-  (:require [cn.academy.block.matrix :as matrix]))
+  (:require [cn.academy.block.matrix :as matrix]
+            [cn.academy.block.matrix.utils :as utils])
+  (:import [net.minecraft.util ResourceLocation]))
+
+(def ^:private matrix-texture
+  (ResourceLocation. "academy" "textures/blocks/wireless_matrix.png"))
 
 (defprotocol IMatrixRenderer
   "Protocol for matrix rendering"
   (get-render-data [this])
   (should-render? [this])
-  (get-position [this])
-  (get-core-level [this])
-  (get-plate-count [this])
-  (get-energy-ratio [this])
-  (get-scale [this])
-  (get-rotation [this]))
+  (render-base [this])
+  (render-core [this])
+  (render-plates [this])
+  (render-shield [this time])
+  (update-animation! [this delta-time]))
 
 (defprotocol IMatrixParticles
   "Protocol for matrix particle effects"
@@ -18,43 +22,53 @@
   (spawn-plate-particles [this pos plate-count])
   (spawn-shield-particles [this pos]))
 
-(defrecord MatrixRenderer [matrix state]
+(defrecord MatrixRenderer [matrix model state]
   IMatrixRenderer
   (get-render-data [_]
     {:formed? (matrix/is-formed? matrix)
      :core-level (matrix/get-core-level matrix)
      :plate-count (matrix/get-plate-count matrix)
+     :energy (matrix/get-energy-stored matrix)
      :time (:time @state)})
   
   (should-render? [_]
     (matrix/is-formed? matrix))
   
-  (get-position [_]
-    (matrix/get-position matrix))
+  (render-base [_]
+    (render/with-push-matrix
+      (render/bind-texture matrix-texture)
+      (render/render-model-part model "Main")))
   
-  (get-core-level [_]
-    (matrix/get-core-level matrix))
+  (render-core [_]
+    (when (pos? (matrix/get-energy-stored matrix))
+      (render/with-push-matrix
+        (render/bind-texture matrix-texture)
+        (render/render-model-part model "Core"))))
   
-  (get-plate-count [_]
-    (matrix/get-plate-count matrix))
+  (render-plates [_]
+    (let [plate-count (matrix/get-plate-count matrix)]
+      (render/with-push-matrix
+        (render/bind-texture matrix-texture)
+        (doseq [i (range plate-count)]
+          (render/with-push-matrix
+            (render/translate 0 (* i 0.25) 0)
+            (render/render-model-part model (str "Plate" i)))))))
   
-  (get-energy-ratio [_]
-    (let [stored (matrix/get-energy-stored matrix)
-          capacity (matrix/get-energy-capacity matrix)]
-      (if (pos? capacity)
-        (/ stored capacity)
-        0.0)))
+  (render-shield [_ time]
+    (when (and (= (matrix/get-plate-count matrix) 3)
+               (pos? (matrix/get-energy-stored matrix)))
+      (let [shield-rotation (* time 2.0)
+            shield-height (* 0.1 (Math/sin (* time Math/PI)))]
+        (render/with-push-matrix
+          (render/bind-texture matrix-texture)
+          (render/translate 0 shield-height 0)
+          (render/rotate shield-rotation [0 1 0])
+          (render/render-model-part model "Shield")))))
   
-  (get-scale [this]
-    (let [core-level (get-core-level this)
-          plate-count (get-plate-count this)]
-      (+ 1.0 (* 0.1 core-level plate-count))))
-  
-  (get-rotation [_]
-    (let [tick-time (/ (System/currentTimeMillis) 50.0)]
-      [(* tick-time 0.5)       ; x rotation
-       (* tick-time 0.25)      ; y rotation
-       (* tick-time 0.125)]))) ; z rotation
+  (update-animation! [_ delta-time]
+    (swap! state update :time + delta-time)
+    (when (> (:time @state) 360.0)
+      (swap! state assoc :time 0.0))))
 
 (defrecord MatrixParticleSystem [matrix]
   IMatrixParticles
@@ -83,7 +97,9 @@
        :count 4})))
 
 (defn create-renderer [matrix]
-  (->MatrixRenderer matrix (atom {:time 0.0})))
+  (let [model (render/load-model "academy:models/block/wireless_matrix")
+        state (atom {:time 0.0})]
+    (->MatrixRenderer matrix model state)))
 
 (defn create-particle-system [matrix]
   (->MatrixParticleSystem matrix))

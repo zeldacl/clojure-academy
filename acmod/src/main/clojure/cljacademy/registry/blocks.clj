@@ -1,10 +1,8 @@
 (ns cljacademy.registry.blocks
-  (:require [cljacademy.blocks.matrix :as matrix]))
+  (:require [cn.academy.block.matrix.registry :as matrix]))
 
 (def blocks
-  {:wireless-matrix {:create-fn matrix/create-matrix-block
-                    :tile-entity? true
-                    :gui? true}})
+  {:wireless-matrix (matrix/register-matrix-block)})
 
 (defn get-block-info [block-id]
   (get blocks block-id))
