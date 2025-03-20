@@ -1,8 +1,6 @@
 (ns cn.academy.block.container.node-container
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.tile-node :as tile-node])
-  (:import [net.minecraft.entity.player EntityPlayer]
-           [net.minecraft.inventory IInventory]))
+            [cn.academy.block.tileentity.tile-node :as tile-node]))
 
 (defrecord NodeContainer [tile-entity player inventory]
   IContainer
@@ -26,7 +24,7 @@
         (let [remaining (.mergeItemStack inventory stack 0 9 false)]
           (when (pos? remaining)
             (.mergeItemStack inventory stack 9 36 false))))))
-  
+
   (merge-stack [_ slot stack]
     (.mergeItemStack inventory stack 
                     (.slotNumber slot) 

@@ -1,6 +1,7 @@
 (ns cn.academy.block.tileentity.tile-node
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
+            [cn.academy.core.node-types :as node-types]
             [clojure.tools.logging :as log])
   (:import [net.minecraft.inventory IInventory]
            [net.minecraft.item ItemStack]))
@@ -11,21 +12,6 @@
   (get-range [this])
   (get-capacity [this])
   (set-placer [this player]))
-
-;; Node types with their attributes
-(def node-types
-  {:basic {:max-energy 15000
-           :bandwidth 150
-           :range 9
-           :capacity 5}
-   :standard {:max-energy 50000
-              :bandwidth 300
-              :range 12
-              :capacity 10}
-   :advanced {:max-energy 200000
-              :bandwidth 900
-              :range 19
-              :capacity 20}})
 
 ;; Node state management
 (defrecord NodeState [energy active placer-id password-hash properties]
@@ -46,7 +32,7 @@
      :properties properties}))
 
 (defn- get-node-attr [state attr]
-  (get-in node-types [(:node-type state) attr]))
+  (node-types/get-node-max-energy (:node-type state)))
 
 (defn tick-node [state]
   state) ; No automatic energy generation for nodes
@@ -114,16 +100,20 @@
 (defn create-node-tile [node-type]
   (let [factory @block-api/*forge-factory*
         tile-entity (block-api/create-tile-entity factory)
-        state-atom (atom (create-node-state (get node-types node-type)))]
+        node-properties {:max-energy (node-types/get-node-max-energy node-type)
+                         :bandwidth (node-types/get-node-bandwidth node-type)
+                         :range (node-types/get-node-range node-type)
+                         :capacity (node-types/get-node-capacity node-type)}
+        state-atom (atom (create-node-state node-properties))]
     
     ;; Register capability provider for energy
     (block-api/add-capability-provider! 
       tile-entity 
       (energy-api/create-energy-storage 
-        (get-node-attr @state-atom :max-energy)
+        (node-types/get-node-max-energy node-type)
         (fn [] (:energy @state-atom))
         (fn [amount] (swap! state-atom assoc :energy amount))
-        (fn [] (get-node-attr @state-atom :bandwidth))))
+        (fn [] (node-types/get-node-bandwidth node-type))))
     
     ;; Register tick method
     (block-api/on-tile-entity-tick! 
@@ -162,10 +152,10 @@
                   (keyword (block-api/get-string compound "nodeType" "basic"))))))
     
     ;; Add getter/setter methods
-    (block-api/add-method! tile-entity "getMaxEnergy" (fn [] (get-node-attr @state-atom :max-energy)))
-    (block-api/add-method! tile-entity "getBandwidth" (fn [] (get-node-attr @state-atom :bandwidth)))
-    (block-api/add-method! tile-entity "getRange" (fn [] (get-node-attr @state-atom :range)))
-    (block-api/add-method! tile-entity "getCapacity" (fn [] (get-node-attr @state-atom :capacity)))
+    (block-api/add-method! tile-entity "getMaxEnergy" (fn [] (node-types/get-node-max-energy node-type)))
+    (block-api/add-method! tile-entity "getBandwidth" (fn [] (node-types/get-node-bandwidth node-type)))
+    (block-api/add-method! tile-entity "getRange" (fn [] (node-types/get-node-range node-type)))
+    (block-api/add-method! tile-entity "getCapacity" (fn [] (node-types/get-node-capacity node-type)))
     (block-api/add-method! tile-entity "getPlacerName" (fn [] (:placer-name @state-atom)))
     (block-api/add-method! tile-entity "setPlacerName" (fn [name] (swap! state-atom assoc :placer-name name)))
     (block-api/add-method! tile-entity "getNodeName" (fn [] (:node-name @state-atom)))
