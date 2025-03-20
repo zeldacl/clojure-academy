@@ -1,15 +1,8 @@
 (ns cn.academy.block.component)
 
-(defprotocol IBlockComponent
-  "Core component protocol for all block-related components"
-  (update! [this] "Update component state each tick")
-  (get-capability [this type side] "Get capability for given type and side")
-  (serialize [this] "Convert component state to NBT data")
-  (deserialize! [this data] "Load component state from NBT data")
-  (get-state [this] "Get current component state"))
-
+;; Factory functions for creating components
 (defrecord BlockComponent [id type state-atom]
-  IBlockComponent
+  mcmod.protocols/IBlockComponent  ; Use protocol from mcmod
   (update! [_] 
     nil)
   
@@ -25,15 +18,8 @@
   (get-state [_]
     @state-atom))
 
-(defprotocol IInventoryComponent
-  "Component for blocks with inventories"
-  (get-inventory [this])
-  (get-slot [this slot])
-  (set-slot! [this slot item])
-  (get-size [this]))
-
 (defrecord InventoryComponent [size inventory]
-  IBlockComponent
+  mcmod.protocols/IBlockComponent
   (update! [_] nil)
   (get-capability [_ type _] 
     (when (= type :inventory) this))
@@ -44,7 +30,7 @@
   (get-state [_]
     {:size size :inventory @inventory})
 
-  IInventoryComponent  
+  mcmod.protocols/IInventory  
   (get-inventory [_] @inventory)
   (get-slot [_ slot] 
     (get @inventory slot))
@@ -52,15 +38,8 @@
     (swap! inventory assoc slot item))
   (get-size [_] size))
 
-(defprotocol IEnergyComponent
-  "Component for blocks that handle energy"
-  (get-energy [this])
-  (get-capacity [this])
-  (receive-energy [this amount simulate?])
-  (extract-energy [this amount simulate?]))
-
 (defrecord EnergyComponent [capacity energy]
-  IBlockComponent
+  mcmod.protocols/IBlockComponent
   (update! [_] nil)
   (get-capability [_ type _]
     (when (= type :energy) this))
@@ -71,7 +50,7 @@
   (get-state [_]
     {:capacity capacity :energy @energy})
   
-  IEnergyComponent
+  mcmod.protocols/IEnergyStorage
   (get-energy [_] @energy)
   (get-capacity [_] capacity)
   (receive-energy [_ amount simulate?]

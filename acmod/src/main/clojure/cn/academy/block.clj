@@ -1,6 +1,7 @@
 (ns cn.academy.block
   (:require [cn.academy.block.component :as component]
             [cn.academy.block.registry :as registry]
+            [mcmod.block.protocols :refer [IBlockComponent]]
             [clojure.tools.logging :as log])
   (:import [net.minecraft.block.material Material]))
 
@@ -77,17 +78,6 @@
                 :render-type :cutout
                 :opaque? false}})
 
-;; Block registration protocol
-(defprotocol IBlockRegistration
-  (register-block! [this block-id block])
-  (register-tile-entity! [this block-id te-type te-factory])
-  (register-container! [this block-id container-factory]))
-
-;; Block component system
-(defprotocol IBlockComponent
-  (update! [this] "Update component state each tick")
-  (get-capability [this type side] "Get capability for given type and side"))
-
 ;; Block state management
 (defrecord BlockState [id properties components]
   IBlockComponent
@@ -98,7 +88,7 @@
   (get-capability [_ type side]
     (some #(get-capability % type side) (vals @components))))
 
-;; Block registration functions
+;; Block creation helpers
 (defn create-block 
   "Create a new block instance with given properties"
   [id & {:as props}]
@@ -122,5 +112,8 @@
                               (registry/create-tile-entity id props))))))
 
 ;; Re-export commonly used functions
+(def register-block! registry/register-block!)
+(def register-tile-entity! registry/register-tile-entity!)
+(def register-container! registry/register-container!)
 (def register-event-handler! registry/register-event-handler!)
 (def register-item! registry/register-item!)

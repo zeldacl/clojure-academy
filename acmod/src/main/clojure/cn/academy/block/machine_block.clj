@@ -1,6 +1,29 @@
 (ns cn.academy.block.machine-block
   (:require [mcmod.factory :as factory]
-            [mcmod.registry :as registry]))
+            [mcmod.registry :as registry]
+            [mcmod.protocols.energy :as energy]))
+
+(defrecord MachineBlockEnergy [state]
+  energy/IEnergyHandler  
+  (get-energy [_]
+    (:energy @state))
+  
+  (get-max-energy [_]
+    (:max-energy @state))
+  
+  (receive-energy [this amount]
+    (let [max-receive (:max-receive @state)
+          actual-receive (min amount max-receive)
+          new-amount (min (+ (get-energy this) actual-receive)
+                         (get-max-energy this))]
+      (swap! state assoc :energy new-amount)
+      actual-receive))
+  
+  (extract-energy [this amount]
+    (let [max-extract (:max-extract @state)
+          actual-extract (min amount max-extract (get-energy this))]
+      (swap! state update :energy - actual-extract)
+      actual-extract)))
 
 (def energy-storage-block 
   (factory/create-block
@@ -8,38 +31,7 @@
      :hardness 3.5
      :resistance 17.5
      :light-level 7
-     :has-tile-entity true
-     :on-activated (fn [pos data]
-                    (let [{:keys [world player]} data]
-                      ; Interact with player
-                      true))
-     :on-placed (fn [pos data]
-                 (let [{:keys [world player]} data]
-                   ; Initialize tile entity
-                   nil))
-     :on-removed (fn [pos]
-                  ; Cleanup
-                  nil)}))
-
-(def energy-storage-te
-  (factory/create-tile-entity
-    {:capabilities {:energy {:storage 10000
-                            :max-receive 100
-                            :max-extract 100}}
-     :on-tick (fn [state]
-                (swap! state update :energy #(min (+ % 10) 10000)))
-     :on-load (fn [state]
-                (reset! state {:energy 0}))
-     :get-update (fn [state]
-                  {:energy (:energy @state)})
-     :handle-update (fn [state packet]
-                     (swap! state assoc :energy (:energy packet)))}))
+     :has-tile-entity true}))
 
 (defn register! [mod-id]
-  ; Register block
-  (registry/register-block! mod-id "energy_storage" energy-storage-block)
-  
-  ; Register tile entity
-  (registry/register-tile-entity! mod-id "energy_storage" 
-                                "energy_storage" 
-                                energy-storage-te))
+  (registry/register-block! mod-id "energy_storage" energy-storage-block))

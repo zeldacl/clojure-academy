@@ -3,9 +3,10 @@
 
 (def ^:private GUI_WIDTH 176)
 (def ^:private GUI_HEIGHT 166)
+(def ^:private GUI_TEXTURE "cljacademy:textures/gui/node.png")
 
 (defrecord NodeGui [container tile-entity widgets]
-  IGUI
+  IGui
   (init [this]
     ;; Initialize GUI components
     (let [x (quot (- (.width this) GUI_WIDTH) 2)
@@ -39,55 +40,57 @@
                                :height 20
                                :text (if (.isEnabled tile-entity) "Enabled" "Disabled")
                                :callback #(.setEnabled tile-entity (not (.isEnabled tile-entity)))})]
-        (swap! widgets assoc :toggle-btn btn))))
+        (swap! widgets assoc :toggle-btn btn)))
 
-  (draw-background [this renderer mouse-x mouse-y]
+  (render [this mouse-data render-data]
     (let [x (quot (- (.width this) GUI_WIDTH) 2)
-          y (quot (- (.height this) GUI_HEIGHT) 2)]
+          y (quot (- (.height this) GUI_HEIGHT) 2)
+          matrix-stack (:matrix-stack render-data)]
       
       ;; Draw main background
-      (bind-texture renderer "academy:textures/gui/node.png")
-      (draw-textured-rect renderer x y 0 0 GUI_WIDTH GUI_HEIGHT)
+      (bind-texture GUI_TEXTURE)
+      (draw-textured-rect x y 0 0 GUI_WIDTH GUI_HEIGHT)
       
       ;; Draw energy bar
-      (let [energy-pct (/ (.getEnergy tile-entity) (.getMaxEnergy tile-entity))
-            bar-height (int (* 50 energy-pct))]
-        (draw-textured-rect renderer 
-                          (+ x 156) (+ y (- 63 bar-height))
-                          176 (- 50 bar-height)
-                          16 bar-height))))
-  
-  (draw-foreground [this renderer mouse-x mouse-y]
-    ;; Draw text labels
-    (let [title (.getNodeName tile-entity)
-          energy (format "%.0f / %.0f RF" 
-                        (.getEnergy tile-entity)
-                        (.getMaxEnergy tile-entity))
-          bandwidth (format "Bandwidth: %d RF/t" (.getBandwidth tile-entity))
-          range (format "Range: %d blocks" (.getRange tile-entity))]
+      (let [energy (.getEnergy tile-entity)
+            max-energy (.getMaxEnergy tile-entity)
+            energy-height (int (* 50 (/ energy max-energy)))]
+        (draw-textured-rect (+ x 166) (+ y 8) 176 0 4 50)  ;; Empty bar
+        (when (pos? energy-height)
+          (draw-textured-rect (+ x 166) (+ y (- 58 energy-height)) 180 0 4 energy-height))) ;; Filled bar
       
-      (draw-string renderer (.font this) title 8 6 4210752)
-      (draw-string renderer (.font this) energy 8 85 4210752)
-      (draw-string renderer (.font this) bandwidth 8 95 4210752) 
-      (draw-string renderer (.font this) range 8 105 4210752))
-    
-    ;; Draw widgets
-    (doseq [widget (vals @widgets)]
-      (render widget renderer mouse-x mouse-y 0)))
-  
-  (handle-mouse-click [this mouse-x mouse-y button]
-    (doseq [widget (vals @widgets)]
-      (mouse-clicked widget mouse-x mouse-y button)))
-  
-  (handle-key-press [this key scancode modifiers]
+      ;; Draw range indicator
+      (let [range (.getRange tile-entity)]
+        (draw-string range 8 105 4210752))
+      
+      ;; Draw widgets
+      (doseq [widget (vals @widgets)]
+        (render widget mouse-data render-data)))
+
+  (on-close [this]
+    ;; Save any pending changes
     (let [name-field (:name-field @widgets)
           pwd-field (:pwd-field @widgets)]
-      (when (.isFocused name-field)
-        (key-pressed name-field key scancode modifiers)
-        (.setNodeName tile-entity (.getText name-field)))
-      (when (.isFocused pwd-field)
-        (key-pressed pwd-field key scancode modifiers)
-        (.setPassword tile-entity (.getText pwd-field))))))
+      (.setNodeName tile-entity (.getText name-field))
+      (.setPassword tile-entity (.getText pwd-field))))
+
+  (get-title [_] "Wireless Node")
+  
+  (get-texture [_] GUI_TEXTURE)
+
+  IGuiContainer  
+  (get-slots [_] 
+    (.getSlots container))
+
+  (is-valid? [_ player]
+    (.stillValid container player))
+
+  (sync-data [_]
+    (.broadcastChanges container))
+
+  (on-button-clicked [_ player button-id]
+    (when-let [btn (get @widgets button-id)]
+      ((:callback btn)))))
 
 (defn create-gui [container]
   (->NodeGui container 

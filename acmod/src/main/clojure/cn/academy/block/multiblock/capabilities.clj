@@ -1,32 +1,32 @@
 (ns cn.academy.block.multiblock.capabilities
-  (:require [cn.academy.block.multiblock.machine-state :as machine])
-  (:import [net.minecraftforge.energy IEnergyStorage]))
+  (:require [cn.academy.block.multiblock.machine-state :as machine]
+            [mcmod.protocols.energy :refer [IEnergyHandler]]))
 
 (defrecord MultiblockEnergyHandler [machine max-transfer]
-  IEnergyStorage
-  (receiveEnergy [_ maxReceive simulate]
+  IEnergyHandler
+  (receive-energy [_ amount simulate]
     (let [space-left (- (:max-energy machine)
                        (machine/get-energy machine))
-          amount (min maxReceive max-transfer space-left)]
+          amount (min amount max-transfer space-left)]
       (when (and (pos? amount) (not simulate))
         (machine/add-energy! machine amount))
       amount))
   
-  (extractEnergy [_ maxExtract simulate]
+  (extract-energy [_ amount simulate]
     (let [energy (machine/get-energy machine)
-          amount (min maxExtract max-transfer energy)]
+          amount (min amount max-transfer energy)]
       (when (and (pos? amount) (not simulate))
         (machine/use-energy! machine amount))
       amount))
   
-  (getEnergyStored [_]
+  (get-energy-stored [_]
     (machine/get-energy machine))
   
-  (getMaxEnergyStored [_]
+  (get-max-energy-stored [_]
     (:max-energy machine))
   
-  (canExtract [_]
+  (can-extract? [_]
     true)
   
-  (canReceive [_]
+  (can-receive? [_]
     true))
