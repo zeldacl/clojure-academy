@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "energy_level=0,enabled=false": { "model": "acmod:block/node_basic" },
+    "energy_level=0,enabled=true": { "model": "acmod:block/node_basic_on_0" },
+    "energy_level=1,enabled=true": { "model": "acmod:block/node_basic_on_1" },
+    "energy_level=2,enabled=true": { "model": "acmod:block/node_basic_on_2" },
+    "energy_level=3,enabled=true": { "model": "acmod:block/node_basic_on_3" },
+    "energy_level=4,enabled=true": { "model": "acmod:block/node_basic_on_4" }
+  }
+}

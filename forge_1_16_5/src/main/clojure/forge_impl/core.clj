@@ -1,10 +1,12 @@
 (ns forge-impl.core
   (:require [forge-impl.registry-scanner :as scanner]
             [forge-impl.dependency-scanner :as deps]
-            [forge-impl.content-scanner :as content])
+            [forge-impl.content-scanner :as content]
+            [clojure.tools.logging :as log])
   (:import [net.minecraftforge.fml.common Mod]
            [net.minecraftforge.fml.javafmlmod FMLJavaModLoadingContext]
-           [net.minecraftforge.eventbus.api IEventBus]
+           [net.minecraftforge.eventbus.api IEventBus SubscribeEvent]
+           [net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent]
            [net.minecraft.item ItemGroup ItemStack]
            [net.minecraft.item Items]))
 
@@ -45,3 +47,18 @@
     (.addListener mod-bus register-blocks)
     (.addListener mod-bus register-items)
     (.addListener mod-bus register-tile-entities)))
+
+(gen-class
+  :name forge_impl.ForgeInitializer
+  :prefix "forge-"
+  :methods [[init [] void]
+            [^{SubscribeEvent true} onCommonSetup [net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent] void]]
+  :annotations [[net.minecraftforge.fml.common.Mod "forge_1_16_5"]])
+
+(defn forge-init []
+  (log/info "Initializing Forge 1.16.5 implementation"))
+
+(defn forge-onCommonSetup [this event]
+  (log/info "Starting content registration")
+  (scanner/scan-and-register!)
+  (log/info "Content registration complete"))

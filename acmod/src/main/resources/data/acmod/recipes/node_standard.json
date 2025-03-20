@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GRG",
+    "RNR",
+    "GRG"
+  ],
+  "key": {
+    "G": {
+      "tag": "forge:ingots/gold"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    },
+    "N": {
+      "item": "acmod:node_basic"
+    }
+  },
+  "result": {
+    "item": "acmod:node_standard",
+    "count": 1
+  }
+}

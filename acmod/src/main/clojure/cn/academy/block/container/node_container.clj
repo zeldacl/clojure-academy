@@ -1,37 +1,89 @@
 (ns cn.academy.block.container.node-container
-  (:require [cn.academy.api.container :as container-api]
-            [cn.academy.api.item :as item-api])
-  (:import [net.minecraft.inventory IInventory]
-           [net.minecraft.entity.player EntityPlayer]))
+  (:require [mcmod.protocols :refer :all]
+            [cn.academy.block.tileentity.tile-node :as tile-node])
+  (:import [net.minecraft.entity.player EntityPlayer]
+           [net.minecraft.inventory IInventory]))
+
+(defrecord NodeContainer [tile-entity player inventory]
+  IContainer
+  (get-slots [_]
+    (range (.getSizeInventory inventory)))
+  
+  (get-slot [_ idx]
+    (.getStackInSlot inventory idx))
+  
+  (set-slot [_ idx stack]
+    (.setInventorySlotContents inventory idx stack))
+  
+  (can-interact-with [_ player]
+    true)
+  
+  (transfer-stack [_ player idx]
+    (let [slot (.getSlot inventory idx)
+          stack (.getStack slot)]
+      (when stack
+        ;; Handle shift-clicking logic for energy items
+        (let [remaining (.mergeItemStack inventory stack 0 9 false)]
+          (when (pos? remaining)
+            (.mergeItemStack inventory stack 9 36 false))))))
+  
+  (merge-stack [_ slot stack]
+    (.mergeItemStack inventory stack 
+                    (.slotNumber slot) 
+                    (inc (.slotNumber slot)) 
+                    false))
+  
+  (detect-sync-changes [_]
+    (.detectAndSendChanges inventory)))
 
 (defprotocol INodeContainer
-  (init-slots [this])
-  (can-interact [this player])
-  (transfer-slot [this slot-id player-action]))
+  (get-node [this])
+  (get-energy [this])
+  (get-max-energy [this])
+  (get-bandwidth [this])
+  (get-range [this])
+  (get-capacity [this]))
 
-(defrecord NodeContainer [tile player]
+(defrecord NodeContainerImpl [container tile]
   INodeContainer
-  (init-slots [this]
-    ;; Add slots for energy items
-    (doto this
-      (container-api/add-slot "INPUT" tile 0 56 17) ; Input slot for charging
-      (container-api/add-slot "OUTPUT" tile 1 56 53) ; Output slot for discharging
-      (container-api/map-player-inventory 8 84))) ; Player inventory at y=84
+  (get-node [_] tile)
   
-  (can-interact [_ player]
-    (.isWithinUsableDistance player (.getPos tile)))
+  (get-energy [_]
+    (tile-node/get-energy tile))
   
-  (transfer-slot [this slot-id action]
-    (let [input-slot (container-api/get-slot this 0)
-          output-slot (container-api/get-slot this 1)
-          player-slots (container-api/get-player-slots this)
-          energy-handler (item-api/get-energy-handler input-slot)]
-      (case action
-        :to-player (container-api/merge-into-player this slot-id player-slots)
-        :from-player (when (item-api/is-energy-item? slot-id)
-                      (container-api/merge-into-slot this slot-id input-slot))))))
+  (get-max-energy [_]
+    (tile-node/get-max-energy tile))
+  
+  (get-bandwidth [_]
+    (tile-node/get-bandwidth tile))
+  
+  (get-range [_]
+    (tile-node/get-range tile))
+  
+  (get-capacity [_]
+    (tile-node/get-capacity tile)))
 
+;; Factory function
 (defn create-container [tile player]
-  (let [container (->NodeContainer tile player)]
-    (init-slots container)
-    container))
+  (let [inventory (tile-node/get-inventory tile)
+        container (->NodeContainer tile player inventory)]
+    (->NodeContainerImpl container tile)))
+
+;; Export for Java interop
+(gen-class
+  :name cn.academy.block.container.ContainerNode
+  :prefix "container-"
+  :state state
+  :init init
+  :constructors {[Object Object] []}
+  :methods [[getTileEntity [] Object]
+            [getPlayer [] Object]])
+
+(defn container-init [tile player]
+  [[] (create-container tile player)])
+
+(defn container-getTileEntity [this]
+  (get-node (.state this)))
+
+(defn container-getPlayer [this]
+  (:player (.state this)))

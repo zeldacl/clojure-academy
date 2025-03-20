@@ -1,0 +1,16 @@
+{
+  "block.acmod.node_basic": "Basic Wireless Node",
+  "block.acmod.node_standard": "Standard Wireless Node",
+  "block.acmod.node_advanced": "Advanced Wireless Node",
+  
+  "container.acmod.node_basic": "Basic Node",
+  "container.acmod.node_standard": "Standard Node", 
+  "container.acmod.node_advanced": "Advanced Node",
+
+  "tooltip.acmod.node.energy": "Energy: %d / %d",
+  "tooltip.acmod.node.enabled": "Enabled",
+  "tooltip.acmod.node.disabled": "Disabled",
+  
+  "message.acmod.node.activated": "Node activated",
+  "message.acmod.node.deactivated": "Node deactivated"
+}

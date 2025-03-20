@@ -1,0 +1,7 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "acmod:blocks/node_basic_on_2",
+    "particle": "acmod:blocks/node_basic_on_2"
+  }
+}

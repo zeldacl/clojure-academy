@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DED",
+    "ENE",
+    "DED"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond_block"
+    },
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "N": {
+      "item": "acmod:node_standard"
+    }
+  },
+  "result": {
+    "item": "acmod:node_advanced",
+    "count": 1
+  }
+}
