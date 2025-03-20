@@ -1,14 +1,12 @@
 (ns cn.academy.block.gui.cat-engine-gui
   (:require [cn.academy.energy.api.wireless-helper :as wireless-helper]
             [cn.academy.block.tileentity.tile-cat-engine :as tile-engine]
-            [cn.academy.client.gui.base :as gui-base])
-  (:import [net.minecraft.client.gui GuiScreen]
-           [net.minecraft.util ResourceLocation]
-           [net.minecraft.client.resources I18n]))
+            [cn.academy.client.gui.base :as gui-base]
+            [cn.academy.block.material :as material]
+            [cn.academy.gui.base :as gui-protocol]
+            [cn.academy.util.local-helper :as local]))
 
-(def ^:private GUI_TEX 
-  (ResourceLocation. "cljacademy" "textures/gui/cat_engine.png"))
-
+(def ^:private GUI_TEX "cljacademy:textures/gui/cat_engine.png")
 (def ^:private GUI_WIDTH 176)
 (def ^:private GUI_HEIGHT 166)
 
@@ -33,13 +31,13 @@
           max-energy tile-engine/ENERGY_MAX
           gen-rate (tile-engine/get-this-tick-gen engine)]
       (gui-base/draw-string 
-        (I18n/format "gui.cat_engine.energy" 
-                    (int energy) 
-                    (int max-energy))
+        (local/format "gui.cat_engine.energy" 
+                    [(int energy) 
+                     (int max-energy)])
         8 20 0x404040)
       (gui-base/draw-string
-        (I18n/format "gui.cat_engine.gen_rate"
-                    (format "%.1f" gen-rate))
+        (local/format "gui.cat_engine.gen_rate"
+                    [(format "%.1f" gen-rate)])
         8 32 0x404040)))
   
   (draw-network-info [_]
@@ -47,17 +45,19 @@
       (let [node (wireless-helper/get-linked-node engine)
             network (wireless-helper/get-wireless-net node)]
         (gui-base/draw-string
-          (I18n/format "gui.cat_engine.linked_to"
-                      (wireless-helper/get-network-name network))
+          (local/format "gui.cat_engine.linked_to"
+                      [(wireless-helper/get-network-name network)])
           8 50 0x404040))
       (gui-base/draw-string
-        (I18n/format "gui.cat_engine.not_linked")
+        (local/format "gui.cat_engine.not_linked")
         8 50 0x404040)))
 
-  GuiScreen
-  (drawScreen [this mouse-x mouse-y partial-ticks]
-    (draw-background this mouse-x mouse-y partial-ticks)
-    (draw-foreground this mouse-x mouse-y)))
+  gui-protocol/IScreen
+  (init [_] nil)
+  (render [this data]
+    (draw-background this (:mouse-x data) (:mouse-y data) (:partial-ticks data))
+    (draw-foreground this (:mouse-x data) (:mouse-y data)))
+  (on-close [_] nil))
 
 (defn create [engine]
   (->CatEngineGui engine (gui-base/create)))

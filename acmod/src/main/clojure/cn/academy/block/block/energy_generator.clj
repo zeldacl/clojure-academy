@@ -1,7 +1,7 @@
 (ns cn.academy.block.block.energy-generator
   (:require [cn.academy.block.registry :as reg]
-            [mcmod.protocols :refer :all])
-  (:import [net.minecraft.block.material Material]))
+            [mcmod.protocols :refer :all]
+            [cn.academy.blocks.helpers :refer [create-block-base]]))
 
 (defrecord EnergyGeneratorTile [energy max-energy]
   ITileEntity
@@ -23,7 +23,7 @@
     (reset! energy (:energy packet))))
 
 (defn create-energy-generator []
-  (let [block-properties {:material Material/IRON
+  (let [block-properties {:material :iron
                          :hardness 3.5
                          :resistance 17.5
                          :light-level 7

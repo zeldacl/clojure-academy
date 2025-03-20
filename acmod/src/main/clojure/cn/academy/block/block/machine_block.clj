@@ -1,7 +1,7 @@
 (ns cn.academy.block.block.machine-block
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.registry :as reg])
-  (:import [net.minecraft.block.material Material]))
+            [cn.academy.block.registry :as reg]
+            [cn.academy.blocks.helpers :refer [create-block-base]]))
 
 (defrecord MachineTile [power max-power active]
   ITileEntity
@@ -27,15 +27,16 @@
     (reset! power (:power packet))
     (reset! active (:active packet))))
 
-(defrecord MachineBlock []
+(defrecord MachineBlock [active]
   IBlock
   (get-properties [this]
-    {:material Material/IRON
+    {:material :iron
      :hardness 3.5
      :resistance 17.5
-     :light-level (if @active 15 0)})
+     :light-level (if @active 15 0)
+     :has-tile-entity true})
   
-  (get-material [_] Material/IRON)
+  (get-material [_] :iron)
   
   (get-hardness [_] 3.5)
   
@@ -56,7 +57,7 @@
     nil))
 
 (defn register! []
-  (let [block (->MachineBlock)]
+  (let [block (->MachineBlock (atom false))]
     (reg/create-block "machine_block" block)
     (reg/register-tile-entity! "machine_block" :machine 
       (->MachineTile (atom 0) (atom 1000) (atom false)))))

@@ -2,8 +2,8 @@
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.energy.api.wireless :as wireless]
-            [clojure.tools.logging :as log])
-  (:import [net.minecraft.nbt NBTTagCompound]))
+            [mcmod.nbt :as nbt]
+            [clojure.tools.logging :as log]))
 
 ;; Constants
 (def ^:const ENERGY_MAX 100000.0)
@@ -77,20 +77,20 @@
       (write-to-nbt [_ tag]
         (let [state @state-atom]
           (doto tag
-            (.setDouble "energy" (:energy state))
-            (.setDouble "rotation" (:rotation state))
-            (.setLong "lastRender" (:last-render state))
-            (.setDouble "thisTickGen" (:this-tick-gen state))
-            (.setBoolean "active" (:active state)))))
+            (nbt/put-double "energy" (:energy state))
+            (nbt/put-double "rotation" (:rotation state))
+            (nbt/put-long "lastRender" (:last-render state))
+            (nbt/put-double "thisTickGen" (:this-tick-gen state))
+            (nbt/put-boolean "active" (:active state)))))
       
       (read-from-nbt [_ tag]
         (reset! state-atom
           (->CatEngineState
-            (.getDouble tag "energy")
-            (.getDouble tag "rotation")
-            (.getLong tag "lastRender")
-            (.getDouble tag "thisTickGen")
-            (.getBoolean tag "active"))))
+            (nbt/get-double tag "energy")
+            (nbt/get-double tag "rotation")
+            (nbt/get-long tag "lastRender")
+            (nbt/get-double tag "thisTickGen")
+            (nbt/get-boolean tag "active"))))
       
       wireless/IWirelessGenerator
       (generate-energy [this amount]
@@ -101,4 +101,4 @@
           generated))
       
       (get-generation-rate [_]
-        ENERGY_GEN_PER_TICK))))
+        ENERGY_GEN_PER_TICK)))))
