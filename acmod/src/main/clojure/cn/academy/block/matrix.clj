@@ -6,7 +6,17 @@
             [cn.academy.block.matrix.inventory :as inventory]
             [cn.academy.block.matrix.container :as container]
             [cn.academy.block.matrix.render :as render]
-            [cn.academy.block.matrix.utils :as utils]))
+            [cn.academy.block.matrix.utils :as utils]
+            [cn.academy.block.multiblock :as multiblock]))
+
+;; Define sub-blocks for multiblock structure
+(def ^:private matrix-sub-blocks
+  [[0 0 1] [1 0 1] [1 0 0] [0 1 0] [0 1 1] [1 1 1] [1 1 0]])
+
+(defprotocol IMatrixMultiblock
+  (is-complete? [this])
+  (get-origin [this])
+  (get-sub-blocks [this]))
 
 (defprotocol IMatrix
   "Core matrix functionality"
@@ -24,7 +34,11 @@
   (working? [this])
   (join-network [this network-id password])
   (leave-network [this])
-  (can-interact? [this player]))
+  (can-interact? [this player])
+  (handle-block-activated [this world pos state player]
+    "Handle block activation (right-click)")
+  (handle-block-placed [this world pos state placer stack]
+    "Handle block placement"))
 
 (defrecord Matrix [id pos state inventory network energy renderer]
   IMatrix
@@ -71,7 +85,28 @@
     (network/leave))
   
   (can-interact? [this player]
-    (container/can-interact-with? player)))
+    (container/can-interact-with? player))
+  
+  (handle-block-activated [_ world pos state player]
+    (when-not (.isSneaking player)
+      (when-let [origin (multiblock/get-origin world pos)]
+        (container/open-gui player world origin)
+        true)))
+  
+  (handle-block-placed [_ world pos state placer stack]
+    (when (instance? net.minecraft.entity.player.EntityPlayer placer)
+      (when-let [tile (get-tile-entity world pos)]
+        (set-placer! this (.getName placer)))))
+  
+  IMatrixMultiblock
+  (is-complete? [_]
+    (multiblock/is-complete? pos matrix-sub-blocks))
+  
+  (get-origin [_]
+    (multiblock/get-origin pos matrix-sub-blocks))
+  
+  (get-sub-blocks [_]
+    matrix-sub-blocks))
 
 (defn create-matrix
   "Create new matrix instance"
