@@ -3,8 +3,8 @@
             [cn.academy.energy.api.wireless :as wireless]
             [cn.academy.energy.api.wireless-helper :as wireless-helper]
             [cn.academy.block.tileentity.tile-cat-engine :as tile-engine]
-            [cn.lambdalib2.util.rand-utils :as rand-utils])
-  (:import [net.minecraft.block.material Material]))
+            [cn.lambdalib2.util.rand-utils :as rand-utils]
+            [cn.academy.block.material :as material]))
 
 (defprotocol ICatEngineBlock
   (create-tile-entity [this world meta])
@@ -45,4 +45,4 @@
 
 (defn create []
   (->CatEngineBlock
-    {:material Material/ROCK}))
+    {:material (material/create-material (block-api/get-block-material @block-api/*forge-factory* "rock"))}))
