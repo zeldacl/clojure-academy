@@ -1,19 +1,9 @@
 (ns cn.li.bridge.inventory.bridge
-  (:require [cn.li.bridge.inventory.core :as inv])
+  (:require [cn.li.bridge.inventory.core :as inv]
+            [mcmod.protocols :refer [IInventoryBridge]])
   (:import [net.minecraft.inventory IInventory]
            [net.minecraft.item ItemStack]
            [net.minecraftforge.items IItemHandler IItemHandlerModifiable]))
-
-(defprotocol IForgeInventoryBridge
-  "Bridge between platform-independent inventory and Forge inventory"
-  (wrap-forge-inventory [this forge-inv]
-    "Wrap Forge inventory with platform-independent interface")
-  (wrap-forge-item-handler [this forge-handler]
-    "Wrap Forge item handler with platform-independent interface")
-  (to-forge-inventory [this inventory]
-    "Convert platform-independent inventory to Forge inventory")
-  (to-forge-item-handler [this handler]
-    "Convert platform-independent handler to Forge item handler"))
 
 (defrecord ForgeInventoryWrapper [forge-inv]
   inv/IInventory
@@ -62,4 +52,4 @@
   (extract-item [_ slot amount simulate]
     (let [result (.extractItem forge-handler slot amount simulate)]
       {:item (.getItem result)
-       :count (.getCount result)})))
+       :count (.getCount result)}))

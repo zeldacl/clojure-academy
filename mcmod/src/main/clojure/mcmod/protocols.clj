@@ -593,3 +593,51 @@
   (get-particles [this] "Get effect particles")
   (update-effect [this] "Update effect state")
   (is-finished? [this] "Check if effect is finished"))
+
+;; Inventory protocols
+(defprotocol IInventory
+  "Core inventory functionality"
+  (get-size [this] "Get inventory size")
+  (get-stack [this slot] "Get item stack in slot")
+  (set-stack [this slot stack] "Set item stack in slot")
+  (remove-stack [this slot amount] "Remove items from slot")
+  (is-empty? [this] "Check if inventory is empty")
+  (mark-dirty [this] "Mark inventory as changed"))
+
+(defprotocol IItemHandler
+  "Item handler functionality"
+  (get-slots [this] "Get number of slots")
+  (get-stack-in-slot [this slot] "Get stack in slot")
+  (insert-item [this slot stack simulate] "Insert stack into slot")
+  (extract-item [this slot amount simulate] "Extract items from slot"))
+
+(defprotocol IInventoryBridge
+  "Bridge between platform-independent inventory and platform-specific implementation"
+  (wrap-platform-inventory [this platform-inv]
+    "Wrap platform inventory with platform-independent interface")
+  (wrap-platform-item-handler [this platform-handler]
+    "Wrap platform item handler with platform-independent interface")
+  (to-platform-inventory [this inventory]
+    "Convert platform-independent inventory to platform inventory")
+  (to-platform-item-handler [this handler]
+    "Convert platform-independent handler to platform item handler"))
+
+;; Bridge protocols
+(defprotocol IBridge
+  "Base protocol for all bridge implementations"
+  (init [this] "Initialize the bridge")
+  (teardown [this] "Clean up bridge resources"))
+
+(defprotocol IInventoryBridge
+  "Bridge for inventory operations"
+  (get-inventory [this holder] "Get inventory from holder")
+  (get-slot-count [this inventory] "Get number of slots")
+  (get-stack [this inventory slot] "Get item stack in slot")
+  (set-stack [this inventory slot stack] "Set item stack in slot")
+  (is-empty? [this inventory] "Check if inventory is empty"))
+
+(defprotocol ICapabilityBridge
+  "Bridge for capability system"
+  (register-capability [this cap] "Register a new capability type")
+  (get-capability [this object cap] "Get capability from object")
+  (has-capability? [this object cap] "Check if object has capability"))
