@@ -1,8 +1,6 @@
 (ns mcmod.test-utils
   (:require [mcmod.protocols :refer :all]
-            [mcmod.capabilities :as cap])
-  (:import [net.minecraft.world World]
-           [net.minecraft.util.math BlockPos]))
+            [mcmod.capabilities :as cap]))
 
 (defprotocol IMockWorld
   (get-tile-entity [this pos])
@@ -18,7 +16,20 @@
     (swap! (:tile-entities this) assoc-in [(:x pos) (:y pos) (:z pos)] te))
   
   (remove-tile-entity [this pos]
-    (swap! (:tile-entities this) update-in [(:x pos) (:y pos)] dissoc (:z pos))))
+    (swap! (:tile-entities this) update-in [(:x pos) (:y pos)] dissoc (:z pos)))
+
+  IWorld
+  (get-block [this pos]
+    nil) ; Mock implementation returns nil for blocks
+  
+  (set-block [this pos block]
+    nil) ; Mock implementation does nothing for blocks
+  
+  (get-tile-entity [this pos]
+    (get-tile-entity this pos))
+  
+  (spawn-entity [this entity]
+    nil)) ; Mock implementation does nothing for entities
 
 (defn create-mock-world []
   (->MockWorld {:tile-entities (atom {})}))
