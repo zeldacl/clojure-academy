@@ -1,6 +1,15 @@
-(ns cn.academy.block.matrix-util
-  (:require [cn.academy.block.matrix :as matrix]))
+(ns cn.academy.block.matrix-util)
 
+;; Core matrix structure definition
+(def default-structure
+  [[-1 0 -1] [0 0 -1] [1 0 -1]
+   [-1 0 0]  [0 0 0]  [1 0 0]
+   [-1 0 1]  [0 0 1]  [1 0 1]])
+
+(defn get-default-structure []
+  default-structure)
+
+;; Position and coordinate utilities
 (defn calc-offset [pos facing]
   (let [[x y z] pos]
     (case facing
@@ -15,6 +24,30 @@
   (let [rotation-matrix (get-rotation-matrix facing)
         base-pos (vec pos)]
     (map #(map + base-pos (matrix-multiply rotation-matrix %)) pattern)))
+
+;; Structure validation utilities
+(defn valid-structure-placement? [pos structure]
+  (every? #(can-replace-block? (calc-offset pos %)) structure))
+
+(defn try-form-structure [pos structure]
+  (when (valid-structure-placement? pos structure)
+    (mapv #(calc-offset pos %) structure)))
+
+;; Position serialization
+(defn serialize-pos [pos]
+  {:x (:x pos) :y (:y pos) :z (:z pos)})
+
+(defn deserialize-pos [data]
+  {:x (:x data) :y (:y data) :z (:z data)})
+
+;; Math utilities
+(defn in-range? [pos1 pos2 range]
+  (<= (calc-distance pos1 pos2) range))
+
+(defn calc-distance [pos1 pos2]
+  (Math/sqrt (+ (Math/pow (- (:x pos2) (:x pos1)) 2)
+                (Math/pow (- (:y pos2) (:y pos1)) 2)
+                (Math/pow (- (:z pos2) (:z pos1)) 2))))
 
 (defn get-rotation-matrix [facing]
   (case facing
@@ -33,19 +66,3 @@
 
 (defn matrix-multiply [matrix vec]
   (mapv #(reduce + (map * % vec)) matrix))
-
-(defn in-range? [pos1 pos2 range]
-  (<= (Math/sqrt (+ (Math/pow (- (:x pos2) (:x pos1)) 2)
-                    (Math/pow (- (:y pos2) (:y pos1)) 2)
-                    (Math/pow (- (:z pos2) (:z pos1)) 2)))
-      range))
-
-(defn serialize-pos [pos]
-  {:x (:x pos)
-   :y (:y pos)
-   :z (:z pos)})
-
-(defn deserialize-pos [data]
-  {:x (:x data)
-   :y (:y data)
-   :z (:z data)})

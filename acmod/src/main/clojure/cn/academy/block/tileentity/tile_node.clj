@@ -2,10 +2,8 @@
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.core.node-types :as node-types]
-            [mcmod.protocols :refer [ITileEntity]]
-            [clojure.tools.logging :as log])
-  (:import [net.minecraft.inventory IInventory]
-           [net.minecraft.item ItemStack]))
+            [mcmod.protocols :refer [ITileEntity IInventory]]
+            [clojure.tools.logging :as log]))
 
 ;; Now implementing shared IWirelessNode protocol from node-types
 ;; Node state management

@@ -1,6 +1,7 @@
 (ns cn.academy.block.block-node
   (:require [mcmod.protocols :refer :all]
             [mcmod.block.block-state :as block-state]
+            [cn.academy.block.node :as node]
             [cn.academy.block.tileentity.tile-node :as tile-node]
             [cn.academy.core.node-types :as node-types]))
 
@@ -52,7 +53,7 @@
 
   (on-removed [_ pos] nil)
 
-  INodeBlock
+  node/INodeBase
   (get-node-type [_] 
     node-type)
 

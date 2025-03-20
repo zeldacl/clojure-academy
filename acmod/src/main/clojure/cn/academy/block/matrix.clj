@@ -1,6 +1,7 @@
 (ns cn.academy.block.matrix
   (:require [cn.academy.block.core :as block]
-            [cn.academy.energy.core :as energy]))
+            [cn.academy.energy.core :as energy]
+            [cn.academy.block.matrix-util :as mutil]))
 
 (def matrix-properties
   (block/create-properties
@@ -9,15 +10,12 @@
     :light-level 15
     :material :stone))
 
-(def ^:private matrix-structure
-  [[-1 0 -1] [0 0 -1] [1 0 -1]
-   [-1 0 0]  [0 0 0]  [1 0 0]
-   [-1 0 1]  [0 0 1]  [1 0 1]])
+;; Move structure definition to matrix-util
+(def ^:private matrix-structure (mutil/get-default-structure))
 
 (defrecord MatrixBlock [position id owner storage]
   block/IBlock
   (get-position [_] position)
-  
   (get-properties [_] matrix-properties)
   
   (on-placed [this pos placer data]
@@ -26,7 +24,7 @@
            :owner (:id placer)))
   
   (on-removed [_ pos]
-    (when-let [structure (get-structure pos)]
+    (when-let [structure (mutil/get-structure pos)]
       (break-structure! structure)))
   
   (on-activated [this pos activator data]
@@ -82,18 +80,16 @@
   []
   matrix-structure)
 
+;; Simplified helper functions using matrix-util
 (defn- valid-placement?
   "Check if matrix can be placed at position"
   [pos]
-  (every? #(can-replace-block? (offset-pos pos %))
-          matrix-structure))
+  (mutil/valid-structure-placement? pos matrix-structure))
 
 (defn- try-form-structure
   "Attempt to form matrix structure at position"
   [pos]
-  (when (valid-placement? pos)
-    (for [offset matrix-structure]
-      (offset-pos pos offset))))
+  (mutil/try-form-structure pos matrix-structure))
 
 (defn break-structure!
   "Break matrix multiblock structure"
