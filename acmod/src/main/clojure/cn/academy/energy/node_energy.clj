@@ -1,6 +1,6 @@
 (ns cn.academy.energy.node-energy
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.node-tile :as node-tile])
+            [cn.academy.block.tileentity.tile-node :as tile-node])
   (:import [net.minecraftforge.energy IEnergyStorage]))
 
 (defprotocol IWirelessEnergy

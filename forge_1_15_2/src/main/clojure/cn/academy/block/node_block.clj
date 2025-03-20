@@ -1,6 +1,7 @@
 (ns cn.academy.block.node-block
   (:require [cn.academy.block.node :as node]
-            [cn.academy.block.node-types :as types])
+            [cn.academy.block.node-types :as types]
+            [cn.academy.block.tileentity.tile-node :as tile-node])
   (:import [net.minecraft.block Block AbstractBlock$Properties BlockState]
            [net.minecraft.state StateContainer$Builder]
            [net.minecraft.state.properties BooleanProperty IntegerProperty]
@@ -12,18 +13,6 @@
 
 (def connected-prop (BooleanProperty/create "connected"))
 (def energy-prop (IntegerProperty/create "energy" 0 4))
-
-(defrecord NodeTileEntity [node-state]
-  TileEntity
-  (write [this compound]
-    (proxy-super write compound)
-    ; Add NBT saving logic here
-    compound)
-  
-  (read [this compound]
-    (proxy-super read compound)
-    ; Add NBT loading logic here
-    this))
 
 (defrecord NodeBlock [block-properties node-type]
   Block
@@ -39,7 +28,21 @@
     (.getDefaultState this))
   
   (createTileEntity [this state]
-    (NodeTileEntity. (node/create-node-state node-type))))
+    (tile-node/create-node-tile node-type)))
 
 (defn create-node-block [node-type properties]
   (->NodeBlock properties node-type))
+
+(defn create-tile-entity [node-type]
+  (tile-node/create-node-tile node-type))
+
+(defn get-node-info [world pos]
+  (let [te (.getTileEntity world pos)]
+    (let [connected (if (instance? tile-node/TileNode te)
+                     (count (get-connected-nodes world pos))
+                     0)
+          energy (if (instance? tile-node/TileNode te)
+                  (.getEnergy te)
+                  0.0)]
+      {:connected connected
+       :energy energy})))

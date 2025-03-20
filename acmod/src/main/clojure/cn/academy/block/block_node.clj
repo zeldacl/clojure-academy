@@ -1,7 +1,7 @@
 (ns cn.academy.block.block-node
   (:require [mcmod.protocols :refer :all]
             [mcmod.block.block-state :as block-state]
-            [cn.academy.block.tileentity.node-tile :as node-tile]
+            [cn.academy.block.tileentity.tile-node :as tile-node]
             [cn.academy.core.node-types :as node-types]))
 
 ;; Block state properties
@@ -41,13 +41,13 @@
   (on-activated [_ pos data]
     (let [{:keys [world player]} data]
       (when-let [tile (.getTileEntity world pos)]
-        (when (instance? cn.academy.block.tileentity.TileNode tile)
+        (when (instance? tile-node/TileNode tile)
           true)))) ; Return true to open GUI
 
   (on-placed [_ pos data]
     (let [{:keys [world player]} data]
       (when-let [tile (.getTileEntity world pos)]
-        (when (instance? cn.academy.block.tileentity.TileNode tile)
+        (when (instance? tile-node/TileNode tile)
           (.setPlacer tile player)))))
 
   (on-removed [_ pos] nil)

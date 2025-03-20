@@ -1,6 +1,6 @@
 (ns cn.academy.network.node-network
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.node-tile :as node-tile])
+            [cn.academy.block.tileentity.tile-node :as tile-node])
   (:import [net.minecraft.network PacketBuffer]
            [net.minecraft.util.math BlockPos]))
 
@@ -25,7 +25,7 @@
   
   (handle [this world player]
     (when-let [tile (.getTileEntity world pos)]
-      (when (instance? cn.academy.block.tileentity.TileNode tile)
+      (when (instance? tile-node/TileNode tile)
         (.setEnergy tile energy)))))
 
 ;; Node state message (enabled/disabled)
@@ -43,7 +43,7 @@
   
   (handle [this world player]
     (when-let [tile (.getTileEntity world pos)]
-      (when (instance? cn.academy.block.tileentity.TileNode tile)
+      (when (instance? tile-node/TileNode tile)
         (.setEnabled tile enabled)))))
 
 ;; Node config message (name/password)
@@ -63,7 +63,7 @@
   
   (handle [this world player]
     (when-let [tile (.getTileEntity world pos)]
-      (when (instance? cn.academy.block.tileentity.TileNode tile)
+      (when (instance? tile-node/TileNode tile)
         (.setNodeName tile name)
         (.setPassword tile password)))))
 

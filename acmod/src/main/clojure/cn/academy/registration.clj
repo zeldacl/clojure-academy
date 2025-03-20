@@ -3,7 +3,7 @@
             [mcmod.registry :as mcr]
             [mcmod.util :as util]
             [cn.academy.block.block-node :as block-node]
-            [cn.academy.block.tileentity.node-tile :as node-tile]
+            [cn.academy.block.tileentity.tile-node :as tile-node]
             [clojure.tools.logging :as log]))
 
 (def MOD-ID "acmod")
@@ -30,15 +30,15 @@
 (defn register-nodes! []
   ;; Register basic node
   (register-block! "node_basic" (block-node/create-basic-node))
-  (register-tile-entity! "node_basic" #(node-tile/create-node-tile :basic))
+  (register-tile-entity! "node_basic" #(tile-node/create-node-tile :basic))
 
   ;; Register standard node
   (register-block! "node_standard" (block-node/create-standard-node))
-  (register-tile-entity! "node_standard" #(node-tile/create-node-tile :standard))
+  (register-tile-entity! "node_standard" #(tile-node/create-node-tile :standard))
 
   ;; Register advanced node
   (register-block! "node_advanced" (block-node/create-advanced-node))
-  (register-tile-entity! "node_advanced" #(node-tile/create-node-tile :advanced)))
+  (register-tile-entity! "node_advanced" #(tile-node/create-node-tile :advanced)))
 
 ;; Core initialization function
 (defn init-registration! []

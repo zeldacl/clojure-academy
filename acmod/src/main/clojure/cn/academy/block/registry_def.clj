@@ -48,15 +48,15 @@
   ;; Register tile entities for each node type
   (register-tile-entity! registry 
                         "node_basic" 
-                        #(node-tile/create-node-tile :basic))
+                        #(tile-node/create-node-tile :basic))
   
   (register-tile-entity! registry 
                         "node_standard" 
-                        #(node-tile/create-node-tile :standard))
+                        #(tile-node/create-node-tile :standard))
   
   (register-tile-entity! registry 
                         "node_advanced" 
-                        #(node-tile/create-node-tile :advanced))
+                        #(tile-node/create-node-tile :advanced))
   
   ;; Add other tile entity registrations here
   )
