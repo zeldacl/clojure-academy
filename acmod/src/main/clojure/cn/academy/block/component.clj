@@ -1,44 +1,98 @@
-(ns cn.academy.block.component
-  "Generic component system for block entities that can be used across different mod implementations")
+(ns cn.academy.block.component)
 
-;; Protocol definition for all block-related components
 (defprotocol IBlockComponent
-  (update! [this] 
-    "Update the component state (called each tick)")
-  
-  (get-capability [this type side]
-    "Get a capability of specified type from this component"))
+  "Core component protocol for all block-related components"
+  (update! [this] "Update component state each tick")
+  (get-capability [this type side] "Get capability for given type and side")
+  (serialize [this] "Convert component state to NBT data")
+  (deserialize! [this data] "Load component state from NBT data")
+  (get-state [this] "Get current component state"))
 
-;; Protocol for serialization of component data
-(defprotocol IComponentSerializer
-  (serialize [this component]
-    "Convert component state to serializable data")
-  
-  (deserialize! [this component data]
-    "Update component with deserialized data"))
-
-;; Basic implementation of a component that tracks its position
-(defrecord BaseComponent [state-atom]
+(defrecord BlockComponent [id type state-atom]
   IBlockComponent
-  (update! [_]
-    nil) ;; Default no-op implementation
+  (update! [_] 
+    nil)
   
-  (get-capability [_ _ _]
-    nil)) ;; Default returns no capabilities
-
-;; Create a new base component
-(defn create-base-component []
-  (->BaseComponent (atom {})))
-
-;; Basic serializer that just passes through data
-(defrecord BaseSerializer []
-  IComponentSerializer
-  (serialize [_ component]
-    @(:state-atom component))
+  (get-capability [_ _ _] 
+    nil)
   
-  (deserialize! [_ component data]
-    (reset! (:state-atom component) data)))
+  (serialize [_]
+    @state-atom)
+  
+  (deserialize! [_ data]
+    (reset! state-atom data))
+  
+  (get-state [_]
+    @state-atom))
 
-;; Create a new base serializer
-(defn create-base-serializer []
-  (->BaseSerializer))
+(defprotocol IInventoryComponent
+  "Component for blocks with inventories"
+  (get-inventory [this])
+  (get-slot [this slot])
+  (set-slot! [this slot item])
+  (get-size [this]))
+
+(defrecord InventoryComponent [size inventory]
+  IBlockComponent
+  (update! [_] nil)
+  (get-capability [_ type _] 
+    (when (= type :inventory) this))
+  (serialize [_] 
+    {:inventory @inventory})
+  (deserialize! [_ data]
+    (reset! inventory (:inventory data)))
+  (get-state [_]
+    {:size size :inventory @inventory})
+
+  IInventoryComponent  
+  (get-inventory [_] @inventory)
+  (get-slot [_ slot] 
+    (get @inventory slot))
+  (set-slot! [_ slot item]
+    (swap! inventory assoc slot item))
+  (get-size [_] size))
+
+(defprotocol IEnergyComponent
+  "Component for blocks that handle energy"
+  (get-energy [this])
+  (get-capacity [this])
+  (receive-energy [this amount simulate?])
+  (extract-energy [this amount simulate?]))
+
+(defrecord EnergyComponent [capacity energy]
+  IBlockComponent
+  (update! [_] nil)
+  (get-capability [_ type _]
+    (when (= type :energy) this))
+  (serialize [_]
+    {:energy @energy})
+  (deserialize! [_ data]
+    (reset! energy (:energy data)))
+  (get-state [_]
+    {:capacity capacity :energy @energy})
+  
+  IEnergyComponent
+  (get-energy [_] @energy)
+  (get-capacity [_] capacity)
+  (receive-energy [_ amount simulate?]
+    (let [space (- capacity @energy)
+          accept (min amount space)]
+      (when (and (pos? accept) (not simulate?))
+        (swap! energy + accept))
+      accept))
+  (extract-energy [_ amount simulate?]
+    (let [available @energy
+          extract (min amount available)]
+      (when (and (pos? extract) (not simulate?))
+        (swap! energy - extract))
+      extract)))
+
+;; Factory functions
+(defn create-component [id type & {:as state}]
+  (->BlockComponent id type (atom state)))
+
+(defn create-inventory [size]
+  (->InventoryComponent size (atom {})))
+
+(defn create-energy [capacity]
+  (->EnergyComponent capacity (atom 0)))

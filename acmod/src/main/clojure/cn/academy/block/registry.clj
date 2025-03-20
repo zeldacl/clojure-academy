@@ -1,58 +1,77 @@
 (ns cn.academy.block.registry
-  (:require [cn.academy.block.node-types :as types]
-            [cn.academy.block.block.block-matrix :as matrix]
-            [mcmod.protocols :refer :all])
+  (:require [cn.academy.block.component :as component])
   (:import [net.minecraft.block.material Material]))
 
-(def registered-blocks (atom {}))
-(def registered-items (atom {}))
-(def registered-tile-entities (atom {}))
+;; Registry state
+(def ^:private registry-state 
+  (atom {:blocks {}
+         :tile-entities {}
+         :containers {}}))
 
-(defprotocol IBlockRegistration
-  (register-block! [this block-id block])
-  (register-tile-entity! [this block tile-type]))
+;; Implementation tracking 
+(def ^:private registry-impl (atom nil))
 
-(defmulti create-node-block 
-  "Create a node block implementation specific to Minecraft/Forge version"
-  (fn [forge-version block-type block-properties] forge-version))
+(defprotocol IBlockRegistryImpl
+  "Interface for Minecraft version-specific registry implementations"
+  (create-block [this id properties])
+  (create-item-block [this block])
+  (create-tile-entity [this id properties])
+  (register-block! [this id block])
+  (register-tile-entity! [this id te-type factory])
+  (register-container! [this id factory])
+  (open-gui [this player world pos]))
 
-(defn register-node-blocks! [registry forge-version block-properties]
-  (doseq [[type-key _] types/node-types]
-    (let [block-id (str "node_" (name type-key))
-          block (create-node-block forge-version type-key block-properties)]
-      (register-block! registry block-id block))))
-
-(defn register-matrix! [registry]
-  (let [matrix-def (matrix/create-matrix)]
-    (register-block! registry "matrix" matrix-def)))
+;; Registry functions that use current implementation
+(defn set-registry-impl! [impl]
+  (reset! registry-impl impl))
 
 (defn create-block [id properties]
-  (let [block (reify IBlock
-                (get-properties [_] properties)
-                (get-material [_] (:material properties Material/ROCK))
-                (get-hardness [_] (:hardness properties 3.0))
-                (get-resistance [_] (:resistance properties 3.0))
-                (get-light-level [_] (:light-level properties 0))
-                (on-activated [_ pos data] 
-                  (when-let [handler (:on-activated properties)]
-                    (handler pos data)))
-                (on-placed [_ pos data]
-                  (when-let [handler (:on-placed properties)]
-                    (handler pos data)))
-                (on-removed [_ pos]
-                  (when-let [handler (:on-removed properties)]
-                    (handler pos))))]
-    (swap! registered-blocks assoc id block)
-    block))
+  (when-let [impl @registry-impl]
+    (create-block impl id properties)))
 
-(defn register-tile-entity! [block-id te-type tile-entity]
-  (swap! registered-tile-entities assoc block-id [te-type tile-entity]))
+(defn create-item-block [block]
+  (when-let [impl @registry-impl]
+    (create-item-block impl block)))
 
-(defn get-registered-blocks []
-  @registered-blocks)
+(defn create-tile-entity [id properties]
+  (when-let [impl @registry-impl]
+    (create-tile-entity impl id properties)))
 
-(defn get-registered-tile-entities []
-  @registered-tile-entities)
+(defn register-block! [id block]
+  (when-let [impl @registry-impl]
+    (swap! registry-state assoc-in [:blocks id] block)
+    (register-block! impl id block)))
 
-(defn get-registered-items []
-  @registered-items)
+(defn register-tile-entity! [id te-type factory]
+  (when-let [impl @registry-impl]
+    (swap! registry-state assoc-in [:tile-entities id] factory)
+    (register-tile-entity! impl id te-type factory)))
+
+(defn register-container! [id factory]
+  (when-let [impl @registry-impl]
+    (swap! registry-state assoc-in [:containers id] factory)
+    (register-container! impl id factory)))
+
+(defn open-gui [player world pos]
+  (when-let [impl @registry-impl]
+    (open-gui impl player world pos)))
+
+;; Helper functions
+(defn get-block [id]
+  (get-in @registry-state [:blocks id]))
+
+(defn get-tile-entity-factory [id]
+  (get-in @registry-state [:tile-entities id]))
+
+(defn get-container-factory [id]
+  (get-in @registry-state [:containers id]))
+
+;; Event registration
+(def event-handlers (atom {}))
+
+(defn register-event-handler! [event-type handler]
+  (swap! event-handlers assoc event-type handler))
+
+(defn handle-event! [event-type & args]
+  (when-let [handler (get @event-handlers event-type)]
+    (apply handler args)))
