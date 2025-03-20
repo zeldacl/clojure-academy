@@ -1,10 +1,8 @@
 (ns cn.academy.block.tileentity.node-tile
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.block-node :as block-node])
-  (:import [net.minecraft.nbt NBTTagCompound]
-           [net.minecraft.entity.player EntityPlayer]
-           [net.minecraft.inventory IInventory]
-           [net.minecraft.item ItemStack]))
+            [mcmod.inventory :as inventory]
+            [mcmod.nbt :as nbt]
+            [cn.academy.block.block-node :as block-node]))
 
 (defprotocol IWirelessNode
   (get-node-type [this])
@@ -33,24 +31,23 @@
     ;; Return energy capability
     {:energy (get-energy this)})
   
-  (read-from-nbt [this nbt]
+  (read-from-nbt [this tag]
     (reset! state-atom
-            {:energy (.getDouble nbt "energy")
-             :enabled (.getBoolean nbt "enabled")
-             :placer-id (.getString nbt "placerId")
-             :node-type (keyword (.getString nbt "nodeType"))
-             :password (.getString nbt "password")
-             :node-name (.getString nbt "nodeName")}))
+            {:energy (nbt/get-double tag "energy")
+             :enabled (nbt/get-boolean tag "enabled")
+             :placer-id (nbt/get-string tag "placerId")
+             :node-type (keyword (nbt/get-string tag "nodeType"))
+             :password (nbt/get-string tag "password")
+             :node-name (nbt/get-string tag "nodeName")}))
   
-  (write-to-nbt [this nbt]
+  (write-to-nbt [this tag]
     (let [state @state-atom]
-      (doto nbt
-        (.setDouble "energy" (:energy state))
-        (.setBoolean "enabled" (:enabled state))
-        (.setString "placerId" (or (:placer-id state) ""))
-        (.setString "nodeType" (name (:node-type state)))
-        (.setString "password" (or (:password state) ""))
-        (.setString "nodeName" (or (:node-name state) "")))))
+      (nbt/set-double tag "energy" (:energy state))
+      (nbt/set-boolean tag "enabled" (:enabled state))
+      (nbt/set-string tag "placerId" (or (:placer-id state) ""))
+      (nbt/set-string tag "nodeType" (name (:node-type state)))
+      (nbt/set-string tag "password" (or (:password state) ""))
+      (nbt/set-string tag "nodeName" (or (:node-name state) ""))))
   
   (mark-dirty [_]
     ;; Mark tile for saving
@@ -110,23 +107,7 @@
            :node-name ""})
     ;; Create inventory based on capacity
     (let [capacity (get-in block-node/node-types [node-type :capacity])]
-      (reify IInventory
-        (getSizeInventory [_] capacity)
-        (isEmpty [_] true)  ;; Implement actual inventory logic
-        (getStackInSlot [_ slot] nil)
-        (decrStackSize [_ slot amount] nil)
-        (removeStackFromSlot [_ slot] nil)
-        (setInventorySlotContents [_ slot stack] nil)
-        (getInventoryStackLimit [_] 64)
-        (markDirty [_] nil)
-        (isUsableByPlayer [_ player] true)
-        (openInventory [_ player] nil)
-        (closeInventory [_ player] nil)
-        (isItemValidForSlot [_ slot stack] true)
-        (getField [_ id] 0)
-        (setField [_ id value] nil)
-        (getFieldCount [_] 0)
-        (clear [_] nil)))))
+      (inventory/create-inventory capacity))))
 
 ;; Export for Java interop
 (gen-class
