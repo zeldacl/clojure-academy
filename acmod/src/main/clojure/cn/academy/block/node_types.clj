@@ -20,11 +20,20 @@
 (defn get-node-type [type-key]
   (get node-types type-key))
 
+(defn get-property [type-key property]
+  (get (get-node-type type-key) property))
+
 (defn get-type-name [type-key]
-  (:name (get-node-type type-key)))
+  (get-property type-key :name))
 
 (defn get-max-energy [type-key]
-  (:max-energy (get-node-type type-key)))
+  (get-property type-key :max-energy))
 
 (defn get-bandwidth [type-key]
-  (:bandwidth (get-node-type type-key)))
+  (get-property type-key :bandwidth))
+
+(defn get-range [type-key]
+  (get-property type-key :range))
+
+(defn get-capacity [type-key]
+  (get-property type-key :capacity))

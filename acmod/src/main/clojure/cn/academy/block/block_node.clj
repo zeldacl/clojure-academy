@@ -1,114 +1,64 @@
 (ns cn.academy.block.block-node
   (:require [mcmod.protocols :refer :all]
-            [mcmod.block.block-state :as block-state]
-            [cn.academy.block.node :as node]
-            [cn.academy.block.tileentity.tile-node :as tile-node]
-            [cn.academy.core.node-types :as node-types]))
+            [cn.academy.core :as core]
+            [clojure.tools.logging :as log]))
 
-;; Block state properties
-(def state-properties
-  {"connected" (block-state/create-bool-property "connected" false)
-   "energy" (block-state/create-int-property "energy" 0 4 0)})
+(def node-types
+  {:basic {:range 8
+           :max-connections 4
+           :max-energy 5000}
+   :standard {:range 16
+              :max-connections 8  
+              :max-energy 20000}
+   :advanced {:range 32
+              :max-connections 16
+              :max-energy 100000}})
 
-(defprotocol INodeBlock
-  (get-node-type [this])
-  (get-max-energy [this])
-  (get-bandwidth [this])
-  (get-range [this])
-  (get-capacity [this])
-  (get-actual-state [this world pos state]))
-
-(defrecord BlockNode [node-type state]
+(defrecord WirelessNode [node-type properties]
   IBlock
-  (get-properties [_]
-    {:material :rock
-     :hardness 2.5
-     :resistance 3.0
-     :light-level 0
-     :harvest-level ["pickaxe" 1]
-     :has-tile-entity true
-     :creative-tab :academy
-     :render-type (node-types/get-node-render-type node-type)})
+  (get-properties [this]
+    properties)
+    
+  (on-placed [this world pos placer]
+    (when-let [te (get-tile-entity world pos)]
+      (mark-dirty te)))
+      
+  (on-broken [this world pos]
+    (when-let [te (get-tile-entity world pos)]
+      (invalidate-caps te)))
+      
+  IWirelessCapability
+  (get-capability [this cap dir]
+    (when (instance? IEnergyStorage cap)
+      (reify IEnergyStorage
+        (receive-energy [_ amount simulate]
+          (if-let [te (get-tile-entity (get-world this) (get-position this))]
+            (receive-energy te amount simulate)
+            0))
+        (extract-energy [_ amount simulate]  
+          (if-let [te (get-tile-entity (get-world this) (get-position this))]
+            (extract-energy te amount simulate)
+            0))
+        (get-energy-stored [_]
+          (if-let [te (get-tile-entity (get-world this) (get-position this))]
+            (get-energy te)
+            0))
+        (get-max-energy-stored [_]
+          (get-in node-types [node-type :max-energy]))
+        (can-receive? [_] true)
+        (can-extract? [_] true))))
 
-  (get-material [_] :rock)
-  (get-hardness [_] 2.5)
-  (get-resistance [_] 3.0)
-  (get-light-level [_] 0)
-  (get-harvest-level [_] ["pickaxe" 1])
-  
-  (get-state-properties [_] state-properties)
-  (get-default-state [_] state)
+  (invalidate-caps [this]
+    (when-let [te (get-tile-entity (get-world this) (get-position this))]
+      (invalidate-capabilities te))))
 
-  (on-activated [_ pos data]
-    (let [{:keys [world player]} data]
-      (when-let [tile (.getTileEntity world pos)]
-        (when (instance? tile-node/TileNode tile)
-          true)))) ; Return true to open GUI
+(defn create-node [node-type]
+  (->WirelessNode node-type
+                  {:material :iron
+                   :hardness 3.0
+                   :resistance 15.0
+                   :light-level 0}))
 
-  (on-placed [_ pos data]
-    (let [{:keys [world player]} data]
-      (when-let [tile (.getTileEntity world pos)]
-        (when (instance? tile-node/TileNode tile)
-          (.setPlacer tile player)))))
-
-  (on-removed [_ pos] nil)
-
-  node/INodeBase
-  (get-node-type [_] 
-    node-type)
-
-  (get-max-energy [this]
-    (node-types/get-node-max-energy (get-node-type this)))
-
-  (get-bandwidth [this]
-    (node-types/get-node-bandwidth (get-node-type this)))
-
-  (get-range [this]
-    (node-types/get-node-range (get-node-type this)))
-
-  (get-capacity [this]
-    (node-types/get-node-capacity (get-node-type this)))
-
-  (get-actual-state [_ world pos state]
-    (if-let [tile (.getTileEntity world pos)]
-      (if (instance? cn.academy.block.tileentity.TileNode tile)
-        (let [enabled? (.isEnabled tile)
-              energy-pct (int (min 4 (Math/round (* 4 (/ (.getEnergy tile)
-                                                        (.getMaxEnergy tile))))))]
-          (-> state
-              (block-state/with-property "connected" enabled?)
-              (block-state/with-property "energy" energy-pct)))
-        state)
-      state)))
-
-;; Factory functions
-(defn create-basic-node []
-  (->BlockNode :basic (block-state/create-block-state state-properties)))
-
-(defn create-standard-node []
-  (->BlockNode :standard (block-state/create-block-state state-properties)))
-
-(defn create-advanced-node []
-  (->BlockNode :advanced (block-state/create-block-state state-properties)))
-
-;; Block registration helpers
-(defn register-node! [registry block-id node]
-  (register-block! registry block-id node)
-  (register-tile-entity! registry block-id #(node-tile/create-node-tile (get-node-type node))))
-
-;; Export constructors for Java interop
-(gen-class
-  :name cn.academy.block.BlockNode
-  :methods [^:static [createBasic [] Object]
-            ^:static [createStandard [] Object]
-            ^:static [createAdvanced [] Object]]
-  :prefix "block-")
-
-(defn block-createBasic []
-  (create-basic-node))
-
-(defn block-createStandard []
-  (create-standard-node))
-
-(defn block-createAdvanced []
-  (create-advanced-node))
+(def create-basic-node #(create-node :basic))
+(def create-standard-node #(create-node :standard)) 
+(def create-advanced-node #(create-node :advanced))

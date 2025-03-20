@@ -4,21 +4,11 @@ plugins {
 
 buildscript {
     repositories {
-        maven { url uri('./repo') }
-        maven { url = 'https://maven.minecraftforge.net/' }
-        maven { url = 'https://libraries.minecraft.net/' }
-        maven { url = 'https://plugins.gradle.org/m2' }
-        maven { url = 'https://repo.clojars.org/' }
-        mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
         maven { url = 'https://files.minecraftforge.net/maven' }
+        mavenCentral()
     }
     dependencies {
-        classpath "dev.clojurephant:clojurephant-plugin:0.6.0"
-        classpath 'net.minecraftforge.gradle:ForgeGradle:4.+'
-        classpath 'dev.clojurephant:clojurephant-plugin:0.7.0'
-        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+'
     }
 }
 
@@ -69,13 +59,16 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'clojure'
     apply plugin: 'maven-publish'
     
     compileJava.options.encoding = "UTF-8"
     
     dependencies {
-        implementation 'org.clojure:clojure:1.12.0'
+        implementation 'org.clojure:clojure:1.11.1'
         implementation 'org.clojure:tools.logging:1.2.4'
+        testImplementation 'org.clojure:test.check:1.1.1'
+        testImplementation 'com.github.seancorfield:expectations:2.0.160'
     }
 
     java {
@@ -83,7 +76,7 @@ subprojects {
             languageVersion = JavaLanguageVersion.of(8)
         }
     }
-    version = '1.0.0'
+    version = '1.0'
     group = 'cn.academy'
 
     sourceCompatibility = '1.8'
@@ -91,6 +84,21 @@ subprojects {
 
     tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url = 'https://repo.clojars.org/' }
+    }
+
+    test {
+        useJUnitPlatform()
+        
+        testLogging {
+            events "passed", "skipped", "failed"
+            exceptionFormat "full"
+        }
     }
 }
 
@@ -134,6 +142,7 @@ project(':forge_1_15_2') {
 project(':forge_1_16_5') {
     dependencies {
         implementation project(':mcmod')
+        implementation project(':acmod')
         implementation 'net.minecraftforge:forge:1.16.5-36.1.0'
         implementation 'org.clojure:clojure:1.12.0'
         implementation 'org.clojure:tools.logging:1.2.4'
@@ -142,6 +151,7 @@ project(':forge_1_16_5') {
 
 project(':mcmod') {
     dependencies {
+        // Core protocols project has minimal dependencies
         implementation 'org.clojure:clojure:1.12.0'
         implementation 'org.clojure:tools.logging:1.2.4'
     }
@@ -177,3 +187,8 @@ version = '1.0.0'
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// Ensure proper build order
+evaluationDependsOn(':mcmod')
+evaluationDependsOn(':acmod')
+evaluationDependsOn(':forge_1_16_5')

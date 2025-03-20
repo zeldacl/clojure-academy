@@ -2,91 +2,52 @@
   (:require [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [cn.academy.registry :as registry]
-            [cn.academy.block.registry :as block-reg]
             [mcmod.protocols :refer :all]
-            [mcmod.registry :as registry]
-            [cn.academy.block.machine-block :as machine]
-            [cn.academy.block.processor-block :as processor]
-            [cn.academy.registration :as reg]
-            [cn.academy.block.registry-def :as block-defs])
-  (:import [net.minecraft.creativetab CreativeTabs]
-           [net.minecraft.item ItemStack]
-           [net.minecraftforge.fml.common.network NetworkRegistry]
-           [net.minecraftforge.common MinecraftForge]
-           [net.minecraftforge.common.config Configuration]
-           [net.minecraft.util ResourceLocation]))
+            [mcmod.registry :as mcr]
+            [cn.academy.registration :as reg]))
 
-(def modid "academy")
+(def MOD-ID "acmod")
 (def version "1.0.0")
 (def debug true)
 
-(def channel (NetworkRegistry/INSTANCE.newSimpleChannel modid))
-(def config (atom nil))
-(def mod-instance (atom nil))
+(def ^:dynamic *registry-provider* nil)
+(def ^:dynamic *network-bridge* nil)
+(def ^:dynamic *capability-bridge* nil)
 
-;; Creative tab for Academy Craft items
-(def creative-tab 
-  (proxy [CreativeTabs] ["AcademyCraft"]
-    (createIcon []
-      (ItemStack. net.minecraft.init.Items/DIAMOND)))) ;; Placeholder icon
+;; Core initialization
+(defn init! [registry-provider network-bridge capability-bridge]
+  (binding [*registry-provider* registry-provider
+            *network-bridge* network-bridge
+            *capability-bridge* capability-bridge]
+    
+    (log/info "Initializing AcademyCraft core module")
+    
+    ;; Initialize registries
+    (let [registry (create-registry registry-provider MOD-ID)]
+      (reg/init-registration! registry))
+    
+    ;; Setup networking
+    (when network-bridge
+      (let [channel (create-channel network-bridge MOD-ID)]
+        ;; Register network messages here
+        ))
+        
+    ;; Register capabilities
+    (when capability-bridge
+      ;; Register mod capabilities here
+      )))
 
-(defn init-network []
-  ;; Network message registration will go here
-  nil)
+;; Common setup (called on both client and server)
+(defn setup-common! []
+  (log/info "Setting up common components"))
 
-(defn init-config [config-file]
-  (reset! config (Configuration. config-file))
-  (.save @config))
+;; Client-only setup 
+(defn setup-client! []
+  (log/info "Setting up client components"))
 
-(defn init []
-  (log/info "Initializing AcademyCraft core module")
-  (MinecraftForge/EVENT_BUS.register (proxy [Object] [])))
-
-(defn post-init []
-  (when @config
-    (.save @config)))
-
-(defn init-mod []
-  (let [registry (registry/register-all)]
-    (reset! mod-instance registry)
-    (println "AcademyCraft Core Initialized")))
-
-(def MOD-ID "acmod")
-
-(defn register-block! [block-id block-def]
-  (block-reg/create-block block-id block-def))
-
-(defn register-tile-entity! [block-id te-type te-def]
-  (block-reg/register-tile-entity! block-id te-type te-def))
-
-(defn load-blocks! []
-  ;; Register basic blocks
-  (register-block! "machine_frame" 
-    {:material :iron :hardness 4.0})
-  
-  ;; Register blocks with tile entities  
-  (register-block! "energy_generator"
-    {:material :iron 
-     :hardness 3.5
-     :has-tile-entity true})
-  
-  ;; Register tile entities
-  (register-tile-entity! "energy_generator" 
-    :energy_generator
-    (cn.academy.block.block.energy-generator/->EnergyGeneratorTile 
-      (atom 0) (atom 10000))))
-
-;; Core mod initialization function
-(defn init! []
-  (log/info "Initializing AcademyCraft")
-  
-  ;; Register all blocks defined in registry-def
-  (block-defs/register-all! block-reg/create-block "acmod")
-  
-  ;; Initialize main registration system
-  (reg/init-registration!)
-  
-  (log/info "AcademyCraft initialization complete"))
+;; Server-only setup
+(defn setup-server! []
+  (log/info "Setting up server components"))
 
 ;; Export Java-accessible initialization method
 (gen-class
@@ -95,4 +56,4 @@
   :prefix "core-")
 
 (defn core-init []
-  (init!))
+  (init! *registry-provider* *network-bridge* *capability-bridge*))

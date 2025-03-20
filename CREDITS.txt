@@ -1,0 +1,33 @@
+Academy Craft - Protocol-Based Minecraft Mod
+=========================================
+
+Core Development Team:
+--------------------
+Lambda Innovation - Original AC Mod concept and implementation
+Clojure Academy Team - Protocol-based architecture redesign
+
+Libraries and Frameworks:
+-----------------------
+- Clojure - Core programming language
+- Minecraft Forge - Modding framework
+- JaCoCo - Code coverage reporting
+- test.check - Property-based testing
+- expectations - Testing framework
+- tools.logging - Logging framework
+
+Special Thanks:
+-------------
+- Minecraft Forge team for their excellent modding framework
+- Clojure community for guidance on protocol design
+- Contributors to the original Academy Craft mod
+- All testers and bug reporters
+
+The project structure and protocol-based architecture draws inspiration from:
+- Component framework by Stuart Sierra
+- Clojure's core.async for concurrency patterns
+- Metosin's protocol-first design approach
+
+License:
+-------
+This project is licensed under the MIT License.
+See LICENSE file for full text.

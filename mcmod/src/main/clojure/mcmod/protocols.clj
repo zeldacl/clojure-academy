@@ -1,5 +1,45 @@
 (ns mcmod.protocols)
 
+;; Block Protocols
+(defprotocol IBlock
+  "Core block functionality"
+  (get-position [this] "Get block position")
+  (get-properties [this] "Get block properties")
+  (on-placed [this world pos placer] "Handle block placement")
+  (on-broken [this world pos] "Handle block breaking")
+  (on-activated [this world pos player hand] "Handle block activation"))
+
+(defprotocol IBlockEntity
+  "Block entity (TileEntity) functionality"
+  (load-data [this tag] "Load data from NBT")
+  (save-data [this] "Save data to NBT")
+  (get-update-packet [this] "Get network update packet")
+  (handle-update-packet [this packet] "Handle network update packet"))
+
+(defprotocol IBlockRegistry
+  "Block registration functionality"
+  (register-block! [this block-id block] "Register a block")
+  (register-block-entity! [this block-id entity-supplier] "Register a block entity"))
+
+(defprotocol IItemRegistry
+  "Item registration functionality"
+  (register-item! [this item-id item] "Register an item")) 
+
+(defprotocol IMultiblock
+  "Multiblock structure functionality"
+  (is-complete? [this] "Check if structure is complete")
+  (get-blocks [this] "Get all blocks in structure")
+  (get-controller [this] "Get controller block")
+  (validate-structure [this] "Validate multiblock structure")
+  (on-structure-formed [this] "Called when structure forms")
+  (on-structure-broken [this] "Called when structure breaks"))
+
+(defprotocol IRegistryProvider
+  "Version-specific registry provider"
+  (create-registry [this mod-id] "Create new registry for mod")
+  (get-registry [this] "Get existing registry")
+  (register! [this registry-type id value] "Register value with given ID"))
+
 ;; Network related protocols
 (defprotocol IBuffer
   "Network buffer serialization functionality"

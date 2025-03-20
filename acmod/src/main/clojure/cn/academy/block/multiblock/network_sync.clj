@@ -2,7 +2,9 @@
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.multiblock.machine-state :as machine]
             [cn.academy.api.block :as block-api]
-            [cn.academy.network :as network])
+            [cn.academy.network :as network]
+            [mcmod.protocols :refer :all]
+            [clojure.tools.logging :as log])
   (:import [net.minecraft.network PacketBuffer]
            [net.minecraft.util math.BlockPos]))
 
@@ -55,3 +57,81 @@
   
   (handle-update-packet [this packet]
     (handle-sync-data this packet)))
+
+;; Network sync messages for multiblock structures
+(defrecord MultiblockUpdateMessage [pos blocks master-pos]
+  IPacket
+  (encode [this buf]
+    (doto buf
+      (write-long (pos->long pos))
+      (write-long (pos->long master-pos))
+      (write-int (count blocks))
+      (doseq [block blocks]
+        (write-long (pos->long block)))))
+      
+  (decode [this buf]
+    (let [pos (long->pos (read-long buf))
+          master (long->pos (read-long buf))
+          block-count (read-int buf)
+          blocks (vec (repeatedly block-count #(long->pos (read-long buf))))]
+      (assoc this 
+             :pos pos
+             :master-pos master
+             :blocks blocks)))
+             
+  (handle [this ctx]
+    (when-let [world (get-world ctx)]
+      (when-let [te (get-tile-entity world (:pos this))]
+        (when (satisfies? IMultiblock te)
+          (doseq [pos (:blocks this)]
+            (add-block te pos))
+          (set-master te (:master-pos this)))))))
+
+;; Network sync messages for wireless nodes
+(defrecord NodeNetworkMessage [pos energy connections]
+  IPacket
+  (encode [this buf]
+    (doto buf
+      (write-long (pos->long pos))
+      (write-long energy)
+      (write-int (count connections))
+      (doseq [conn connections]
+        (write-long (pos->long conn)))))
+        
+  (decode [this buf]
+    (let [pos (long->pos (read-long buf))
+          energy (read-long buf)
+          conn-count (read-int buf)
+          connections (vec (repeatedly conn-count #(long->pos (read-long buf))))]
+      (assoc this
+             :pos pos
+             :energy energy
+             :connections connections)))
+             
+  (handle [this ctx]
+    (when-let [world (get-world ctx)]
+      (when-let [te (get-tile-entity world (:pos this))]
+        (when (satisfies? IWirelessNode te)
+          (receive-energy te (:energy this) false)
+          (doseq [conn (:connections this)]
+            (connect te conn)))))))
+
+(defn register-network-packets! [network]
+  (let [channel (get-channel network)]
+    ;; Register multiblock sync packet
+    (register-message channel 
+                     "multiblock_sync"
+                     ->MultiblockUpdateMessage
+                     encode
+                     decode
+                     handle
+                     :server->client)
+                     
+    ;; Register node network packet
+    (register-message channel
+                     "node_sync" 
+                     ->NodeNetworkMessage
+                     encode
+                     decode
+                     handle
+                     :server->client)))

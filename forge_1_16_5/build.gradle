@@ -4,7 +4,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+'
+        classpath 'org.jacoco:org.jacoco.core:0.8.7'
     }
 }
 
@@ -12,6 +13,8 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'clojure'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
+apply plugin: 'java'
+apply plugin: 'jacoco'
 
 version = '1.0'
 group = 'cn.academy'
@@ -44,6 +47,19 @@ minecraft {
                 }
             }
         }
+        
+        // Add data generation run configuration
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            args '--mod', 'acmod', '--all', '--output', file('src/generated/resources/')
+            mods {
+                forge_1_16_5 {
+                    source sourceSets.main
+                }
+            }
+        }
     }
 }
 
@@ -53,14 +69,25 @@ repositories {
     maven { url = 'https://repo.clojars.org/' }
 }
 
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.39'
     
     implementation 'org.clojure:clojure:1.11.1'
     implementation 'org.clojure:tools.logging:1.2.4'
     implementation project(':mcmod')  // Add dependency on mcmod project
+    implementation project(':acmod')
     
     testImplementation 'org.clojure:test.check:1.1.1'
+    testImplementation 'com.github.seancorfield:expectations:2.0.160'
+    
+    integrationTestImplementation sourceSets.main.output
+    integrationTestImplementation configurations.testImplementation
+    integrationTestImplementation sourceSets.test.output
 }
 
 sourceSets {
@@ -69,26 +96,154 @@ sourceSets {
             srcDirs = ['src/main/clojure']
         }
         resources {
-            srcDirs = ['src/main/resources']
+            srcDirs = ['src/main/resources', 'src/generated/resources']
         }
     }
     test {
         clojure {
             srcDirs = ['src/test/clojure']
         }
+        resources {
+            srcDirs = ['test/resources'] 
+        }
+    }
+    integrationTest {
+        clojure {
+            srcDirs = ['src/integration-test/clojure']
+        }
+        resources {
+            srcDirs = ['src/integration-test/resources']
+        }
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+task integrationTest(type: Test) {
+    description = 'Runs the integration tests for protocol implementations'
+    group = 'verification'
+    
+    testClassesDirs = sourceSets.integrationTest.output.classDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    
+    systemProperty "forge.gameTestServer", "true"
+    systemProperty "forge.logging.markers", "REGISTRIES,REGISTRYDUMP"
+    systemProperty "clojure.test.runner", "cn.academy.forge.test.TestRunner"
+    
+    // Make sure unit tests run first
+    mustRunAfter test
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+// Make check task depend on integration tests
+check.dependsOn integrationTest
+
+test {
+    useJUnitPlatform()
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+    
+    systemProperty "forge.gameTestServer", "true"
+    systemProperty "forge.logging.markers", "REGISTRIES,REGISTRYDUMP"
+    
+    // Configure Clojure test runner
+    doFirst {
+        systemProperty "clojure.test.runner", "cn.academy.forge.test.TestRunner"
     }
 }
 
 jar {
     manifest {
         attributes([
-            "Specification-Title": "forge_1_16_5",
-            "Specification-Vendor": "academy",
-            "Specification-Version": "1",
-            "Implementation-Title": project.name,
-            "Implementation-Version": "${version}",
-            "Implementation-Vendor" :"academy",
+            "Specification-Title": "Academy Craft",
+            "Specification-Vendor": "Lambda Innovation",
+            "Specification-Version": "1.0",
+            "Implementation-Title": "Academy Craft",
+            "Implementation-Version": project.version,
+            "Implementation-Vendor" :"Lambda Innovation",
             "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }
+
+// Add data generation task
+task generateModData(type: JavaExec) {
+    group = 'forge'
+    description = 'Runs data generators to generate mod resources'
+    
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'cn.academy.forge.datagen.DataGenerators'
+    args '--mod', 'acmod', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+    
+    doFirst {
+        file('src/generated/resources/').mkdirs()
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.7"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    
+    // Include integration test results
+    executionData test, integrationTest
+    
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                // Exclude generated classes
+                "**/*_Impl*",
+                "**/generated/**",
+                // Exclude test classes
+                "**/test/**"
+            ])
+        }))
+    }
+}
+
+// Add coverage verification
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.80
+            }
+        }
+        
+        rule {
+            element = 'CLASS'
+            includes = ['cn.academy.forge.*']
+            
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+            
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.70
+            }
+        }
+    }
+}
+
+// Make check task depend on coverage verification
+check.dependsOn jacocoTestCoverageVerification
+
+// Generate coverage report after tests
+test.finalizedBy jacocoTestReport
+integrationTest.finalizedBy jacocoTestReport
