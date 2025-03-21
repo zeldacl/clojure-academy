@@ -2,7 +2,7 @@
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.blocks.block-node.config :as config]
-            [mcmod.protocols :refer [ITileEntity IInventory]]
+            [mcmod.protocols :refer [ITileEntity IInventory IEnergyStorage]]
             [clojure.tools.logging :as log]))
 
 (defrecord NodeState [energy active placer-id password-hash node-type node-name]
@@ -73,7 +73,39 @@
     (< (get-energy this) (config/get-node-property (:node-type @state-atom) :max-energy)))
   
   (can-discharge? [this]
-    (> (get-energy this) 0)))
+    (> (get-energy this) 0))
+  
+  ;; Add the standard IEnergyStorage protocol for consistency
+  IEnergyStorage
+  (get-energy-stored [this]
+    (get-energy this))
+  
+  (get-max-energy-stored [this]
+    (config/get-node-property (:node-type @state-atom) :max-energy))
+  
+  (receive-energy [this amount simulate]
+    (if simulate
+      (let [current (get-energy this)
+            max-capacity (get-max-energy-stored this)
+            bandwidth (config/get-node-property (:node-type @state-atom) :bandwidth)
+            space (- max-capacity current)
+            accept-amount (min amount space bandwidth)]
+        (max 0 accept-amount))
+      (charge this amount false)))
+  
+  (extract-energy [this amount simulate]
+    (if simulate
+      (let [current (get-energy this)
+            bandwidth (config/get-node-property (:node-type @state-atom) :bandwidth)
+            available (min current bandwidth)]
+        (min amount available))
+      (discharge this amount false)))
+  
+  (can-receive? [this]
+    (can-charge? this))
+  
+  (can-extract? [this]
+    (can-discharge? this)))
 
 (defn create-node-tile [node-type]
   (let [factory @block-api/*forge-factory*

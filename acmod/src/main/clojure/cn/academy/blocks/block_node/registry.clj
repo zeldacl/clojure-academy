@@ -4,13 +4,13 @@
             [cn.academy.blocks.block-node.container :as container]
             [cn.academy.blocks.block-node.gui :as gui]
             [cn.academy.blocks.block-node.config :as node-config]
-            [cn.academy.tech-system.energy-system.registry :as energy-registry]
+            [cn.academy.tech-system.energy-system.api :as energy-api]
             [mcmod.registry :as registry]))
 
 (defn- register-node-types! []
   ;; Register node type configurations with energy system
   (doseq [[node-type config] node-config/node-types]
-    (energy-registry/register-node-type! node-type config)))
+    (energy-api/register-energy-node-type! node-type config)))
 
 (defn register! [mod-id]
   ;; Register node types with energy system first

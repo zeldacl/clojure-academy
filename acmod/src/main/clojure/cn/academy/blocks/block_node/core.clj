@@ -4,7 +4,6 @@
             [cn.academy.blocks.block-node.config :as config]
             [cn.academy.tech-system.energy-system.api :as energy-api]
             [cn.academy.tech-system.energy-system.registry :as energy-registry]
-            [cn.academy.tech-system.energy-system.network.handler :as network]
             [clojure.tools.logging :as log]))
 
 (defrecord WirelessNode [node-type properties]

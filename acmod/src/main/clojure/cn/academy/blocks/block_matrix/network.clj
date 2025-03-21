@@ -1,7 +1,8 @@
 (ns cn.academy.blocks.block_matrix.network
   (:require [cn.academy.blocks.block_matrix.config :as config]
             [cn.academy.blocks.block_matrix.state :as state]
-            [cn.academy.tech-system.energy-system.network.distribution :as distribution]
+            [cn.academy.tech-system.energy-system.api :as energy-api]
+            [cn.academy.tech-system.energy-system.registry :as energy-registry]
             [clojure.tools.logging :as log]))
 
 (defprotocol IMatrixNetwork
@@ -17,7 +18,7 @@
 (defrecord MatrixNetwork [matrix state network-atom]
   IMatrixNetwork
   (join-network [_ network-id password]
-    (when-let [network (distribution/get-network network-id)]
+    (when-let [network (energy-api/get-network network-id)]
       (swap! network-atom assoc :network-id network-id)
       (swap! network-atom assoc :network network)
       true))
@@ -34,8 +35,8 @@
     (get-in @network-atom [:network-info :name] "Unnamed Network"))
   
   (get-nodes [_]
-    (if-let [network (:network @network-atom)]
-      (distribution/get-network-nodes (:network-id @network-atom))
+    (if-let [network-id (:network-id @network-atom)]
+      (energy-api/get-network-nodes network-id)
       []))
   
   (get-node-count [this]

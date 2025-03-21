@@ -1,6 +1,7 @@
 (ns cn.academy.tech-system.energy-system.api
   (:require [cn.academy.core.energy.chunk-cache :as chunk-cache]
-            [cn.academy.core.config :as config]))
+            [cn.academy.core.config :as config]
+            [cn.academy.tech-system.energy-system.network.distribution :as distribution]))
 
 (def ^:dynamic *energy-impl* nil)
 
@@ -44,6 +45,43 @@
     (if allow-interdim
       nodes
       (filter #(= (.dimension world) (.dimension (.getWorld %))) nodes))))
+
+;; Network-related API functions to provide a clean interface for the block modules
+(defn get-network
+  "Get a network by ID"
+  [network-id]
+  (distribution/get-network network-id))
+
+(defn get-network-nodes
+  "Get all nodes for a given network"
+  [network-id]
+  (distribution/get-network-nodes network-id))
+
+(defn create-network!
+  "Create a new network and return its ID"
+  []
+  (let [network (distribution/create-network!)]
+    (:id network)))
+
+(defn join-network!
+  "Join a node to a network"
+  [node-id network-id]
+  (when-let [network (get-network network-id)]
+    (let [node-network (distribution/get-node-network node-id)]
+      (when (and node-network (not= (:id node-network) network-id))
+        (distribution/leave-network! node-id))
+      (distribution/join-network! node-id network-id))))
+
+(defn leave-network!
+  "Remove a node from its network"
+  [node-id]
+  (distribution/leave-network! node-id))
+
+(defn register-energy-node-type!
+  "Register a new energy node type with the system"
+  [type-id properties]
+  (let [registry (requiring-resolve 'cn.academy.tech-system.energy-system.registry/register-node-type!)]
+    (registry type-id properties)))
 
 (defn set-energy-impl! [impl]
   (alter-var-root #'*energy-impl* (constantly impl)))
