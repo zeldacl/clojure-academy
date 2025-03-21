@@ -1,6 +1,8 @@
 (ns cn.academy.blocks.block_matrix.container
-  (:require [cn.academy.blocks.block_matrix :as matrix])
-  (:import [net.minecraft.entity.player EntityPlayer]))
+  (:require [cn.academy.blocks.block_matrix :as matrix]
+            [mcmod.entity :as entity]
+            [mcmod.player :as player]
+            [mcmod.protocols :refer [IContainer ISlot]]))
 
 (defprotocol IMatrixContainer
   (can-interact-with? [this player])
@@ -14,11 +16,11 @@
   IMatrixContainer
   (can-interact-with? [_ player]
     (let [pos (matrix/get-position matrix)]
-      (.withinDistance player 
-                      (:x pos) 
-                      (:y pos) 
-                      (:z pos) 
-                      64.0)))
+      (player/within-distance? player 
+                             (:x pos) 
+                             (:y pos) 
+                             (:z pos) 
+                             64.0)))
   
   (get-energy-info [_]
     {:current (matrix/get-energy-stored matrix)
@@ -44,11 +46,31 @@
     (case slot-id
       0 (matrix/handle-core-slot matrix button)
       (1 2 3) (matrix/handle-plate-slot matrix (dec slot-id) button)
-      nil)))
+      nil))
+  
+  IContainer
+  (can-interact-with? [this player]
+    (can-interact-with? this player))
+  
+  (transfer-stack-in-slot [_ player slot-id]
+    (when (pos? slot-id)
+      (let [slot-type (if (< slot-id 4) :container :inventory)
+            direction (if (= slot-type :container) :to-player :to-container)]
+        (matrix/transfer-item matrix slot-id direction))))
+  
+  (get-slot-count [_]
+    4)  ; Core slot + 3 plate slots
+  
+  (get-slot [this idx]
+    (if (zero? idx)
+      (get-core-slot this)
+      (let [plate-idx (dec idx)]
+        (when (< plate-idx 3)
+          (nth (get-plate-slots this) plate-idx nil))))))
 
 (defn create-container
   "Create new matrix container instance"
   [matrix player]
   (->MatrixContainer matrix 
-                     player
-                     (atom {:slots {}})))
+                    player
+                    (atom {:slots {}})))

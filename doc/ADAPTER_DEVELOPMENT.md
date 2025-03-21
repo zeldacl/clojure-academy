@@ -1,3 +1,79 @@
+# Adapter Development Guidelines
+
+## Protocol-Based Architecture
+
+The Clojure Academy mod follows a strict protocol-based architecture that separates core game logic from Minecraft/Forge implementation details. This document outlines the key principles and rules to follow when developing for this project.
+
+## Fundamental Rule: No Direct Minecraft Imports in acmod
+
+**The `acmod` project must never directly import Minecraft or Forge classes.** Instead, it should only interact with Minecraft through the protocol abstractions defined in the `mcmod` project.
+
+### Correct Example:
+
+```clojure
+;; CORRECT: Using protocols
+(ns cn.academy.blocks.example
+  (:require [mcmod.protocols :refer :all]
+            [mcmod.resources :as resources]
+            [mcmod.materials :as materials]))
+
+(def texture (resources/create-resource-location "academy" "textures/blocks/example.png"))
+
+(defrecord ExampleBlock []
+  IBlock
+  (get-properties [_]
+    {:material (materials/get-material :iron)
+     :hardness 3.0}))
+```
+
+### Incorrect Example:
+
+```clojure
+;; INCORRECT: Direct Minecraft imports
+(ns cn.academy.blocks.example
+  (:import [net.minecraft.util ResourceLocation]
+           [net.minecraft.block.material Material]))
+           
+(def texture (ResourceLocation. "academy" "textures/blocks/example.png"))
+
+(defrecord ExampleBlock []
+  (get-properties [_]
+    {:material Material/IRON
+     :hardness 3.0}))
+```
+
+## Common Replacements
+
+Here are the most common Minecraft classes and their protocol-based replacements:
+
+| Minecraft Class         | Protocol Replacement                                |
+|-------------------------|-----------------------------------------------------|
+| `ResourceLocation`      | `mcmod.resources/create-resource-location`          |
+| `Material`              | `mcmod.materials/get-material`                      |
+| `EntityPlayer`          | `mcmod.player` protocol functions                   |
+| `BlockPos`              | Use maps with `:x`, `:y`, `:z` keys                 |
+| `TileEntity`            | Implement `mcmod.protocols/ITileEntity` protocol    |
+| `Container`             | Implement `mcmod.protocols/IContainer` protocol     |
+| `ItemStack`             | Implement `mcmod.protocols/IItemStack` protocol     |
+
+## Benefits of Protocol-Based Architecture
+
+1. **Version Independence**: Core logic works across different Minecraft versions
+2. **Testability**: Core logic can be tested without a Minecraft environment
+3. **Cleaner Separation**: Clear boundaries between game logic and implementation
+4. **Easier Maintenance**: Changes to Minecraft APIs don't require changes to core logic
+5. **Simpler Debugging**: Issues are isolated to either core logic or adapters
+
+## Implementation Details
+
+The protocol abstractions are defined in `mcmod` and implemented by version-specific adapters in `forge_1_12_2`, `forge_1_15_2`, and `forge_1_16_5` projects. This allows the same core logic to run on multiple Minecraft versions with minimal changes.
+
+When you need functionality that doesn't have an existing protocol, follow this process:
+
+1. Define a new protocol in `mcmod` 
+2. Implement the protocol in the appropriate Forge adapter
+3. Use the protocol in `acmod` instead of direct Minecraft imports
+
 # Protocol Adapter Development Guide
 
 This guide explains how to implement protocol adapters for new Minecraft versions or platforms.

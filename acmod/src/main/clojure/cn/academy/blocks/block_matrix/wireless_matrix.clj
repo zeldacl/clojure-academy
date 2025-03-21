@@ -2,16 +2,16 @@
   (:require [mcmod.protocols :refer :all]
             [mcmod.capabilities :as cap]
             [mcmod.gui :as gui]
+            [mcmod.materials :as materials]
             [cn.academy.blocks.block_matrix.component :as component]
-            [cn.academy.blocks.block_matrix.registry :as registry])
-  (:import [net.minecraft.block.material Material]))
+            [cn.academy.blocks.block_matrix.registry :as registry]))
 
 ;; ...existing code...
 
 (defrecord WirelessMatrix []
   IBlock
   (get-properties [this]
-    {:material Material/IRON
+    {:material (materials/get-material :iron)
      :hardness 4.0
      :resistance 20.0
      :light-level 7})

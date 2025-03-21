@@ -1,10 +1,11 @@
 (ns cn.academy.blocks.block_matrix.render
   (:require [cn.academy.blocks.block_matrix :as matrix]
-            [cn.academy.blocks.block_matrix.utils :as utils])
-  (:import [net.minecraft.util ResourceLocation]))
+            [cn.academy.blocks.block_matrix.utils :as utils]
+            [mcmod.render :as render]
+            [mcmod.resources :as resources]))
 
 (def ^:private matrix-texture
-  (ResourceLocation. "academy" "textures/blocks/wireless_matrix.png"))
+  (resources/create-resource-location "academy" "textures/blocks/wireless_matrix.png"))
 
 (defprotocol IMatrixRenderer
   "Protocol for matrix rendering"

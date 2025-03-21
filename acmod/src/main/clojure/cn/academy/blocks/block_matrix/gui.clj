@@ -1,14 +1,15 @@
 (ns cn.academy.blocks.block_matrix.gui
   (:require [cn.academy.blocks.block_matrix :as matrix]
-            [cn.academy.blocks.block_matrix.container :as container])
-  (:import [net.minecraft.util ResourceLocation]))
+            [cn.academy.blocks.block_matrix.container :as container]
+            [mcmod.resources :as resources]
+            [mcmod.gui :as gui]))
 
 ;; GUI textures
 (def ^:private gui-texture 
-  (ResourceLocation. "academy" "textures/gui/container/wireless_matrix.png"))
+  (resources/create-resource-location "academy" "textures/gui/container/wireless_matrix.png"))
 
 (def ^:private energy-bar-texture
-  (ResourceLocation. "academy" "textures/gui/container/energy_bar.png"))
+  (resources/create-resource-location "academy" "textures/gui/container/energy_bar.png"))
 
 (def ^:private gui-layout
   {:size {:width 176 :height 166}
