@@ -1,19 +1,18 @@
-(ns cn.academy.energy.node-energy
-  (:require [mcmod.protocols :refer :all]
-            [mcmod.capabilities :as cap]
-            [cn.academy.block.tileentity.tile-node :as tile-node]))
+(ns cn.academy.tech-system.energy-system.block.node
+  (:require [cn.academy.tech-system.energy-system.capability.wireless :as wireless]
+            [cn.academy.tech-system.energy-system.api.wireless :as wireless-api]
+            [mcmod.capabilities :as cap]))
 
-(defprotocol IWirelessEnergy
+(defprotocol IEnergyNode
   (connect-to-network [this])
   (disconnect-from-network [this])
   (is-connected? [this])
   (send-energy [this target amount simulate?])
   (receive-energy [this source amount simulate?]))
 
-;; Energy storage implementation for nodes using mcmod abstractions
 (defrecord NodeEnergyStorage [node]
-  ;; Implement the IEnergyStorage protocol from mcmod instead of direct Forge import
-  IEnergyStorage
+  ;; Energy storage implementation
+  cap/IEnergyStorage
   (receive-energy [_ max-receive simulate]
     (let [space (- (.getMaxEnergy node) (.getEnergy node))
           amount (min max-receive space)]
@@ -39,7 +38,8 @@
   (can-receive? [_]
     true)
   
-  IWirelessEnergy
+  ;; Wireless node functionality
+  IEnergyNode
   (connect-to-network [_]
     (.setEnabled node true))
   

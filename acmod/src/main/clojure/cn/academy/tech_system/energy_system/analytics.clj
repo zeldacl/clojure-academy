@@ -1,145 +1,71 @@
 (ns cn.academy.tech-system.energy-system.analytics
-  (:require [cn.academy.tech-system.energy-system.network.wireless :as network]
-            [cn.academy.tech-system.energy-system.capability.wireless :as wireless]
-            [cn.academy.tech-system.energy-system.monitoring :as monitoring]
+  (:require [cn.academy.tech-system.energy-system.network.optimization :as optimization]
+            [cn.academy.tech-system.energy-system.network.state :as network-state]
+            [cn.academy.tech-system.energy-system.config :as config]
             [clojure.tools.logging :as log]))
 
 (def ^:private analytics-state
-  (atom {:stats {}
-         :hourly-snapshots []
-         :daily-summaries []
-         :retention-days 7}))
+  (atom {:metrics {}
+         :samples {}
+         :window-size 300000})) ; 5 minute window
 
-(defprotocol INetworkAnalytics
-  (collect-stats! [this network timestamp])
-  (analyze-trends [this network-id timespan])
-  (generate-report [this network-id])
-  (predict-usage [this network-id hours]))
+(defn- record-metric! [metric-type node-id value]
+  (let [now (System/currentTimeMillis)
+        window-size (config/get-config [:analytics :window-size] 300000)]
+    (swap! analytics-state update-in [:metrics metric-type node-id]
+           (fn [samples]
+             (->> (or samples [])
+                  (filter #(> (:timestamp %) (- now window-size)))
+                  (conj {:timestamp now :value value}))))))
 
-(defrecord NetworkAnalytics [state-atom]
-  INetworkAnalytics
-  (collect-stats! [_ network timestamp]
-    (let [nodes (network/get-nodes network)
-          stats {:timestamp timestamp
-                 :node-count (count nodes)
-                 :total-energy (reduce + (map wireless/get-energy nodes))
-                 :avg-energy (if (seq nodes)
-                             (/ (reduce + (map wireless/get-energy nodes))
-                                (count nodes))
-                             0)
-                 :connections (reduce + (map #(count (network/get-connected-nodes %))
-                                           nodes))
-                 :transfer-rate (network/get-transfer-rate network)}]
-      (swap! state-atom update-in [:stats (:id network)]
-             (fnil conj []) stats)
-      ;; Maintain history size
-      (when (> (count (get-in @state-atom [:stats (:id network)]))
-               (* 24 (:retention-days @state-atom)))
-        (swap! state-atom update-in [:stats (:id network)] 
-               #(vec (take-last (* 24 (:retention-days @state-atom)) %))))
-      stats))
-  
-  (analyze-trends [_ network-id timespan]
-    (when-let [stats (get-in @state-atom [:stats network-id])]
-      (let [recent-stats (take-last timespan stats)
-            periods (partition 2 1 recent-stats)]
-        {:energy-trend
-         (let [changes (for [[prev curr] periods]
-                        (- (:total-energy curr)
-                           (:total-energy prev)))]
-           {:direction (if (pos? (reduce + changes)) :increasing :decreasing)
-            :rate (if (seq changes)
-                   (/ (reduce + changes) (count changes))
-                   0)})
-         
-         :stability
-         (let [energy-stddev (when (seq recent-stats)
-                              (let [energies (map :total-energy recent-stats)
-                                    mean (/ (reduce + energies) (count energies))]
-                                (Math/sqrt (/ (reduce + (map #(Math/pow (- % mean) 2)
-                                                           energies))
-                                            (count energies)))))]
-           {:score (if energy-stddev
-                    (- 1.0 (min 1.0 (/ energy-stddev
-                                      (:avg-energy (last recent-stats)))))
-                    1.0)
-            :fluctuations (count (filter #(> (Math/abs %) 1000)
-                                       (map - (map :total-energy (rest recent-stats))
-                                             (map :total-energy (butlast recent-stats)))))})
-         
-         :efficiency
-         (let [transfer-rates (map :transfer-rate recent-stats)]
-           {:average (if (seq transfer-rates)
-                      (/ (reduce + transfer-rates) (count transfer-rates))
-                      0)
-            :peak (apply max 0 transfer-rates)})})))
-  
-  (generate-report [this network-id]
-    (when-let [stats (get-in @state-atom [:stats network-id])]
-      (let [current (last stats)
-            trends (analyze-trends this network-id 24)
-            daily-avg (/ (reduce + (map :total-energy (take-last 24 stats)))
-                        24)]
-        {:timestamp (:timestamp current)
-         :current-state
-         {:node-count (:node-count current)
-          :total-energy (:total-energy current)
-          :connections (:connections current)}
-         :trends trends
-         :daily-statistics
-         {:average-energy daily-avg
-          :peak-energy (apply max (map :total-energy (take-last 24 stats)))
-          :min-energy (apply min (map :total-energy (take-last 24 stats)))}
-         :recommendations
-         (cond-> []
-           (< (:score (:stability trends)) 0.7)
-           (conj {:type :improve-stability
-                  :priority :high
-                  :reason "Network showing significant energy fluctuations"})
-           
-           (< (:average (:efficiency trends)) 500)
-           (conj {:type :improve-efficiency
-                  :priority :medium
-                  :reason "Network transfer rates below optimal levels"}))})))
-  
-  (predict-usage [_ network-id hours]
-    (when-let [stats (get-in @state-atom [:stats network-id])]
-      (let [recent-stats (take-last (* 24 7) stats) ; Use last week's data
-            hourly-patterns (reduce (fn [acc stat]
-                                    (let [hour (mod (quot (:timestamp stat) 3600000) 24)]
-                                      (update acc hour
-                                              #(conj (or % []) (:total-energy stat)))))
-                                  {}
-                                  recent-stats)
-            predictions
-            (for [hour (range hours)
-                  :let [target-hour (mod hour 24)
-                        historical (get hourly-patterns target-hour [])]]
-              {:hour hour
-               :predicted-energy (if (seq historical)
-                                 (/ (reduce + historical) (count historical))
-                                 0)
-               :confidence (min 1.0 (/ (count historical) 7))}))]
-        {:predictions predictions
-         :reliability (/ (count (filter #(>= (:confidence %) 0.5) predictions))
-                        (count predictions))}))))
+(defn get-metric-stats [metric-type node-id]
+  (let [samples (get-in @analytics-state [:metrics metric-type node-id])
+        values (map :value samples)]
+    (when (seq values)
+      {:min (apply min values)
+       :max (apply max values)
+       :avg (/ (reduce + values) (count values))
+       :count (count values)})))
 
-(def analytics (->NetworkAnalytics analytics-state))
+(defn track-network-metrics! [network-id]
+  (when-let [network (network-state/get-network network-id)]
+    (let [nodes (network-state/get-network-nodes network-id)]
+      (doseq [node-id nodes]
+        (let [bandwidth-usage (optimization/get-bandwidth-usage node-id 60000)]
+          (record-metric! :bandwidth node-id bandwidth-usage))))))
 
-(defn start-analytics-collection! []
-  (let [collection-thread
-        (Thread.
-          (fn []
-            (try
-              (while true
-                (let [timestamp (System/currentTimeMillis)]
-                  (doseq [[id network] (network/get-all-networks)]
-                    (try
-                      (collect-stats! analytics network timestamp)
-                      (catch Exception e
-                        (log/error e "Error collecting network statistics" id)))))
-                (Thread/sleep 3600000)) ; Collect hourly stats
-              (catch InterruptedException _))))]
-    (.setDaemon collection-thread true)
-    (.start collection-thread)
-    collection-thread))
+(defn analyze-network-performance [network-id]
+  (when-let [network (network-state/get-network network-id)]
+    (let [nodes (network-state/get-network-nodes network-id)
+          node-metrics (for [node-id nodes]
+                        {:id node-id
+                         :bandwidth (get-metric-stats :bandwidth node-id)})]
+      {:network-id network-id
+       :timestamp (System/currentTimeMillis)
+       :nodes node-metrics
+       :total-bandwidth (reduce + (map #(get-in % [:bandwidth :avg] 0) node-metrics))
+       :active-nodes (count (filter #(pos? (get-in % [:bandwidth :avg] 0)) node-metrics))})))
+
+(defn generate-performance-report [network-id]
+  (when-let [analysis (analyze-network-performance network-id)]
+    (let [{:keys [total-bandwidth active-nodes nodes]} analysis
+          high-usage-nodes (filter #(> (get-in % [:bandwidth :avg] 0) 
+                                     (config/get-config [:network :bandwidth-warning-threshold] 5000))
+                                  nodes)]
+      (when (seq high-usage-nodes)
+        (log/warn "High bandwidth usage detected in network" network-id 
+                 "- Nodes:" (map :id high-usage-nodes)))
+      (assoc analysis
+             :performance-rating 
+             (cond 
+               (> total-bandwidth (* active-nodes 10000)) :poor
+               (> total-bandwidth (* active-nodes 5000)) :fair
+               :else :good)))))
+
+(defn init! []
+  (let [metric-interval (config/get-config [:analytics :metric-interval] 60000)]
+    (mcmod.scheduler/schedule-recurring 
+      metric-interval
+      #(doseq [network-id (keys (network-state/get-all-networks))]
+         (track-network-metrics! network-id)))
+    (log/info "Network analytics system initialized")))

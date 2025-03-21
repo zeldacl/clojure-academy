@@ -1,87 +1,84 @@
 (ns cn.academy.tech-system.energy-system.persistence
-  (:require [cn.academy.tech-system.energy-system.network.wireless :as network]
-            [cn.academy.tech-system.energy-system.security :as security]
+  (:require [cn.academy.tech-system.energy-system.network.state :as network-state]
+            [cn.academy.tech-system.energy-system.config :as config]
             [mcmod.nbt :as nbt]
-            [mcmod.world :as world]
             [clojure.tools.logging :as log]))
 
-(defprotocol INetworkStorage
-  (save-network! [this world net-id])
-  (load-network! [this world net-id])
-  (save-all! [this world])
-  (load-all! [this world]))
+(defprotocol IPersistable
+  (save-to-nbt! [this nbt-tag])
+  (load-from-nbt! [this nbt-tag]))
 
-(defrecord NetworkStorage []
-  INetworkStorage
-  (save-network! [_ world net-id]
-    (when-let [network (network/get-network net-id)]
-      (let [data (nbt/create-compound)]
-        ;; Save basic network info
-        (nbt/put-string data "id" net-id)
-        (nbt/put-int data "node_count" (count (network/get-nodes network)))
-        
-        ;; Save node data
-        (let [nodes-tag (nbt/create-list)]
-          (doseq [node (network/get-nodes network)]
-            (let [node-tag (nbt/create-compound)]
-              (nbt/put-string node-tag "id" (:id node))
-              (nbt/put-int node-tag "pos_x" (get-in node [:pos :x]))
-              (nbt/put-int node-tag "pos_y" (get-in node [:pos :y]))
-              (nbt/put-int node-tag "pos_z" (get-in node [:pos :z]))
-              (nbt/put-double node-tag "energy" (network/get-energy node))
-              (.add nodes-tag node-tag)))
-          (nbt/put-list data "nodes" nodes-tag))
-        
-        ;; Save to world data
-        (world/set-world-data! world 
-                              (str "energy_network_" net-id)
-                              data))))
-  
-  (load-network! [_ world net-id]
-    (when-let [data (world/get-world-data world 
-                                         (str "energy_network_" net-id))]
-      (let [network (network/create-network!)]
-        ;; Load nodes
-        (when-let [nodes-tag (nbt/get-list data "nodes")]
-          (doseq [node-tag nodes-tag]
-            (let [node-id (nbt/get-string node-tag "id")
-                  pos {:x (nbt/get-int node-tag "pos_x")
-                      :y (nbt/get-int node-tag "pos_y")
-                      :z (nbt/get-int node-tag "pos_z")}
-                  energy (nbt/get-double node-tag "energy")]
-              (when-let [te (world/get-tile-entity world pos)]
-                (network/add-node! network te)))))
-        network)))
-  
-  (save-all! [this world]
-    (let [networks (network/get-all-networks)]
-      (doseq [net-id (keys networks)]
-        (save-network! this world net-id))
-      ;; Save security state
-      (let [sec-data (nbt/create-compound)]
-        (security/save-security-state! sec-data)
-        (world/set-world-data! world "energy_security" sec-data))))
-  
-  (load-all! [this world]
-    ;; Load security state first
-    (when-let [sec-data (world/get-world-data world "energy_security")]
-      (security/load-security-state! sec-data))
+(defn- save-network! [network-id network nbt]
+  (let [network-tag (nbt/create-compound)]
+    ;; Save basic network info
+    (nbt/put-string network-tag "id" network-id)
+    (nbt/put-string network-tag "type" (name (:type network)))
     
-    ;; Load networks
-    (doseq [data-key (world/get-all-data-keys world)]
-      (when (.startsWith data-key "energy_network_")
-        (let [net-id (.substring data-key 14)]
-          (load-network! this world net-id))))))
+    ;; Save node list
+    (let [nodes-tag (nbt/create-list)]
+      (doseq [node-id (:nodes network)]
+        (nbt/add-string nodes-tag node-id))
+      (nbt/put-tag network-tag "nodes" nodes-tag))
+    
+    ;; Save network properties
+    (when-let [props (:properties network)]
+      (let [props-tag (nbt/create-compound)]
+        (doseq [[k v] props]
+          (nbt/put-any props-tag (name k) v))
+        (nbt/put-tag network-tag "properties" props-tag)))
+    
+    network-tag))
 
-(def storage (->NetworkStorage))
+(defn- load-network! [network-tag]
+  (let [network-id (nbt/get-string network-tag "id")
+        network-type (keyword (nbt/get-string network-tag "type"))
+        nodes (into #{} (map nbt/get-string (nbt/get-list network-tag "nodes")))
+        properties (when-let [props-tag (nbt/get-compound network-tag "properties")]
+                    (into {} (map (fn [[k v]] 
+                                  [(keyword k) (nbt/get-any props-tag k)])
+                                (.get-keys props-tag))))]
+    {:id network-id
+     :type network-type
+     :nodes nodes
+     :properties properties}))
+
+(defn save-all! [world]
+  (try
+    (let [save-dir (mcmod.world/get-save-directory world)
+          networks-file (io/file save-dir "energy_networks.dat")
+          nbt (nbt/create-compound)]
+      
+      ;; Save network states
+      (let [networks-tag (nbt/create-list)]
+        (doseq [[network-id network] (network-state/get-all-networks)]
+          (nbt/add-compound networks-tag 
+                           (save-network! network-id network nbt)))
+        (nbt/put-tag nbt "networks" networks-tag))
+      
+      ;; Write to file
+      (nbt/write! nbt networks-file)
+      (log/info "Saved" (count (network-state/get-all-networks)) "networks"))
+    (catch Exception e
+      (log/error "Failed to save network state:" (.getMessage e)))))
+
+(defn load-all! [world]
+  (try
+    (let [save-dir (mcmod.world/get-save-directory world)
+          networks-file (io/file save-dir "energy_networks.dat")]
+      (when (.exists networks-file)
+        (let [nbt (nbt/read! networks-file)]
+          (when-let [networks-tag (nbt/get-list nbt "networks")]
+            (doseq [network-tag networks-tag]
+              (let [network (load-network! network-tag)]
+                (network-state/register-network! (:id network) network)))
+            (log/info "Loaded" (count networks-tag) "networks")))))
+    (catch Exception e
+      (log/error "Failed to load network state:" (.getMessage e)))))
 
 (defn init! []
-  ;; Register world save handler
-  (world/register-save-handler 
-    (fn [world]
-      (save-all! storage world)))
-  
-  ;; Register world load handler
-  (world/register-load-handler
-    (fn [world]
-      (load-all! storage world))))
+  (let [save-interval (config/get-config [:storage :save-interval] 300000)]
+    (mcmod.scheduler/schedule-recurring 
+      save-interval
+      #(when-let [world (mcmod.world/get-current-world)]
+         (save-all! world)))
+    (log/info "Network persistence system initialized")))
