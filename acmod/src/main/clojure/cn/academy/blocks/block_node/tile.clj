@@ -1,12 +1,10 @@
-(ns cn.academy.block.tileentity.tile-node
+(ns cn.academy.blocks.block-node.tile
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.core.node-types :as node-types]
             [mcmod.protocols :refer [ITileEntity IInventory]]
             [clojure.tools.logging :as log]))
 
-;; Now implementing shared IWirelessNode protocol from node-types
-;; Node state management
 (defrecord NodeState [energy active placer-id password-hash node-type node-name]
   node-types/IWirelessNode
   (get-node-type [_] node-type)
@@ -32,11 +30,8 @@
      :node-name ""}))
 
 (defn tick-node [state]
-  ; Enhanced tick logic to handle enabled state and energy transfer
   (if (:active state)
-    (do
-      ; Process any energy transfer logic here
-      state)
+    state
     state))
 
 (defprotocol INodeTile
@@ -80,13 +75,11 @@
   (can-discharge? [this]
     (> (get-energy this) 0)))
 
-;; TileEntity implementation for Forge
 (defn create-node-tile [node-type]
   (let [factory @block-api/*forge-factory*
         tile-entity (block-api/create-tile-entity factory)
         state-atom (atom (create-node-state node-type))]
     
-    ;; Register capability provider for energy
     (block-api/add-capability-provider! 
       tile-entity 
       (energy-api/create-energy-storage 
@@ -95,7 +88,6 @@
         (fn [amount] (swap! state-atom assoc :energy amount))
         (fn [] (node-types/get-node-bandwidth node-type))))
     
-    ;; Register tick method
     (block-api/on-tile-entity-tick! 
       tile-entity 
       (fn []
@@ -103,7 +95,6 @@
         (when (zero? (mod (block-api/get-world-time) 20))
           (block-api/mark-dirty! tile-entity))))
     
-    ;; Implement NBT serialization
     (block-api/on-save-nbt! 
       tile-entity 
       (fn [compound]
@@ -116,7 +107,6 @@
             (block-api/put-string! "nodeName" (or (:node-name state) ""))
             (block-api/put-string! "nodeType" (name (:node-type state)))))))
     
-    ;; Implement NBT deserialization
     (block-api/on-load-nbt! 
       tile-entity 
       (fn [compound]
@@ -129,7 +119,6 @@
                    :node-name (block-api/get-string compound "nodeName" "")
                    :node-type (keyword (block-api/get-string compound "nodeType" "basic"))}))))
     
-    ;; Add getter/setter methods for Java interop
     (block-api/add-method! tile-entity "getMaxEnergy" 
                           (fn [] (node-types/get-node-max-energy (:node-type @state-atom))))
     (block-api/add-method! tile-entity "getBandwidth" 
@@ -161,9 +150,8 @@
     
     tile-entity))
 
-;; Export the constructor functions for Java interop
 (gen-class
-  :name cn.academy.block.tileentity.TileNode$Factory
+  :name cn.academy.blocks.block-node.TileNode$Factory
   :methods [^:static [createBasic [] Object]
             ^:static [createStandard [] Object]
             ^:static [createAdvanced [] Object]]

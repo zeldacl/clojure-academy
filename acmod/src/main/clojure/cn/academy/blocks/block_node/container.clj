@@ -1,7 +1,8 @@
-(ns cn.academy.block.container.node-container
+(ns cn.academy.blocks.block-node.container
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.tile-node :as tile-node]))
+            [cn.academy.blocks.block-node.tile :as tile]))
 
+;; Copy existing NodeContainer implementation with updated namespace references
 (defrecord NodeContainer [tile-entity player inventory]
   IContainer
   (get-slots [_]
@@ -47,29 +48,29 @@
   (get-node [_] tile)
   
   (get-energy [_]
-    (tile-node/get-energy tile))
+    (tile/get-energy tile))
   
   (get-max-energy [_]
-    (tile-node/get-max-energy tile))
+    (tile/get-max-energy tile))
   
   (get-bandwidth [_]
-    (tile-node/get-bandwidth tile))
+    (tile/get-bandwidth tile))
   
   (get-range [_]
-    (tile-node/get-range tile))
+    (tile/get-range tile))
   
   (get-capacity [_]
-    (tile-node/get-capacity tile)))
+    (tile/get-capacity tile)))
 
 ;; Factory function
 (defn create-container [tile player]
-  (let [inventory (tile-node/get-inventory tile)
+  (let [inventory (tile/get-inventory tile)
         container (->NodeContainer tile player inventory)]
     (->NodeContainerImpl container tile)))
 
 ;; Export for Java interop
 (gen-class
-  :name cn.academy.block.container.ContainerNode
+  :name cn.academy.blocks.block-node.ContainerNode
   :prefix "container-"
   :state state
   :init init

@@ -1,5 +1,6 @@
-(ns cn.academy.block.gui.node-gui
-  (:require [mcmod.protocols :refer :all]))
+(ns cn.academy.blocks.block-node.gui
+  (:require [mcmod.protocols :refer :all]
+            [cn.academy.blocks.block-node.tile :as tile]))
 
 (def ^:private GUI_WIDTH 176)
 (def ^:private GUI_HEIGHT 166)
@@ -99,7 +100,7 @@
 
 ;; Export for Java interop
 (gen-class
-  :name cn.academy.block.gui.GuiNode
+  :name cn.academy.blocks.block-node.GuiNode
   :prefix "gui-"
   :init init
   :constructors {[Object] []}

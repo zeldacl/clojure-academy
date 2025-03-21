@@ -1,4 +1,4 @@
-(ns cn.academy.block.block-node
+(ns cn.academy.blocks.block-node.core
   (:require [mcmod.protocols :refer :all]
             [cn.academy.core :as core]
             [clojure.tools.logging :as log]))
