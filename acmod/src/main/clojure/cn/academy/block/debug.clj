@@ -1,71 +1,152 @@
 (ns cn.academy.block.debug
-  (:require [cn.academy.block.validation :as validation]
-            [clojure.tools.logging :as log]
-            [clojure.pprint :as pp]))
+  (:require [mcmod.protocols :refer [IDebugger IDebugTarget]]
+            [cn.academy.block.error :as error]
+            [cn.academy.block.monitor :as monitor]
+            [cn.academy.block.stats :as stats]
+            [cn.academy.block.config :as config]
+            [clojure.tools.logging :as log]))
 
 ;; Debug state tracking
-(def debug-state (atom {:enabled false
-                       :tracked-blocks #{}
-                       :performance-metrics {}}))
+(def debug-state
+  (atom {:breakpoints {}  
+         :watches {}
+         :enabled-targets #{}
+         :traces []}))
 
-;; Monitoring configuration
-(def monitor-config
-  {:sample-rate 20  ; ticks
-   :history-size 100
-   :metrics #{:energy :progress :efficiency}})
+;; Debug target implementation
+(defrecord DebugTarget [id category target-fn state-atom]
+  IDebugTarget
+  (enable! [_]
+    (swap! state-atom update :enabled-targets conj id))
+  
+  (disable! [_]
+    (swap! state-atom update :enabled-targets disj id))
+  
+  (is-enabled? [_]
+    (contains? (:enabled-targets @state-atom) id))
+  
+  (collect-data [this]
+    (when (.is-enabled? this)
+      (error/with-error-handling :debug
+        (target-fn)))))
 
-;; Debug helpers
-(defn enable-debug! []
-  (swap! debug-state assoc :enabled true))
+;; Debugger implementation
+(defrecord BlockDebugger [state-atom]
+  IDebugger
+  (add-breakpoint! [_ id pred]
+    (swap! state-atom assoc-in [:breakpoints id] pred))
+  
+  (remove-breakpoint! [_ id]
+    (swap! state-atom update :breakpoints dissoc id))
+  
+  (check-breakpoint [_ id state]
+    (when-let [pred (get-in @state-atom [:breakpoints id])]
+      (pred state)))
+  
+  (add-watch! [_ id path handler]
+    (swap! state-atom assoc-in [:watches id] 
+           {:path path :handler handler}))
+  
+  (remove-watch! [_ id]
+    (swap! state-atom update :watches dissoc id))
+  
+  (notify-watch [this id old-state new-state]
+    (when-let [{:keys [path handler]} (get-in @state-atom [:watches id])]
+      (let [old-value (get-in old-state path)
+            new-value (get-in new-state path)]
+        (when (not= old-value new-value)
+          (handler old-value new-value)))))
+  
+  (add-trace! [_ event]
+    (swap! state-atom update :traces conj 
+           (assoc event :timestamp (System/currentTimeMillis))))
+  
+  (get-traces [_]
+    (:traces @state-atom))
+  
+  (clear-traces! [_]
+    (swap! state-atom assoc :traces [])))
 
-(defn disable-debug! []
-  (swap! debug-state assoc :enabled false))
+;; Factory functions
+(defn create-debugger []
+  (->BlockDebugger debug-state))
 
-;; Block tracking
-(defn track-block! [block]
-  (swap! debug-state update :tracked-blocks conj block))
+(defn create-target [id category target-fn]
+  (->DebugTarget id category target-fn debug-state))
 
-(defn untrack-block! [block]
-  (swap! debug-state update :tracked-blocks disj block))
-
-;; Performance monitoring
-(defn record-metric! [block-type metric value]
-  (when (:enabled @debug-state)
-    (swap! debug-state update-in [:performance-metrics block-type metric]
-           (fn [history]
-             (take (:history-size monitor-config)
-                   (conj (or history '()) value))))))
-
-;; State monitoring
-(defn monitor-block-state! [block]
-  (when (and (:enabled @debug-state)
-             (contains? (:tracked-blocks @debug-state) block))
-    (let [state @(:state block)]
-      (doseq [metric (:metrics monitor-config)]
-        (when-let [value (get state metric)]
-          (record-metric! (:type block) metric value))))))
+;; Debug data collectors
+(def debug-targets
+  [{:id :machine-states
+    :category :machine
+    :fn #(into {} (map (fn [m] 
+                        [(:id m) (select-keys @(:state m) 
+                                            [:active :progress :error])])
+                      (mcmod.machine/get-active-machines)))}
+   
+   {:id :network-stats
+    :category :network
+    :fn #(let [stats-collector (stats/create-collector :network)]
+           {:active-networks (count (mcmod.network/get-active-networks))
+            :packet-stats (stats/generate-stats-report stats-collector)})}
+   
+   {:id :resource-usage
+    :category :resource
+    :fn #(let [stats-collector (stats/create-collector :resource)]
+           (stats/generate-stats-report stats-collector))}
+   
+   {:id :error-state
+    :category :error
+    :fn #(into {} (map (fn [[id errors]]
+                        [id (mapv :message errors)])
+                      (error/get-active-errors)))}])
 
 ;; Debug reporting
-(defn generate-block-report [block]
-  (let [state @(:state block)
-        config (:config block)]
-    {:type (:type block)
-     :state state
-     :config config
-     :validation (validation/validate-machine! block)
-     :metrics (get-in @debug-state [:performance-metrics (:type block)])}))
+(defn generate-debug-report []
+  (let [debugger (create-debugger)]
+    {:timestamp (System/currentTimeMillis)
+     :version (mcmod.version/get-current-version)
+     :config (config/get-active-config)
+     :traces (.get-traces debugger)
+     :metrics (monitor/get-all-metrics)
+     :targets (->> debug-targets
+                  (map (fn [{:keys [id category fn]}]
+                        (let [target (create-target id category fn)]
+                          [id (.collect-data target)])))
+                  (into {}))}))
 
-(defn print-block-report! [block]
-  (when (:enabled @debug-state)
-    (let [report (generate-block-report block)]
-      (log/debug "Block Report:")
-      (pp/pprint report))))
+;; Debug command handlers
+(defn handle-debug-command [command & args]
+  (let [debugger (create-debugger)]
+    (case command
+      :breakpoint (let [[id pred] args]
+                   (.add-breakpoint! debugger id pred))
+      :watch (let [[id path handler] args]
+              (.add-watch! debugger id path handler))
+      :enable (let [[target-id] args
+                   target (some #(when (= (:id %) target-id) %) 
+                               debug-targets)]
+               (when target
+                 (.enable! (create-target (:id target) 
+                                        (:category target)
+                                        (:fn target)))))
+      :disable (let [[target-id] args
+                    target (some #(when (= (:id %) target-id) %) 
+                                debug-targets)]
+                (when target
+                  (.disable! (create-target (:id target)
+                                          (:category target) 
+                                          (:fn target)))))
+      :report (generate-debug-report)
+      :clear (.clear-traces! debugger)
+      {:error "Unknown debug command"})))
 
-;; Performance analysis
-(defn analyze-performance! [block-type]
-  (when-let [metrics (get-in @debug-state [:performance-metrics block-type])]
-    (into {}
-          (for [[metric values] metrics]
-            [metric {:min (apply min values)
-                    :max (apply max values)
-                    :avg (/ (apply + values) (count values))}]))))
+;; Initialize debug system
+(defn init-debug! []
+  (reset! debug-state {:breakpoints {}
+                       :watches {}
+                       :enabled-targets #{}
+                       :traces []})
+  
+  ;; Enable default debug targets
+  (doseq [{:keys [id category fn]} debug-targets]
+    (.enable! (create-target id category fn))))

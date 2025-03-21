@@ -1,68 +1,103 @@
 (ns cn.academy.block.upgrade
-  (:require [cn.academy.block.validation :as validation]
+  (:require [mcmod.protocols :refer [IUpgradeHandler IUpgrade]]
             [cn.academy.block.error :as error]
             [clojure.tools.logging :as log]))
 
-;; Upgrade definitions
-(def upgrade-registry (atom {}))
+;; Upgrade state tracking
+(def upgrade-state
+  (atom {:registered-upgrades {}
+         :active-upgrades {}}))
 
-(defn register-upgrade! [id upgrade-def]
-  (swap! upgrade-registry assoc id upgrade-def))
+;; Upgrade implementation
+(defrecord MachineUpgrade [type modifiers]
+  IUpgrade
+  (get-type [_]
+    type)
+  
+  (get-modifier [_ property]
+    (get modifiers property 1.0))
+  
+  (can-apply? [_ machine]
+    (let [existing (get-in @upgrade-state 
+                          [:active-upgrades (:id machine)])]
+      (and (< (count existing) 
+              (get-in machine [:properties :max-upgrades] 4))
+           (every? #(compatible? % type) 
+                   (map :type (vals existing))))))
+  
+  (on-installed [_ machine]
+    (swap! upgrade-state update-in 
+           [:active-upgrades (:id machine)]
+           assoc type this))
+  
+  (on-removed [_ machine]
+    (swap! upgrade-state update-in
+           [:active-upgrades (:id machine)]
+           dissoc type)))
 
-;; Upgrade validation
-(defn validate-upgrade! [block upgrade-def]
-  (let [new-config ((:config-modifier upgrade-def) (:config block))]
-    (validation/validate-config! new-config validation/machine-config)))
+;; Upgrade handler implementation
+(defrecord UpgradeHandler [machine state-atom]
+  IUpgradeHandler
+  (get-upgrades [_]
+    (vals (get-in @upgrade-state [:active-upgrades (:id machine)] {})))
+  
+  (get-upgrade [_ type]
+    (get-in @upgrade-state [:active-upgrades (:id machine) type]))
+  
+  (install-upgrade [_ upgrade]
+    (when (.can-apply? upgrade machine)
+      (.on-installed upgrade machine)
+      true))
+  
+  (remove-upgrade [_ type]
+    (when-let [upgrade (.get-upgrade this type)]
+      (.on-removed upgrade machine)
+      true))
+  
+  (get-property-modifier [this property]
+    (let [upgrades (.get-upgrades this)]
+      (reduce * 1.0 (map #(.get-modifier % property) upgrades))))
+  
+  (apply-modifier [_ base property]
+    (* base (get-in @state-atom [:modifiers property] 1.0))))
 
-;; Default upgrades
-(def machine-upgrades
-  {"efficiency_upgrade"
-   {:name "Efficiency Upgrade"
-    :max-level 3
-    :config-modifier (fn [config level]
-                      (update config :base-efficiency #(* % (+ 1 (* level 0.25)))))
-    :requirements {:energy-capacity 1000}}
-   
-   "capacity_upgrade"
-   {:name "Capacity Upgrade"
-    :max-level 4
-    :config-modifier (fn [config level]
-                      (update config :energy-capacity #(* % (+ 1 (* level 0.5)))))
-    :requirements {:energy-capacity 0}}
-   
-   "speed_upgrade"
-   {:name "Speed Upgrade"
-    :max-level 2
-    :config-modifier (fn [config level]
-                      (-> config
-                          (update :work-speed #(* % (+ 1 (* level 0.3))))
-                          (update :energy-per-tick #(* % (+ 1 (* level 0.4))))))
-    :requirements {:work-speed 0}}})
+;; Factory functions
+(defn create-upgrade [type modifiers]
+  (->MachineUpgrade type modifiers))
 
-;; Apply upgrades
-(defn can-apply-upgrade? [block upgrade-id]
-  (error/with-safe-execution (:type block) :upgrade
-    (when-let [upgrade (get @upgrade-registry upgrade-id)]
-      (and (validation/validate-machine! block)
-           (every? (fn [[k v]]
-                    (>= (get-in block [:config k] 0) v))
-                  (:requirements upgrade))))))
+(defn create-upgrade-handler [machine]
+  (->UpgradeHandler machine (atom {:modifiers {}})))
 
-(defn apply-upgrade! [block upgrade-id]
-  (error/with-safe-execution (:type block) :upgrade
-    (when-let [upgrade (get @upgrade-registry upgrade-id)]
-      (let [current-level (get-in block [:state :upgrades upgrade-id] 0)]
-        (when (and (< current-level (:max-level upgrade))
-                  (can-apply-upgrade? block upgrade-id))
-          (let [new-level (inc current-level)
-                new-config ((:config-modifier upgrade) (:config block) new-level)]
-            (when (validate-upgrade! block upgrade)
-              (swap! (:state block) assoc-in [:upgrades upgrade-id] new-level)
-              (swap! block assoc :config new-config)
-              true)))))))
+;; Upgrade registration
+(defn register-upgrade! [type modifiers]
+  (swap! upgrade-state assoc-in [:registered-upgrades type]
+         (create-upgrade type modifiers)))
 
-;; Initialize upgrades
+;; Upgrade compatibility checking
+(defn compatible? [type1 type2]
+  (not= type1 type2))
+
+;; Upgrade property modifiers
+(def upgrade-properties
+  {:speed {:max 4.0 :min 0.25}
+   :energy-usage {:max 2.0 :min 0.5}
+   :range {:max 3.0 :min 1.0}
+   :capacity {:max 4.0 :min 1.0}})
+
+;; Standard upgrade definitions
+(def standard-upgrades
+  {:speed {:speed 1.5
+           :energy-usage 1.2}
+   :efficiency {:speed 0.8
+                :energy-usage 0.7}
+   :capacity {:capacity 2.0}
+   :range {:range 1.5
+           :energy-usage 1.1}})
+
+;; Initialize upgrade system
 (defn init-upgrades! []
-  (doseq [[id upgrade] machine-upgrades]
-    (register-upgrade! id upgrade))
-  true)
+  (reset! upgrade-state 
+          {:registered-upgrades {}
+           :active-upgrades {}})
+  (doseq [[type modifiers] standard-upgrades]
+    (register-upgrade! type modifiers)))

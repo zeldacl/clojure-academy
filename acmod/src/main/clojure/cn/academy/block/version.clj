@@ -1,100 +1,122 @@
 (ns cn.academy.block.version
-  (:require [cn.academy.block.error :as error]
-            [cn.academy.block.persistence :as persist]
-            [cn.academy.block.validation :as validation]
+  (:require [mcmod.protocols :refer [IVersionManager IMigration]]
+            [cn.academy.block.error :as error]
+            [cn.academy.block.storage :as storage]
             [clojure.tools.logging :as log]))
 
-;; Version tracking
+;; Version state tracking
 (def version-state
-  (atom {:current-version "1.0.0"
+  (atom {:current-version nil
          :migrations {}
-         :block-versions {}}))
+         :applied-migrations #{}}))
 
-;; Version comparison
-(defn parse-version [version-str]
-  (mapv #(Integer/parseInt %)
-        (clojure.string/split version-str #"\.")))
+;; Migration implementation
+(defrecord DataMigration [id version changes]
+  IMigration
+  (get-id [_] id)
+  
+  (get-version [_] version)
+  
+  (apply-changes! [_]
+    (error/with-error-handling :migration
+      (doseq [change changes]
+        (change))
+      true))
+  
+  (rollback! [_]
+    false)) ; Migrations are forward-only for now
 
-(defn version< [v1 v2]
-  (let [v1-parts (parse-version v1)
-        v2-parts (parse-version v2)]
-    (loop [p1 v1-parts
-           p2 v2-parts]
-      (cond
-        (empty? p1) (seq p2)
-        (empty? p2) false
-        :else (let [n1 (first p1)
-                    n2 (first p2)]
-                (if (= n1 n2)
-                  (recur (rest p1) (rest p2))
-                  (< n1 n2)))))))
+;; Version manager implementation
+(defrecord VersionManager [state-atom]
+  IVersionManager
+  (register-migration! [_ migration]
+    (swap! state-atom assoc-in 
+           [:migrations (.get-version migration) (.get-id migration)]
+           migration))
+  
+  (get-pending-migrations [_]
+    (let [current (:current-version @state-atom)
+          applied (:applied-migrations @state-atom)]
+      (->> (:migrations @state-atom)
+           vals
+           (mapcat vals)
+           (remove #(contains? applied (.get-id %)))
+           (filter #(> (.get-version %) current))
+           (sort-by #(.get-version %)))))
+  
+  (apply-migration! [_ migration]
+    (when (.apply-changes! migration)
+      (swap! state-atom update :applied-migrations conj (.get-id migration))
+      (swap! state-atom assoc :current-version (.get-version migration))))
+  
+  (get-current-version [_]
+    (:current-version @state-atom)))
 
-;; Migration registration
-(defn register-migration! [from-version to-version migration-fn]
-  (swap! version-state assoc-in 
-         [:migrations [from-version to-version]] 
-         migration-fn))
+;; Factory functions
+(defn create-manager []
+  (->VersionManager version-state))
 
-;; Config migration
-(defn migrate-config! [config from-version to-version]
-  (loop [current-config config
-         current-version from-version]
-    (if (= current-version to-version)
-      current-config
-      (if-let [next-version (->> (keys (:migrations @version-state))
-                                (filter #(and (= (first %) current-version)
-                                           (version< current-version (second %))))
-                                (map second)
-                                (sort)
-                                first)]
-        (if-let [migration (get-in @version-state [:migrations [current-version next-version]])]
-          (recur (migration current-config) next-version)
-          (throw (Exception. (str "No migration path from " current-version " to " next-version))))
-        (throw (Exception. (str "No migration path to target version " to-version)))))))
+(defn create-migration [id version changes]
+  (->DataMigration id version changes))
 
-;; Block version management
-(defn get-block-version [block]
-  (get-in @version-state [:block-versions (:id block)] "1.0.0"))
+;; Migration definitions
+(def migrations
+  [{:id "add-energy-stats"
+    :version 1.1
+    :changes [#(storage/update-all-blocks! 
+                (fn [block]
+                  (update block :stats merge {:total-energy-consumed 0
+                                            :peak-energy-usage 0})))]}
+   
+   {:id "upgrade-machine-state"
+    :version 1.2
+    :changes [#(storage/update-all-blocks!
+                (fn [block]
+                  (-> block
+                      (update :state assoc :version 2)
+                      (update :upgrades #(mapv (fn [u] 
+                                               (assoc u :installed-at 
+                                                      (System/currentTimeMillis)))
+                                             %)))
+                  ))]}
+   
+   {:id "add-resource-tracking"
+    :version 1.3
+    :changes [#(storage/update-all-blocks!
+                (fn [block]
+                  (assoc-in block [:tracking :resources] 
+                           {:inputs {}
+                            :outputs {}})))]}])
 
-(defn set-block-version! [block version]
-  (swap! version-state assoc-in [:block-versions (:id block)] version))
+;; Version checking
+(defn needs-migration? [manager]
+  (not (empty? (.get-pending-migrations manager))))
 
-;; Version update handling
-(defn update-block-version! [block target-version]
-  (error/with-safe-execution (:id block) :version
-    (let [current-version (get-block-version block)]
-      (when (version< current-version target-version)
-        (let [new-config (migrate-config! (:config block) 
-                                        current-version 
-                                        target-version)]
-          (when (validation/validate-config! new-config)
-            (swap! block assoc :config new-config)
-            (set-block-version! block target-version)
-            (persist/save-block-data! block)
-            true))))))
-
-;; Default migrations
-(def default-migrations
-  {"1.0.0" {"1.1.0" 
-            (fn [config]
-              (-> config
-                  (update :energy-capacity #(* % 1.5))
-                  (assoc :version "1.1.0")))
-            
-            "1.1.0" {"1.2.0"
-                     (fn [config]
-                       (-> config
-                           (assoc :auto-output true)
-                           (assoc :version "1.2.0")))}})
+;; Migration process
+(defn migrate! [manager]
+  (let [pending (.get-pending-migrations manager)]
+    (when (seq pending)
+      (log/info "Starting migration process from version" 
+                (.get-current-version manager))
+      (doseq [migration pending]
+        (log/info "Applying migration" (.get-id migration) 
+                 "to version" (.get-version migration))
+        (.apply-migration! manager migration))
+      (log/info "Migration complete. Current version:" 
+                (.get-current-version manager)))))
 
 ;; Initialize version system
-(defn init-version-system! []
-  ;; Register default migrations
-  (doseq [[from-version migrations] default-migrations
-          [to-version migration-fn] migrations]
-    (register-migration! from-version to-version migration-fn))
+(defn init-version! []
+  (reset! version-state {:current-version 1.0
+                        :migrations {}
+                        :applied-migrations #{}})
   
-  ;; Update loaded blocks to current version
-  (let [current-version (:current-version @version-state)]
-    (doseq [block (mcmod.block/get-loaded-blocks)]
-      (update-block-version! block current-version))))
+  (let [manager (create-manager)]
+    ;; Register migrations
+    (doseq [{:keys [id version changes]} migrations]
+      (.register-migration! manager 
+                          (create-migration id version changes)))
+    
+    ;; Run pending migrations
+    (when (needs-migration? manager)
+      (migrate! manager))))

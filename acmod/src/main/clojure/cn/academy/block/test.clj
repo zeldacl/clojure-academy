@@ -1,101 +1,159 @@
 (ns cn.academy.block.test
-  (:require [cn.academy.block.core :as core]
-            [cn.academy.block.validation :as validation]
-            [cn.academy.block.error :as error]
+  (:require [mcmod.protocols :refer [ITestRunner ITestCase]]
+            [cn.academy.block.error :as error]  
+            [cn.academy.block.monitor :as monitor]
+            [cn.academy.block.profile :as profile]
             [cn.academy.block.debug :as debug]
-            [clojure.test :refer :all]
+            [cn.academy.block.stats :as stats]
             [clojure.tools.logging :as log]))
 
-;; Mock world implementation
-(defprotocol IMockWorld
-  (add-block! [this pos block])
-  (remove-block! [this pos])
-  (get-block-at [this pos]))
+;; Test state tracking
+(def test-state
+  (atom {:test-cases {}
+         :results {}
+         :running nil}))
 
-(defrecord MockWorld [blocks]
-  IMockWorld
-  (add-block! [_ pos block]
-    (swap! blocks assoc pos block))
-  (remove-block! [_ pos]
-    (swap! blocks dissoc pos))
-  (get-block-at [_ pos]
-    (get @blocks pos)))
+;; Test case implementation
+(defrecord BlockTestCase [id category setup-fn test-fn cleanup-fn]
+  ITestCase
+  (setup! [_]
+    (error/with-error-handling :test
+      (setup-fn)))
+  
+  (run-test! [_]
+    (error/with-error-handling :test
+      (test-fn)))
+  
+  (cleanup! [_]
+    (error/with-error-handling :test
+      (cleanup-fn))))
 
-(defn create-mock-world []
-  (->MockWorld (atom {})))
+;; Test runner implementation 
+(defrecord BlockTestRunner [state-atom]
+  ITestRunner
+  (register-test! [_ test-case]
+    (swap! state-atom assoc-in [:test-cases (:id test-case)] test-case))
+  
+  (run-test! [_ id]
+    (when-let [test-case (get-in @state-atom [:test-cases id])]
+      (swap! state-atom assoc :running id)
+      (let [start-time (System/currentTimeMillis)
+            result (try
+                    (.setup! test-case)
+                    (let [test-result (.run-test! test-case)]
+                      {:status :pass
+                       :result test-result})
+                    (catch Exception e
+                      {:status :fail
+                       :error (.getMessage e)})
+                    (finally
+                      (.cleanup! test-case)))]
+        (swap! state-atom assoc-in [:results id]
+               (assoc result
+                      :duration (- (System/currentTimeMillis) start-time)
+                      :timestamp (System/currentTimeMillis)))
+        (swap! state-atom assoc :running nil)
+        result)))
+  
+  (run-category! [this category]
+    (->> (:test-cases @state-atom)
+         vals
+         (filter #(= (:category %) category))
+         (map #(.run-test! this (:id %)))
+         doall))
+  
+  (run-all! [this]
+    (doseq [test-case (vals (:test-cases @state-atom))]
+      (.run-test! this (:id test-case))))
+  
+  (get-results [_]
+    (:results @state-atom))
+  
+  (clear-results! [_]
+    (swap! state-atom assoc :results {})))
+
+;; Factory functions
+(defn create-runner []
+  (->BlockTestRunner test-state))
+
+(defn create-test [id category setup test cleanup]
+  (->BlockTestCase id category setup test cleanup))
 
 ;; Test helpers
-(defn with-test-block [block-type config test-fn]
-  (let [world (create-mock-world)
-        pos {:x 0 :y 0 :z 0}
-        block (core/create-block block-type config)]
-    (add-block! world pos block)
-    (test-fn world pos block)))
+(defmacro with-test-monitoring [& body]
+  `(let [old-errors# (error/get-active-errors)
+         old-metrics# (monitor/get-all-metrics)]
+     (try
+       ~@body
+       (finally
+         ;; Check for new errors
+         (let [new-errors# (error/get-active-errors)
+               error-diff# (remove (set old-errors#) new-errors#)]
+           (when (seq error-diff#)
+             (throw (ex-info "Test produced errors"
+                           {:errors error-diff#}))))
+         ;; Check metrics changed
+         (let [new-metrics# (monitor/get-all-metrics)
+               metric-diff# (into {} 
+                                (filter (fn [[k v]]
+                                        (not= v (get old-metrics# k)))
+                                      new-metrics#))]
+           (when (seq metric-diff#)
+             (log/debug "Metrics changed during test:" metric-diff#)))))))
 
-(defn verify-state! [block expected-state]
-  (let [current-state @(:state block)]
-    (every? (fn [[k v]]
-              (= (get current-state k) v))
-            expected-state)))
+;; Standard test cases
+(def standard-tests
+  [{:id "machine-creation"
+    :category :machine
+    :setup #(do)
+    :test #(let [machine (mcmod.machine/create-test-machine)]
+            (assert machine "Machine created")
+            (assert (mcmod.machine/is-valid? machine) "Machine valid")
+            true)
+    :cleanup mcmod.machine/cleanup-test-machines!}
+   
+   {:id "network-connection"
+    :category :network
+    :setup mcmod.network/setup-test-network!
+    :test #(let [net (mcmod.network/get-test-network)]
+            (assert net "Network exists")
+            (assert (mcmod.network/is-connected? net) "Network connected")
+            true)
+    :cleanup mcmod.network/cleanup-test-network!}
+   
+   {:id "fluid-transfer"
+    :category :fluid
+    :setup mcmod.fluid/setup-test-tanks!
+    :test #(let [result (mcmod.fluid/test-fluid-transfer!)]
+            (assert result "Fluid transferred")
+            true)
+    :cleanup mcmod.fluid/cleanup-test-tanks!}])
 
-;; Block test definitions
-(defn test-block-creation! [block-type config]
-  (testing (str "Block creation for " block-type)
-    (let [block (core/create-block block-type config)]
-      (is (some? block) "Block should be created")
-      (is (validation/validate-machine! block) "Block should be valid")
-      (is (= block-type (:type block)) "Block should have correct type"))))
+;; Test reporting
+(defn generate-test-report []
+  (let [runner (create-runner)
+        results (.get-results runner)]
+    {:timestamp (System/currentTimeMillis)
+     :summary {:total (count results)
+              :passed (count (filter #(= :pass (:status %)) (vals results)))
+              :failed (count (filter #(= :fail (:status %)) (vals results)))}
+     :results (->> results
+                  (group-by (comp :category second))
+                  (map (fn [[k v]]
+                        [k {:total (count v)
+                            :passed (count (filter #(= :pass (:status %)) v))
+                            :failed (count (filter #(= :fail (:status %)) v))
+                            :duration (apply + (map :duration v))}]))
+                  (into {}))}))
 
-(defn test-block-placement! [block-type config]
-  (with-test-block block-type config
-    (fn [world pos block]
-      (testing (str "Block placement for " block-type)
-        (is (some? (get-block-at world pos)) "Block should be in world")
-        (is (core/can-place? block pos) "Block should be placeable")))))
-
-(defn test-block-removal! [block-type config]
-  (with-test-block block-type config
-    (fn [world pos block]
-      (testing (str "Block removal for " block-type)
-        (is (core/can-remove? block pos) "Block should be removable")
-        (remove-block! world pos)
-        (is (nil? (get-block-at world pos)) "Block should be removed from world")))))
-
-;; Energy system tests
-(defn test-energy-handling! [block-type config]
-  (with-test-block block-type config
-    (fn [world pos block]
-      (testing (str "Energy handling for " block-type)
-        (let [energy-cap (get-in block [:config :energy-capacity])
-              test-amount (quot energy-cap 2)]
-          (swap! (:state block) assoc :energy test-amount)
-          (is (= test-amount (get-in @(:state block) [:energy]))
-              "Energy should be stored correctly"))))))
-
-;; Recipe system tests
-(defn test-recipe-processing! [block-type config recipe]
-  (with-test-block block-type config
-    (fn [world pos block]
-      (testing (str "Recipe processing for " block-type)
-        (let [initial-energy (get-in config [:energy-capacity] 0)]
-          (swap! (:state block) assoc 
-                 :energy initial-energy
-                 :current-recipe recipe)
-          (is (validation/can-process? block recipe)
-              "Should be able to process recipe"))))))
-
-;; Run all tests
-(defn run-block-tests! [block-type config]
-  (try
-    (debug/enable-debug!)
-    (test-block-creation! block-type config)
-    (test-block-placement! block-type config)
-    (test-block-removal! block-type config)
-    (test-energy-handling! block-type config)
-    (log/info "All tests passed for block type:" block-type)
-    true
-    (catch Exception e
-      (log/error "Tests failed for block type:" block-type (.getMessage e))
-      false)
-    (finally
-      (debug/disable-debug!))))
+;; Initialize test system
+(defn init-test! []
+  (reset! test-state {:test-cases {}
+                      :results {}
+                      :running nil})
+  
+  (let [runner (create-runner)]
+    ;; Register standard tests
+    (doseq [{:keys [id category setup test cleanup]} standard-tests]
+      (.register-test! runner 
+                      (create-test id category setup test cleanup)))))

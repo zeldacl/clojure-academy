@@ -1,72 +1,131 @@
 (ns cn.academy.block.scheduler
-  (:require [cn.academy.block.error :as error]
-            [clojure.tools.logging :as log]))
+  (:require [mcmod.protocols :refer [IScheduler ITask]]
+            [cn.academy.block.error :as error]
+            [cn.academy.block.monitor :as monitor]
+            [cn.academy.block.profile :as profile]
+            [cn.academy.block.stats :as stats]
+            [clojure.tools.logging :as log])
+  (:import [java.util.concurrent Executors ScheduledFuture TimeUnit]))
 
-;; Task scheduling state
-(def scheduler-state (atom {:tasks {}
-                          :task-queue []
-                          :current-tick 0}))
+;; Scheduler state tracking
+(def scheduler-state
+  (atom {:executor nil
+         :tasks {}
+         :futures {}}))
 
-;; Task priorities
-(def priority-levels
-  {:high 0
-   :normal 10
-   :low 20})
+;; Task implementation
+(defrecord ScheduledTask [id category interval task-fn state-atom]
+  ITask
+  (execute! [_]
+    (error/with-error-handling :scheduler
+      (profile/with-profile (str "task-" id) category
+        (task-fn))))
+  
+  (cancel! [_]
+    (when-let [future (get-in @state-atom [:futures id])]
+      (.cancel ^ScheduledFuture future false)
+      (swap! state-atom update :futures dissoc id)))
+  
+  (is-running? [_]
+    (when-let [future (get-in @state-atom [:futures id])]
+      (not (.isDone ^ScheduledFuture future)))))
 
-;; Task scheduling
-(defn schedule-task! [block-id task-type priority f & args]
-  (let [task-id (str block-id "-" (random-uuid))
-        task {:id task-id
-              :block-id block-id
-              :type task-type
-              :priority (get priority-levels priority :normal)
-              :function f
-              :args args
-              :scheduled-at (:current-tick @scheduler-state)}]
-    (swap! scheduler-state update :tasks assoc task-id task)
-    (swap! scheduler-state update :task-queue conj task-id)
-    task-id))
+;; Scheduler implementation
+(defrecord BlockScheduler [state-atom]
+  IScheduler
+  (schedule! [_ id category interval task-fn]
+    (let [task (->ScheduledTask id category interval task-fn state-atom)
+          executor (:executor @state-atom)
+          future (.scheduleAtFixedRate executor
+                                     #(.execute! task)
+                                     0 interval TimeUnit/MILLISECONDS)]
+      (swap! state-atom assoc-in [:tasks id] task)
+      (swap! state-atom assoc-in [:futures id] future)
+      task))
+  
+  (schedule-once! [_ id category delay task-fn]
+    (let [task (->ScheduledTask id category delay task-fn state-atom)
+          executor (:executor @state-atom)
+          future (.schedule executor
+                          #(.execute! task)
+                          delay TimeUnit/MILLISECONDS)]
+      (swap! state-atom assoc-in [:tasks id] task)
+      (swap! state-atom assoc-in [:futures id] future)
+      task))
+  
+  (cancel-task! [_ id]
+    (when-let [task (get-in @state-atom [:tasks id])]
+      (.cancel! task)
+      (swap! state-atom update :tasks dissoc id)))
+  
+  (get-task [_ id]
+    (get-in @state-atom [:tasks id]))
+  
+  (get-running-tasks [_]
+    (->> (:tasks @state-atom)
+         (filter (fn [[_ task]] (.is-running? task)))
+         (into {}))))
 
-;; Task execution
-(defn execute-task! [task-id]
-  (when-let [task (get-in @scheduler-state [:tasks task-id])]
-    (error/with-safe-execution (:block-id task) :scheduler
-      (try
-        (apply (:function task) (:args task))
-        (swap! scheduler-state update :tasks dissoc task-id)
-        true
-        (catch Exception e
-          (log/error "Task execution failed:" task-id (.getMessage e))
-          false)))))
+;; Factory functions
+(defn create-scheduler []
+  (->BlockScheduler scheduler-state))
 
-;; Task queue processing
-(defn process-task-queue! []
-  (let [current-tick (swap! scheduler-state update :current-tick inc)
-        tasks (sort-by (juxt :priority :scheduled-at) 
-                      (map #(get-in @scheduler-state [:tasks %])
-                           (:task-queue @scheduler-state)))]
-    (swap! scheduler-state assoc :task-queue [])
-    (doseq [task tasks]
-      (execute-task! (:id task)))))
+;; Task definition helpers
+(defn periodic-task [id category interval f]
+  {:id id
+   :category category
+   :interval interval
+   :task f})
 
-;; Periodic task scheduling
-(defn schedule-periodic! [block-id task-type interval f & args]
-  (let [task-id (schedule-task! block-id task-type :normal
-                 (fn [interval f & args]
-                   (apply f args)
-                   (apply schedule-periodic! block-id task-type interval f args))
-                 interval f args)]
-    task-id))
+(defn delayed-task [id category delay f]
+  {:id id
+   :category category
+   :delay delay
+   :task f})
 
-;; Task management
-(defn cancel-task! [task-id]
-  (swap! scheduler-state update :tasks dissoc task-id)
-  (swap! scheduler-state update :task-queue 
-         (fn [queue] (filterv #(not= % task-id) queue))))
+;; Standard maintenance tasks
+(def maintenance-tasks
+  [(periodic-task "stats-collector" :system 60000
+                 #(stats/collect-system-stats!))
+   
+   (periodic-task "cache-cleanup" :system 300000
+                 #(do (monitor/cleanup-old-metrics!)
+                     (stats/cleanup-old-stats!)))
+   
+   (periodic-task "error-cleanup" :system 3600000
+                 #(error/cleanup-old-errors!))
+   
+   (periodic-task "profile-report" :system 600000
+                 #(doseq [category [:machine :network :world]]
+                    (let [report (profile/generate-profile-report category)]
+                      (log/debug "Profile report for" category ":" report))))])
 
-(defn cancel-block-tasks! [block-id]
-  (let [block-tasks (->> (:tasks @scheduler-state)
-                        (filter #(= (:block-id (val %)) block-id))
-                        (map key))]
-    (doseq [task-id block-tasks]
-      (cancel-task! task-id))))
+;; Background task monitoring
+(defn check-task-health! []
+  (let [scheduler (create-scheduler)
+        tasks (.get-running-tasks scheduler)]
+    (doseq [[id task] tasks]
+      (when-not (.is-running? task)
+        (log/warn "Task" id "not running, attempting restart")
+        (.cancel-task! scheduler id)
+        (when-let [{:keys [category interval task-fn]} (get @scheduler-state [:tasks id])]
+          (.schedule! scheduler id category interval task-fn))))))
+
+;; Initialize scheduler system
+(defn init-scheduler! []
+  (when-let [old-executor (:executor @scheduler-state)]
+    (.shutdownNow old-executor))
+  
+  (reset! scheduler-state {:executor (Executors/newScheduledThreadPool 4)
+                          :tasks {}
+                          :futures {}})
+  
+  (let [scheduler (create-scheduler)]
+    ;; Schedule maintenance tasks
+    (doseq [{:keys [id category interval task]} maintenance-tasks]
+      (.schedule! scheduler id category interval task))
+    
+    ;; Schedule health check
+    (.schedule! scheduler 
+               "health-check" :system 300000 
+               check-task-health!)))

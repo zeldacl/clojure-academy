@@ -1,53 +1,49 @@
 (ns cn.academy.block.serialization
-  (:require [clojure.tools.logging :as log]))
-
-;; NBT serialization protocols
-(defprotocol INBTSerializable
-  (write-to-nbt [this])
-  (read-from-nbt [this nbt]))
+  (:require [clojure.tools.logging :as log]
+            [mcmod.protocols :refer [INBTConverter INBTStorage]]
+            [mcmod.nbt :as nbt]))
 
 ;; Block state serialization
 (defn serialize-state [state]
-  (let [nbt (mcmod.nbt/create-compound)]
+  (let [nbt (nbt/create-compound)]
     (doseq [[k v] @state]
-      (mcmod.nbt/write-value! nbt (name k) v))
+      (nbt/write-value! nbt (name k) v))
     nbt))
 
 (defn deserialize-state [state nbt]
-  (doseq [key (mcmod.nbt/get-keys nbt)]
-    (when-let [value (mcmod.nbt/read-value nbt key)]
+  (doseq [key (nbt/get-keys nbt)]
+    (when-let [value (nbt/read-value nbt key)]
       (swap! state assoc (keyword key) value))))
 
-;; Machine serialization implementation
+;; Machine serialization implementation  
 (extend-type clojure.lang.IPersistentMap
-  INBTSerializable
-  (write-to-nbt [block]
-    (let [nbt (mcmod.nbt/create-compound)]
+  INBTConverter
+  (to-nbt [block]
+    (let [nbt (nbt/create-compound)]
       ;; Write common data
-      (mcmod.nbt/write-value! nbt "type" (name (:type block)))
+      (nbt/write-string! nbt "type" (name (:type block)))
       
       ;; Write state data if present
       (when-let [state (:state block)]
-        (mcmod.nbt/write-compound! nbt "state" (serialize-state state)))
+        (nbt/write-compound! nbt "state" (serialize-state state)))
       
       ;; Write config data if present
       (when-let [config (:config block)]
-        (mcmod.nbt/write-compound! nbt "config" 
-          (mcmod.nbt/write-map config)))
+        (nbt/write-compound! nbt "config" (nbt/write-map config)))
       
       nbt))
   
-  (read-from-nbt [block nbt]
+  (from-nbt [block nbt]
     (when-let [state (:state block)]
-      (when-let [state-nbt (mcmod.nbt/get-compound nbt "state")]
+      (when-let [state-nbt (nbt/get-compound nbt "state")]
         (deserialize-state state state-nbt)))
     block))
 
 ;; Multiblock serialization helpers
 (defn serialize-multiblock [controller]
-  (let [nbt (write-to-nbt controller)]
+  (let [nbt (to-nbt controller)]
     (when-let [members (get-in controller [:state :members])]
-      (mcmod.nbt/write-list! nbt "members"
+      (nbt/write-list! nbt "members"
         (map (fn [member]
                (let [pos (mcmod.block/get-pos member)]
                  {:x (:x pos)
@@ -57,8 +53,8 @@
     nbt))
 
 (defn deserialize-multiblock [controller nbt world]
-  (read-from-nbt controller nbt)
-  (when-let [member-list (mcmod.nbt/get-list nbt "members")]
+  (from-nbt controller nbt)
+  (when-let [member-list (nbt/get-list nbt "members")]
     (let [members (map (fn [pos-data]
                         (mcmod.block/get-block-at world pos-data))
                       member-list)]
@@ -68,7 +64,7 @@
 ;; Save/load helpers
 (defn save-block! [block]
   (try
-    (let [nbt (write-to-nbt block)]
+    (let [nbt (to-nbt block)]
       (mcmod.block/write-nbt! block nbt)
       true)
     (catch Exception e
@@ -78,7 +74,7 @@
 (defn load-block! [block]
   (try
     (when-let [nbt (mcmod.block/read-nbt block)]
-      (read-from-nbt block nbt)
+      (from-nbt block nbt)
       true)
     (catch Exception e
       (log/error "Failed to load block:" (.getMessage e))

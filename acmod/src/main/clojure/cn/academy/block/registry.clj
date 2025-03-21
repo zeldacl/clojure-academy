@@ -1,77 +1,63 @@
 (ns cn.academy.block.registry
-  (:require [cn.academy.block.component :as component]
-            [mcmod.material :as material]))
+  (:require [mcmod.protocols :refer [IBlockRegistry IItemRegistry IRegistryProvider]]
+            [cn.academy.block.serialization :as serial]
+            [clojure.tools.logging :as log]))
 
 ;; Registry state
-(def ^:private registry-state 
+(def registry-state
   (atom {:blocks {}
-         :tile-entities {}
-         :containers {}}))
+         :items {}
+         :tile-entities {}}))
 
-;; Implementation tracking 
-(def ^:private registry-impl (atom nil))
+;; Protocol implementations
+(defrecord BlockRegistry [state-atom]
+  IBlockRegistry
+  (register-block! [_ block-id block]
+    (swap! state-atom assoc-in [:blocks block-id] block)
+    (log/info "Registered block:" block-id)
+    block)
 
-(defprotocol IBlockRegistryImpl
-  "Interface for Minecraft version-specific registry implementations"
-  (create-block [this id properties])
-  (create-item-block [this block])
-  (create-tile-entity [this id properties])
-  (register-block! [this id block])
-  (register-tile-entity! [this id te-type factory])
-  (register-container! [this id factory])
-  (open-gui [this player world pos]))
+  (register-block-entity! [_ block-id entity-supplier]
+    (swap! state-atom assoc-in [:tile-entities block-id] entity-supplier)
+    (log/info "Registered block entity for:" block-id)
+    entity-supplier))
 
-;; Registry functions that use current implementation
-(defn set-registry-impl! [impl]
-  (reset! registry-impl impl))
+(defrecord ItemRegistry [state-atom]
+  IItemRegistry
+  (register-item! [_ item-id item]
+    (swap! state-atom assoc-in [:items item-id] item)
+    (log/info "Registered item:" item-id)
+    item))
 
-(defn create-block [id properties]
-  (when-let [impl @registry-impl]
-    (create-block impl id properties)))
+;; Block registration
+(defn create-block-registry []
+  (->BlockRegistry registry-state))
 
-(defn create-item-block [block]
-  (when-let [impl @registry-impl]
-    (create-item-block impl block)))
+(defn register-block! [block-id block]
+  (.register-block! (create-block-registry) block-id block))
 
-(defn create-tile-entity [id properties]
-  (when-let [impl @registry-impl]
-    (create-tile-entity impl id properties)))
+(defn register-block-entity! [block-id entity-supplier]
+  (.register-block-entity! (create-block-registry) block-id entity-supplier))
 
-(defn register-block! [id block]
-  (when-let [impl @registry-impl]
-    (swap! registry-state assoc-in [:blocks id] block)
-    (register-block! impl id block)))
+;; Item registration  
+(defn create-item-registry []
+  (->ItemRegistry registry-state))
 
-(defn register-tile-entity! [id te-type factory]
-  (when-let [impl @registry-impl]
-    (swap! registry-state assoc-in [:tile-entities id] factory)
-    (register-tile-entity! impl id te-type factory)))
+(defn register-item! [item-id item]
+  (.register-item! (create-item-registry) item-id item))
 
-(defn register-container! [id factory]
-  (when-let [impl @registry-impl]
-    (swap! registry-state assoc-in [:containers id] factory)
-    (register-container! impl id factory)))
+;; Registry lookup
+(defn get-block [block-id]
+  (get-in @registry-state [:blocks block-id]))
 
-(defn open-gui [player world pos]
-  (when-let [impl @registry-impl]
-    (open-gui impl player world pos)))
+(defn get-item [item-id]
+  (get-in @registry-state [:items item-id]))
 
-;; Helper functions
-(defn get-block [id]
-  (get-in @registry-state [:blocks id]))
+(defn get-tile-entity-supplier [block-id]
+  (get-in @registry-state [:tile-entities block-id]))
 
-(defn get-tile-entity-factory [id]
-  (get-in @registry-state [:tile-entities id]))
-
-(defn get-container-factory [id]
-  (get-in @registry-state [:containers id]))
-
-;; Event registration
-(def event-handlers (atom {}))
-
-(defn register-event-handler! [event-type handler]
-  (swap! event-handlers assoc event-type handler))
-
-(defn handle-event! [event-type & args]
-  (when-let [handler (get @event-handlers event-type)]
-    (apply handler args)))
+;; Registry state management
+(defn clear-registries! []
+  (reset! registry-state {:blocks {}
+                         :items {}
+                         :tile-entities {}}))

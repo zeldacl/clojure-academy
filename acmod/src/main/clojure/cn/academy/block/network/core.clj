@@ -1,56 +1,92 @@
 (ns cn.academy.block.network.core
-  (:require [clojure.tools.logging :as log]))
+  (:require [mcmod.protocols :refer [INetworkHandler IPacket IBuffer]]
+            [clojure.tools.logging :as log]))
 
-;; Message handlers
-(def message-handlers (atom {}))
+;; Network state tracking
+(def network-state
+  (atom {:handlers {}
+         :pending-updates {}}))
 
-(defn register-handler! [msg-type handler-fn]
-  (swap! message-handlers assoc msg-type handler-fn))
+;; Message handling
+(defmulti handle-message
+  (fn [msg-type data world] msg-type))
 
-;; Message definitions
-(def block-messages
-  {:update-energy {:encode (fn [block amount]
-                           (mcmod.network/encode-message
-                             {:type :update-energy
-                              :pos (mcmod.block/get-pos block)
-                              :amount amount}))
-                   :handle (fn [msg world]
-                           (when-let [block (mcmod.block/get-block-at world (:pos msg))]
-                             (swap! (:state block) update :energy + (:amount msg))))}
-   
-   :update-progress {:encode (fn [block progress]
-                            (mcmod.network/encode-message
-                              {:type :update-progress
-                               :pos (mcmod.block/get-pos block)
-                               :progress progress}))
-                    :handle (fn [msg world]
-                            (when-let [block (mcmod.block/get-block-at world (:pos msg))]
-                              (swap! (:state block) assoc :progress (:progress msg))))}
-   
-   :multiblock-formed {:encode (fn [controller members]
-                              (mcmod.network/encode-message
-                                {:type :multiblock-formed
-                                 :controller-pos (mcmod.block/get-pos controller)
-                                 :member-positions (map mcmod.block/get-pos members)}))
-                      :handle (fn [msg world]
-                              (let [controller (mcmod.block/get-block-at world (:controller-pos msg))
-                                    members (map #(mcmod.block/get-block-at world %) (:member-positions msg))]
-                                (swap! (:state controller) assoc 
-                                  :formed true
-                                  :members (set members))))}})
+(defmethod handle-message :block-destroyed
+  [_ block _]
+  (when-let [pos (mcmod.block/get-pos block)]
+    (mcmod.block/remove-block! pos)))
 
-;; Initialize networking
-(defn init-networking! []
-  (doseq [[msg-type {:keys [handle]}] block-messages]
-    (register-handler! msg-type handle))
-  (mcmod.network/register-handlers! @message-handlers)
-  true)
+(defmethod handle-message :update-energy
+  [_ block amount]
+  (when-let [energy-storage (mcmod.block/get-energy-storage block)]
+    (.set-energy-stored! energy-storage amount)))
 
-;; Network message dispatch
+(defmethod handle-message :update-progress
+  [_ block progress]
+  (when-let [machine (mcmod.block/get-machine-state block)]
+    (.set-progress! machine progress)))
+
+(defmethod handle-message :multiblock-formed
+  [_ controller members]
+  (doseq [member members]
+    (when-let [mb-part (mcmod.block/get-multiblock-part member)]
+      (.set-controller! mb-part controller))))
+
+(defmethod handle-message :multiblock-broken
+  [_ member _]
+  (when-let [mb-part (mcmod.block/get-multiblock-part member)]
+    (.set-controller! mb-part nil)))
+
+;; Network packet implementation
+(defrecord BlockStatePacket [block-id state]
+  IPacket
+  (encode [_ buffer]
+    (.write-string buffer block-id)
+    (.write-map buffer state))
+  
+  (decode [_ buffer]
+    {:block-id (.read-string buffer)
+     :state (.read-map buffer)})
+  
+  (handle [this world]
+    (when-let [block (mcmod.block/get-block-by-id (:block-id this))]
+      (reset! (:state block) (:state this)))))
+
+;; Network handler implementation  
+(defrecord NetworkHandler [channel]
+  INetworkHandler
+  (send-packet! [_ packet target]
+    (.send-packet channel packet target))
+  
+  (register-packet! [_ packet-type packet-class]
+    (.register-packet channel packet-type packet-class))
+  
+  (handle-packet [_ packet world]
+    (try 
+      (.handle packet world)
+      (catch Exception e
+        (log/error "Error handling packet:" (.getMessage e))))))
+
+;; Public interface
 (defn send-message! [msg-type & args]
-  (when-let [{:keys [encode]} (get block-messages msg-type)]
+  (when-let [handler (get-in @network-state [:handlers msg-type])]
     (try
-      (let [msg (apply encode args)]
-        (mcmod.network/send-message! msg))
+      (apply handler args)
       (catch Exception e
         (log/error "Error sending message:" msg-type (.getMessage e))))))
+
+(defn register-handler! [msg-type handler]
+  (swap! network-state assoc-in [:handlers msg-type] handler))
+
+(defn create-network-handler [channel]
+  (->NetworkHandler channel))
+
+;; Initialize network system
+(defn init-network! [network-handler]
+  (.register-packet! network-handler :block-state BlockStatePacket)
+  
+  (register-handler! :block-destroyed handle-message)
+  (register-handler! :update-energy handle-message)
+  (register-handler! :update-progress handle-message)
+  (register-handler! :multiblock-formed handle-message)
+  (register-handler! :multiblock-broken handle-message))
