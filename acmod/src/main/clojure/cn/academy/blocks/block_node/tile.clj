@@ -1,7 +1,7 @@
 (ns cn.academy.blocks.block-node.tile
   (:require [cn.academy.api.block :as block-api]
             [cn.academy.api.energy :as energy-api]
-            [cn.academy.core.node-types :as node-types]
+            [cn.academy.blocks.block-node.config :as config]
             [mcmod.protocols :refer [ITileEntity IInventory]]
             [clojure.tools.logging :as log]))
 
@@ -10,13 +10,13 @@
   (get-node-type [_] node-type)
   (get-energy [_] energy)
   (get-max-energy [this]
-    (node-types/get-node-max-energy (get-node-type this)))
+    (config/get-node-property node-type :max-energy))
   (get-bandwidth [this]
-    (node-types/get-node-bandwidth (get-node-type this)))
+    (config/get-node-property node-type :bandwidth))
   (get-range [this]
-    (node-types/get-node-range (get-node-type this)))
+    (config/get-node-property node-type :range))
   (get-capacity [this]
-    (node-types/get-node-capacity (get-node-type this)))
+    (config/get-node-property node-type :max-connections))
   (set-placer [this player]
     (assoc this :placer-id (.getUniqueID player))))
 
@@ -54,23 +54,23 @@
   
   (set-energy [_ amount]
     (swap! state-atom assoc :energy 
-           (node-types/clamp-energy amount 0 (node-types/get-node-max-energy (:node-type @state-atom)))))
+           (node-types/clamp-energy amount 0 (config/get-node-property (:node-type @state-atom) :max-energy))))
   
   (charge [this amount ignore-bandwidth?]
     (node-types/charge-node state-atom
-                         #(node-types/get-node-max-energy (:node-type %)) 
-                         #(node-types/get-node-bandwidth (:node-type %))
+                         #(config/get-node-property (:node-type %) :max-energy) 
+                         #(config/get-node-property (:node-type %) :bandwidth)
                          amount 
                          ignore-bandwidth?))
   
   (discharge [this amount ignore-bandwidth?]
     (node-types/discharge-node state-atom
-                           #(node-types/get-node-bandwidth (:node-type %))
+                           #(config/get-node-property (:node-type %) :bandwidth)
                            amount
                            ignore-bandwidth?))
   
   (can-charge? [this]
-    (< (get-energy this) (node-types/get-node-max-energy (:node-type @state-atom))))
+    (< (get-energy this) (config/get-node-property (:node-type @state-atom) :max-energy)))
   
   (can-discharge? [this]
     (> (get-energy this) 0)))
@@ -83,10 +83,10 @@
     (block-api/add-capability-provider! 
       tile-entity 
       (energy-api/create-energy-storage 
-        (node-types/get-node-max-energy node-type)
+        (config/get-node-property node-type :max-energy)
         (fn [] (:energy @state-atom))
         (fn [amount] (swap! state-atom assoc :energy amount))
-        (fn [] (node-types/get-node-bandwidth node-type))))
+        (fn [] (config/get-node-property node-type :bandwidth))))
     
     (block-api/on-tile-entity-tick! 
       tile-entity 
@@ -120,13 +120,13 @@
                    :node-type (keyword (block-api/get-string compound "nodeType" "basic"))}))))
     
     (block-api/add-method! tile-entity "getMaxEnergy" 
-                          (fn [] (node-types/get-node-max-energy (:node-type @state-atom))))
+                          (fn [] (config/get-node-property (:node-type @state-atom) :max-energy)))
     (block-api/add-method! tile-entity "getBandwidth" 
-                          (fn [] (node-types/get-node-bandwidth (:node-type @state-atom))))
+                          (fn [] (config/get-node-property (:node-type @state-atom) :bandwidth)))
     (block-api/add-method! tile-entity "getRange" 
-                          (fn [] (node-types/get-node-range (:node-type @state-atom))))
+                          (fn [] (config/get-node-property (:node-type @state-atom) :range)))
     (block-api/add-method! tile-entity "getCapacity" 
-                          (fn [] (node-types/get-node-capacity (:node-type @state-atom))))
+                          (fn [] (config/get-node-property (:node-type @state-atom) :max-connections)))
     (block-api/add-method! tile-entity "getPlacerId" 
                           (fn [] (:placer-id @state-atom)))
     (block-api/add-method! tile-entity "setPlacerId" 

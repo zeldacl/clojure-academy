@@ -1,18 +1,8 @@
 (ns cn.academy.blocks.block-node.core
   (:require [mcmod.protocols :refer :all]
             [cn.academy.core :as core]
+            [cn.academy.blocks.block-node.config :as config]
             [clojure.tools.logging :as log]))
-
-(def node-types
-  {:basic {:range 8
-           :max-connections 4
-           :max-energy 5000}
-   :standard {:range 16
-              :max-connections 8  
-              :max-energy 20000}
-   :advanced {:range 32
-              :max-connections 16
-              :max-energy 100000}})
 
 (defrecord WirelessNode [node-type properties]
   IBlock
@@ -44,7 +34,7 @@
             (get-energy te)
             0))
         (get-max-energy-stored [_]
-          (get-in node-types [node-type :max-energy]))
+          (config/get-node-property node-type :max-energy))
         (can-receive? [_] true)
         (can-extract? [_] true))))
 
