@@ -95,6 +95,13 @@ tech_system/energy_system/
   - Node registry
   - Connection management
 
+- **network/distribution.clj**:
+  - Implements IEnergyNetwork protocol
+  - Network node management (add/remove)
+  - Energy distribution across networks
+  - Network creation, merging, and splitting
+  - Network validation and monitoring
+
 ### Capability System
 
 - **capability/wireless.clj**:
@@ -629,3 +636,49 @@ The following components will be deprecated:
 3. Q4 2025:
    - Complete removal of old systems
    - Full migration to new architecture
+
+## Block Adaptation
+
+### Block-to-Energy System Integration
+
+The energy system provides core functionality that block implementations access through adapters:
+
+```
+[tech-system.energy-system.network.distribution]
+            ^
+            |
+[block.energy.adapter] --> [block implementations]
+```
+
+The adapter layer maintains correct dependency flow with blocks depending on the energy system.
+
+### Energy Node Creation
+
+```clojure
+;; In block code
+(require '[cn.academy.block.energy.adapter :as energy-adapter])
+
+(defn create-energy-block [pos]
+  (let [block (create-block pos)
+        storage (create-energy-storage 10000)]
+    ;; Connect to energy system
+    (energy-adapter/create-energy-node! block storage)
+    block))
+```
+
+### Network Operations Through Adapter
+
+```clojure
+;; Connecting two energy blocks
+(energy-adapter/connect-nodes! block1 block2)
+
+;; Getting all connected blocks
+(let [connected (energy-adapter/get-connected-blocks block)]
+  (doseq [other-block connected]
+    (process-connected block other-block)))
+
+;; Handling block destruction
+(defn on-block-broken [block]
+  (energy-adapter/on-block-destroyed block))
+```
+</copilot-edited-file>
