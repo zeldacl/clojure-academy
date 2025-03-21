@@ -1,8 +1,9 @@
 (ns cn.academy.tech-system.energy-system.registry
   (:require [cn.academy.tech-system.energy-system.network.wireless :as wireless]
-            [cn.academy.tech-system.energy-system.capability.wireless :as wireless-cap]
-            [cn.academy.tech-system.energy-system.api :as energy-api]
-            [mcmod.registry :as registry]
+            [cn.academy.tech-system.energy-system.network.handler :as handler]
+            [cn.academy.tech-system.energy-system.network.optimization :as optimization]
+            [cn.academy.tech-system.energy-system.transfer :as transfer]
+            [mcmod.event :as event]
             [clojure.tools.logging :as log]))
 
 (def ^:private node-types (atom {}))
@@ -48,10 +49,17 @@
      :range 32
      :max-connections 16
      :bandwidth 2000})
+
+  ;; Initialize network systems
+  (transfer/init-network!)
+  (handler/init!)
+  (optimization/init!)
   
   ;; Set up energy implementation
   (energy-api/set-energy-impl! 
     {:create-network wireless/create-network!
      :get-network wireless/get-network
      :get-node-network wireless/get-node-network
-     :create-node-capability create-node-capability}))
+     :create-node-capability create-node-capability})
+  
+  (log/info "Energy system registry initialized"))
