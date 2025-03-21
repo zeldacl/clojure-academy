@@ -2,8 +2,9 @@
   (:require [cn.academy.energy.api.wireless :as wireless]
             [cn.academy.energy.client.wireless-particles :as particles]
             [cn.academy.energy.security.wireless-security :as security]
-            [cn.lambdalib2.util.math :as math])
-  (:import [net.minecraft.nbt NBTTagCompound NBTTagList]))
+            [cn.lambdalib2.util.math :as math]
+            [mcmod.nbt :as nbt]
+            [mcmod.world :as world]))
 
 (def ^:private UPDATE-INTERVAL 40)
 (def ^:private BUFFER-MAX 2000.0)
@@ -63,7 +64,7 @@
     (when-let [mat (wireless/get-matrix matrix)]
       ;; Balance energy across nodes and spawn visualization particles
       (let [node-list @nodes
-            world (.getWorld mat)
+            world-obj (.getWorld mat)
             shuffled (shuffle node-list)
             node-stats (for [n shuffled
                            :let [node (wireless/get-node (:node-ref n))]
@@ -77,10 +78,10 @@
             bandwidth (.getBandwidth mat)]
         
         ;; Energy transfer visualization
-        (when (and (not (.isRemote world))
+        (when (and (not (world/is-client-side? world-obj))
                   (zero? (mod (System/currentTimeMillis) 1000))) ; Every second
           (doseq [{:keys [node]} node-stats]
-            (particles/spawn-connection-particles! world node mat)))
+            (particles/spawn-connection-particles! world-obj node mat)))
         
         ;; Energy balancing
         (loop [nodes node-stats
@@ -103,24 +104,24 @@
             (reset! buffer new-buffer))))))
   
   (save-to-nbt [this]
-    (let [tag (NBTTagCompound.)]
-      (.setString tag "ssid" @ssid)
-      (.setString tag "password" @password)
-      (.setDouble tag "buffer" @buffer)
-      (let [nodes-tag (NBTTagList.)]
+    (let [tag (nbt/create-compound)]
+      (nbt/put-string tag "ssid" @ssid)
+      (nbt/put-string tag "password" @password)
+      (nbt/put-double tag "buffer" @buffer)
+      (let [nodes-tag (nbt/create-list)]
         (doseq [node @nodes]
-          (.appendTag nodes-tag (wireless/save-node-to-nbt node)))
-        (.setTag tag "nodes" nodes-tag))
+          (nbt/add-to-list nodes-tag (wireless/save-node-to-nbt node)))
+        (nbt/put-tag tag "nodes" nodes-tag))
       tag))
   
   (load-from-nbt! [this tag]
-    (reset! ssid (.getString tag "ssid"))
-    (reset! password (.getString tag "password"))
-    (reset! buffer (.getDouble tag "buffer"))
-    (let [nodes-tag (.getTag tag "nodes")]
+    (reset! ssid (nbt/get-string tag "ssid"))
+    (reset! password (nbt/get-string tag "password"))
+    (reset! buffer (nbt/get-double tag "buffer"))
+    (let [nodes-tag (nbt/get-tag tag "nodes")]
       (reset! nodes
-        (for [i (range (.tagCount nodes-tag))]
-          (wireless/load-node-from-nbt (.getCompoundTagAt nodes-tag i)))))))
+        (for [i (range (nbt/get-list-size nodes-tag))]
+          (wireless/load-node-from-nbt (nbt/get-compound-at nodes-tag i)))))))
 
 (defn create-network [world-data matrix ssid password]
   (let [network (->WirelessNetwork

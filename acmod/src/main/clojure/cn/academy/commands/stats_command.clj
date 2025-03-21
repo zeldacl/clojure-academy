@@ -1,9 +1,9 @@
 (ns cn.academy.commands.stats-command
   (:require [mcmod.commands :refer [ICommand]]
             [mcmod.stats :as stats]
-            [mcmod.logging :as log])
-  (:import [net.minecraft.command CommandSource]
-           [net.minecraft.util.text StringTextComponent]))
+            [mcmod.text :as text]
+            [mcmod.world :as world]
+            [mcmod.logging :as log]))
 
 (defn format-stat [name value]
   (str 
@@ -22,15 +22,15 @@
   (get-permission-level [this] 0)
   
   (execute [this context args]
-    (let [source (.getSource context)]
+    (let [source (:source context)]
       (try
         (doseq [[name stat] stats/stats-registry]
-          (.sendSuccess source 
-                       (StringTextComponent. 
-                         (format-stat name (stats/get-value stat)))
-                       false))
+          (world/send-success source 
+                      (text/create-text 
+                        (format-stat name (stats/get-value stat)))
+                      false))
         1
         (catch Exception e
           (log/error "Error displaying stats: %s" (.getMessage e))
-          (.sendFailure source "Error displaying statistics")
+          (world/send-failure source "Error displaying statistics")
           0)))))

@@ -1,9 +1,9 @@
 (ns cn.academy.commands.wireless-matrix-commands
   (:require [mcmod.commands :refer [ICommand]]
             [mcmod.capabilities :as cap]
-            [mcmod.logging :as log])
-  (:import [net.minecraft.command CommandSource]
-           [net.minecraft.util.math BlockPos]))
+            [mcmod.world :as world]
+            [mcmod.position :as position]
+            [mcmod.logging :as log]))
 
 (defrecord CheckEnergyCommand []
   ICommand
@@ -12,20 +12,20 @@
   (get-permission-level [this] 0)
   
   (execute [this context args]
-    (let [source (.getSource context)
-          world (.getLevel source)
-          pos (.getBlockPos source)
-          tile (.getTileEntity world pos)]
+    (let [source (:source context)
+          world-obj (world/get-world source)
+          pos (position/get-block-pos source)
+          tile (world/get-tile-entity world-obj pos)]
       (if (and tile (cap/has-capability? tile "forge:energy" nil))
         (let [energy-storage (cap/get-capability tile "forge:energy" nil)
               current (cap/get-energy-stored energy-storage)
               max (cap/get-max-energy-stored energy-storage)]
-          (.sendSuccess source 
+          (world/send-success source 
                        (str "Energy: " current "/" max " FE")
                        true)
           1)
         (do
-          (.sendFailure source "No energy storage at this position")
+          (world/send-failure source "No energy storage at this position")
           0)))))
 
 (defrecord SetEnergyCommand []
@@ -35,18 +35,18 @@
   (get-permission-level [this] 2)
   
   (execute [this context args]
-    (let [source (.getSource context)
-          world (.getLevel source)
-          pos (.getBlockPos source)
-          tile (.getTileEntity world pos)
+    (let [source (:source context)
+          world-obj (world/get-world source)
+          pos (position/get-block-pos source)
+          tile (world/get-tile-entity world-obj pos)
           amount (get args :amount 0)]
       (if (and tile (cap/has-capability? tile "forge:energy" nil))
         (let [energy-storage (cap/get-capability tile "forge:energy" nil)]
           (cap/receive-energy energy-storage amount false)
-          (.sendSuccess source 
+          (world/send-success source 
                        (str "Set energy to " amount " FE")
                        true)
           1)
         (do
-          (.sendFailure source "No energy storage at this position")
+          (world/send-failure source "No energy storage at this position")
           0)))))

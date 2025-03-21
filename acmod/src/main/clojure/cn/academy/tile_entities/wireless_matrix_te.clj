@@ -8,15 +8,14 @@
             [mcmod.cache :as cache]
             [mcmod.concurrent :as concurrent]
             [mcmod.circuit-breaker :as cb]
+            [mcmod.nbt :as nbt]
+            [mcmod.world :as world]
             [cn.academy.config.mod-config :as mod-config]
             [cn.academy.energy.transfer-handler :as energy]
             [cn.academy.network.energy-sync-packet :refer [->EnergySyncPacket]]
             [cn.academy.particles.energy-particle :as particles]
             [mcmod.lifecycle :as lifecycle])
-  (:import [net.minecraft.nbt CompoundNBT]
-           [net.minecraft.network.play.server SUpdateTileEntityPacket]
-           [net.minecraft.util Direction]
-           [java.util.concurrent.locks ReentrantLock]))
+  (:import [java.util.concurrent.locks ReentrantLock]))
 
 (def ^:private matrix-hum (sound/create-sound-event "cljacademy" "block.wireless_matrix.hum"))
 (def ^:private matrix-transfer (sound/create-sound-event "cljacademy" "block.wireless_matrix.transfer"))
@@ -55,7 +54,7 @@
               (stats/track-stat "wireless_matrix.energy_level" current-energy)
               
               ;; Transfer energy to nearby blocks if circuit breaker allows
-              (when (and (not (.isClientSide world))
+              (when (and (not (world/is-client-side? world))
                         (> current-energy 0)
                         (cb/allow-execution? (:circuit-breaker this)))
                 (perf/with-timing "wireless_matrix.energy_transfer"
@@ -94,7 +93,7 @@
                                (log/error "Energy transfer failed: %s" (.getMessage e))))))))))
 
               ;; Play ambient hum when containing energy
-              (when (and (not (.isClientSide world))
+              (when (and (not (world/is-client-side? world))
                         (> current-energy 0))
                 (sound/play-sound-at world pos matrix-hum 
                                    (* (:sound-volume config) energy-percent) 
@@ -102,7 +101,7 @@
 
 
               ;; Spawn ambient particles on client side
-              (when (and (.isClientSide world)
+              (when (and (world/is-client-side? world)
                         (> current-energy 0))
                 (particles/spawn-particles world pos 
                                          (int (* (:particle-count config) 
@@ -110,20 +109,20 @@
 
 
               ;; Send sync packet to clients
-              (when-not (.isClientSide world)
+              (when-not (world/is-client-side? world)
                 (let [packet (->EnergySyncPacket 
-                              {:x (.getX pos)
-                               :y (.getY pos)
-                               :z (.getZ pos)}
+                              {:x (:x pos)
+                               :y (:y pos)
+                               :z (:z pos)}
                               current-energy)]
                   ;; Send packet to tracking clients
                   ))))))))
 
   (save [this]
     (log/with-error-logging
-      (let [tag (CompoundNBT.)]
+      (let [tag (nbt/create-compound)]
         (when-let [energy-storage (get-value (:energy-storage this))]
-          (.putInt tag "energy" (cap/get-energy-stored energy-storage))
+          (nbt/put-int tag "energy" (cap/get-energy-stored energy-storage))
           (log/debug "Saved energy storage state: %d"
                     (cap/get-energy-stored energy-storage)))
         tag)))
@@ -132,15 +131,15 @@
     (log/with-error-logging
       (let [{:keys [nbt]} data
             this (init this)]
-        (when (.contains nbt "energy")
-          (let [stored-energy (.getInt nbt "energy")]
+        (when (nbt/contains? nbt "energy")
+          (let [stored-energy (nbt/get-int nbt "energy")]
             (cap/receive-energy (get-value (:energy-storage this)) stored-energy false)
             (log/debug "Loaded energy storage state: %d" stored-energy)))
         this)))
   
   cap/ICapabilityProvider
   (has-capability? [this capability-type side]
-    (= (.getName capability-type) "forge:energy"))
+    (= (get-name capability-type) "forge:energy"))
   
   (get-capability [this capability-type side]
     (when (has-capability? this capability-type side)
@@ -153,7 +152,7 @@
   (play-sound [this sound-id pos data]
     (let [world (:world this)
           config (mod-config/get-wireless-matrix-config)]
-      (when-not (.isClientSide world)
+      (when-not (world/is-client-side? world)
         (case sound-id
           :transfer (sound/play-sound-at world pos matrix-transfer 
                                        (:sound-volume config) 1.0)

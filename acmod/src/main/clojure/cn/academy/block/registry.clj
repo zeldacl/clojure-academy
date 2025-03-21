@@ -1,6 +1,6 @@
 (ns cn.academy.block.registry
-  (:require [cn.academy.block.component :as component])
-  (:import [net.minecraft.block.material Material]))
+  (:require [cn.academy.block.component :as component]
+            [mcmod.material :as material]))
 
 ;; Registry state
 (def ^:private registry-state 

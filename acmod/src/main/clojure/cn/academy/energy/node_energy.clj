@@ -1,7 +1,7 @@
 (ns cn.academy.energy.node-energy
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.block.tileentity.tile-node :as tile-node])
-  (:import [net.minecraftforge.energy IEnergyStorage]))
+            [mcmod.capabilities :as cap]
+            [cn.academy.block.tileentity.tile-node :as tile-node]))
 
 (defprotocol IWirelessEnergy
   (connect-to-network [this])
@@ -10,32 +10,33 @@
   (send-energy [this target amount simulate?])
   (receive-energy [this source amount simulate?]))
 
-;; Energy storage implementation for nodes
+;; Energy storage implementation for nodes using mcmod abstractions
 (defrecord NodeEnergyStorage [node]
+  ;; Implement the IEnergyStorage protocol from mcmod instead of direct Forge import
   IEnergyStorage
-  (receiveEnergy [_ maxReceive simulate]
+  (receive-energy [_ max-receive simulate]
     (let [space (- (.getMaxEnergy node) (.getEnergy node))
-          amount (min maxReceive space)]
+          amount (min max-receive space)]
       (when-not simulate
         (.setEnergy node (+ (.getEnergy node) amount)))
       amount))
   
-  (extractEnergy [_ maxExtract simulate]
-    (let [amount (min maxExtract (.getEnergy node))]
+  (extract-energy [_ max-extract simulate]
+    (let [amount (min max-extract (.getEnergy node))]
       (when-not simulate
         (.setEnergy node (- (.getEnergy node) amount)))
       amount))
   
-  (getEnergyStored [_]
+  (get-energy-stored [_]
     (int (.getEnergy node)))
   
-  (getMaxEnergyStored [_]
+  (get-max-energy-stored [_]
     (int (.getMaxEnergy node)))
   
-  (canExtract [_]
+  (can-extract? [_]
     true)
   
-  (canReceive [_]
+  (can-receive? [_]
     true)
   
   IWirelessEnergy
@@ -55,8 +56,8 @@
             max-send (min amount bandwidth energy)]
         (when (and (pos? max-send) 
                   (or simulate? 
-                      (do (.extractEnergy this max-send false)
-                          (.receiveEnergy target max-send false))))
+                      (do (extract-energy this max-send false)
+                          (cap/receive-energy target max-send false))))
           max-send))))
   
   (receive-energy [this source amount simulate?]
@@ -67,7 +68,7 @@
         (when (pos? max-receive)
           (if simulate?
             max-receive
-            (.receiveEnergy this max-receive false)))))))
+            (receive-energy this max-receive false)))))))
 
 (defn create-energy-storage [node]
   (->NodeEnergyStorage node))

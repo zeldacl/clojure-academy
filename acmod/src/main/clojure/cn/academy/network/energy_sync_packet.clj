@@ -1,7 +1,7 @@
 (ns cn.academy.network.energy-sync-packet
-  (:require [mcmod.network :refer [IPacket]])
-  (:import [net.minecraft.network PacketBuffer]
-           [net.minecraft.util.math BlockPos]))
+  (:require [mcmod.network :refer [IPacket]]
+            [mcmod.capabilities :as cap]
+            [mcmod.world :as world]))
 
 (defrecord EnergySyncPacket [pos energy-stored]
   IPacket
@@ -20,10 +20,10 @@
      (.readInt buf)))
   
   (handle [this ctx]
-    (let [world (.. ctx getPlayer world)
-          block-pos (BlockPos. (:x pos) (:y pos) (:z pos))
-          tile-entity (.getTileEntity world block-pos)]
+    (let [world (world/get-world ctx)
+          block-pos {:x (:x pos), :y (:y pos), :z (:z pos)}
+          tile-entity (world/get-tile-entity world block-pos)]
       (when tile-entity
         ;; Update client-side energy storage
-        (when-let [energy-storage (.getCapability tile-entity net.minecraftforge.energy.CapabilityEnergy/ENERGY nil)]
-          (.deserializeNBT energy-storage {"energy" energy-stored}))))))
+        (when-let [energy-storage (cap/get-energy-capability tile-entity nil)]
+          (cap/deserialize-nbt energy-storage {"energy" energy-stored}))))))

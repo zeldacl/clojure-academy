@@ -1,14 +1,11 @@
 (ns cn.academy.energy.client.range-visualizer
-  (:require [cn.academy.energy.api.wireless :as wireless])
-  (:import [net.minecraft.client.renderer BufferBuilder]
-           [com.mojang.blaze3d.vertex IVertexBuilder]
-           [net.minecraft.client.renderer.vertex DefaultVertexFormats]
-           [net.minecraft.client.renderer.tileentity TileEntityRendererDispatcher]
-           [net.minecraft.util.math BlockPos]
-           [org.lwjgl.opengl GL11]))
+  (:require [cn.academy.energy.api.wireless :as wireless]
+            [mcmod.render :as render]
+            [mcmod.player :as player]))
 
 (def ^:private SPHERE_PRECISION 32)
-(def ^:private RANGE_COLOR [0.2 0.6 1.0 0.15]) ; Light blue, transparent
+(def ^:private RANGE_COLOR {:r 0.2 :g 0.6 :b 1.0 :a 0.15}) ; Light blue, transparent
+(def ^:private INACTIVE_COLOR {:r 1.0 :g 0.2 :b 0.2 :a 0.15}) ; Red for inactive
 
 (defn- generate-sphere-vertices [radius precision]
   (for [phi (range 0 Math/PI (/ Math/PI precision))
@@ -18,46 +15,38 @@
      (* radius (Math/sin phi) (Math/sin theta))]))
 
 (defn render-range-sphere [pos range active?]
-  (GL11/glPushMatrix)
-  (GL11/glTranslatef 
-    (float (+ (.getX pos) 0.5))
-    (float (+ (.getY pos) 0.5))
-    (float (+ (.getZ pos) 0.5)))
-  
-  ; Enable transparency and disable depth writing
-  (GL11/glEnable GL11/GL_BLEND)
-  (GL11/glBlendFunc GL11/GL_SRC_ALPHA GL11/GL_ONE_MINUS_SRC_ALPHA)
-  (GL11/glDisable GL11/GL_DEPTH_TEST)
-  
-  (let [buffer (BufferBuilder. 256)
-        vertices (generate-sphere-vertices range SPHERE_PRECISION)
-        [r g b a] (if active? 
-                    RANGE_COLOR
-                    [1.0 0.2 0.2 0.15])] ; Red for inactive
+  (render/with-transform
+    (render/translate 
+      (+ (:x pos) 0.5)
+      (+ (:y pos) 0.5)
+      (+ (:z pos) 0.5))
     
-    (.begin buffer 7 DefaultVertexFormats/POSITION_COLOR) ; GL_QUADS
-    
-    (doseq [[x y z] vertices]
-      (.pos buffer x y z)
-      (.color buffer r g b a)
-      (.endVertex buffer))
-    
-    (.finishDrawing buffer))
-  
-  (GL11/glPopMatrix)
-  (GL11/glEnable GL11/GL_DEPTH_TEST)
-  (GL11/glDisable GL11/GL_BLEND))
+    ; Set up transparent rendering
+    (render/with-state 
+      {:blend true
+       :depth-test false}
+      
+      (let [vertices (generate-sphere-vertices range SPHERE_PRECISION)
+            color (if active? RANGE_COLOR INACTIVE_COLOR)]
+        
+        ; Render the sphere as a collection of quads
+        (render/begin-batch :quads)
+        
+        (doseq [[x y z] vertices]
+          (render/add-vertex x y z color))
+        
+        (render/end-batch)))))
 
 (defn render-node-range [node]
-  (when (and node (.isHoldingFreqTool *client-player*))
-    (let [pos (BlockPos. (.getPos node))
-          range (.getRange node)
+  (when (and node (player/is-holding-freq-tool?))
+    (let [pos (wireless/get-position node)
+          range (wireless/get-range node)
           active? (wireless/is-node-linked node)]
       (render-range-sphere pos range active?))))
 
 (defn render-matrix-range [matrix]
-  (when (and matrix (.isHoldingFreqTool *client-player*))
-    (let [pos (BlockPos. (.getPos matrix))
-          range (.getRange matrix)
+  (when (and matrix (player/is-holding-freq-tool?))
+    (let [pos (wireless/get-position matrix)
+          range (wireless/get-range matrix)
           active? (wireless/is-matrix-active matrix)]
       (render-range-sphere pos range active?))))

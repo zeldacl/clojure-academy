@@ -3,9 +3,11 @@
             [cn.academy.core.util.dev :as dev]
             [cn.academy.core.util.monitoring :as monitoring]
             [cn.academy.core.config :as config]
-            [clojure.pprint :refer [pprint]])
-  (:import [java.io File]
-           [net.minecraft.util.math BlockPos]))
+            [mcmod.nbt :as nbt]
+            [mcmod.world :as world]
+            [mcmod.position :as position]
+            [mcmod.capabilities :as cap]
+            [clojure.pprint :refer [pprint]]))
 
 (defn reload-dev! []
   (dev/with-dev-mode
@@ -14,22 +16,22 @@
     :reloaded))
 
 (defn watch-dev-config! [config-path]
-  (dev/watch-config! (File. config-path)))
+  (dev/watch-config! (java.io.File. config-path)))
 
 (defn show-metrics []
   (pprint (monitoring/get-metrics)))
 
 (defn get-block-info [world pos]
-  (let [block-state (.getBlockState world pos)
-        block (.getBlock block-state)
-        tile (.getTileEntity world pos)]
-    {:block (.getRegistryName block)
-     :meta (.getMetaFromState block block-state)
+  (let [block-state (world/get-block-state world pos)
+        block (world/get-block block-state)
+        tile (world/get-tile-entity world pos)]
+    {:block (world/get-registry-name block)
+     :meta (world/get-meta-from-state block block-state)
      :tile-entity (when tile
-                   {:class (.getClass tile)
-                    :nbt (let [nbt (net.minecraft.nbt.NBTTagCompound.)]
-                          (.writeToNBT tile nbt)
-                          nbt)})}))
+                   {:class (class tile)
+                    :nbt (let [nbt-data (nbt/create-compound)]
+                          (world/write-tile-to-nbt tile nbt-data)
+                          nbt-data)})}))
 
 (defn set-cat-engine-config! [options]
   (config/set-config! [:cat-engine] 
@@ -38,23 +40,19 @@
   :updated)
 
 (defn inspect-energy-network [world pos range]
-  (let [center (if (instance? BlockPos pos)
+  (let [center (if (position/is-block-pos? pos)
                  pos
-                 (BlockPos. (:x pos) (:y pos) (:z pos)))
+                 (position/create-block-pos (:x pos) (:y pos) (:z pos)))
         nodes (for [x (range (- range) (inc range))
                    y (range (- range) (inc range))
                    z (range (- range) (inc range))
-                   :let [pos (BlockPos/add center x y z)
-                         tile (.getTileEntity world pos)]
+                   :let [check-pos (position/add center x y z)
+                         tile (world/get-tile-entity world check-pos)]
                    :when (and tile 
-                             (.hasCapability tile
-                               net.minecraftforge.energy.CapabilityEnergy/ENERGY
-                               nil))]
-               {:pos pos
-                :energy (.getEnergyStored 
-                         (.getCapability tile 
-                           net.minecraftforge.energy.CapabilityEnergy/ENERGY
-                           nil))})]
+                             (cap/has-capability? tile "forge:energy" nil))]
+               {:pos check-pos
+                :energy (cap/get-energy-stored 
+                         (cap/get-capability tile "forge:energy" nil))})]
     (doseq [node nodes]
       (println (format "Energy at %s: %d FE"
                       (str (:pos node))

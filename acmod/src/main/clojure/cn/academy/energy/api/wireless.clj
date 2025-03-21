@@ -1,6 +1,6 @@
 (ns cn.academy.energy.api.wireless
-  (:require [cn.academy.api.energy :as energy])
-  (:import [net.minecraftforge.eventbus.api Event]))
+  (:require [cn.academy.api.energy :as energy]
+            [mcmod.event :as event]))
 
 (defprotocol IWirelessNode
   "Interface for blocks that can act as wireless network nodes"
@@ -51,7 +51,7 @@
       (is-wireless-receiver? obj)))
 
 (defn post-event! [event]
-  (.post (MinecraftForge/EVENT_BUS) event))
+  (event/post-event event))
 
 (defn create-matrix-handler [matrix]
   (reify IWirelessMatrix

@@ -5,13 +5,14 @@
             [clojure.test.check.properties :as prop]
             [clojure.test.check.clojure-test :refer [defspec]]
             [cn.academy.core.util.serialization :as serial]
-            [cn.academy.core.energy.chunk-cache :as cache])
-  (:import [net.minecraft.util.math BlockPos]))
+            [cn.academy.core.energy.chunk-cache :as cache]
+            [cn.academy.api.block :as block-api]))
 
+;; Generate block position data structure instead of direct BlockPos
 (def gen-pos
   (gen/fmap
     (fn [[x y z]]
-      (BlockPos. x y z))
+      {:x x :y y :z z}) ; Use map instead of BlockPos
     (gen/tuple (gen/choose -30000000 30000000)
                (gen/choose 0 255)
                (gen/choose -30000000 30000000))))
@@ -39,9 +40,9 @@
 
 (defspec test-pos-serialization 100
   (prop/for-all [pos gen-pos]
-    (let [nbt (net.minecraft.nbt.NBTTagCompound.)
+    (let [nbt (block-api/create-nbt-compound)
           _ (serial/write-pos-to-nbt pos nbt)
           read-pos (serial/read-pos-from-nbt nbt)]
-      (and (= (.getX pos) (.getX read-pos))
-           (= (.getY pos) (.getY read-pos))
-           (= (.getZ pos) (.getZ read-pos))))))
+      (and (= (:x pos) (:x read-pos))
+           (= (:y pos) (:y read-pos))
+           (= (:z pos) (:z read-pos))))))

@@ -1,55 +1,80 @@
 (ns cn.academy.block.multiblock.machine-state
-  (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.api.block :as block-api]))
+  (:require [mcmod.energy :as energy]))
 
 (defprotocol IMachineState
-  "Protocol for managing machine state"
+  "Protocol for machine state management"
   (is-active? [this] "Check if machine is active")
   (set-active! [this active] "Set machine active state")
-  (get-energy [this] "Get stored energy")
-  (add-energy! [this amount] "Add energy to machine")
-  (use-energy! [this amount] "Use energy from machine")
-  (can-work? [this] "Check if machine can operate")
-  (tick-machine! [this] "Perform machine tick"))
+  (can-work? [this] "Check if machine can work")
+  (consume-energy! [this amount] "Try to consume energy"))
 
-(defrecord MultiblockMachineState [state-atom max-energy work-energy-rate]
+(defn has-energy?
+  "Check if machine has enough energy"
+  [machine amount]
+  (>= (energy/get-stored-energy machine) amount))
+
+(defn get-energy
+  "Get stored energy in machine"
+  [machine]
+  (energy/get-stored-energy machine))
+
+(defn use-energy!
+  "Try to use energy from machine"
+  [machine amount]
+  (when (has-energy? machine amount)
+    (energy/extract-energy! machine amount true)
+    true))
+
+(defprotocol IMachineProgress 
+  "Protocol for machine progress tracking"
+  (get-progress [this] "Get current progress")
+  (set-progress! [this progress] "Set current progress")
+  (get-max-progress [this] "Get maximum progress"))
+
+(defrecord MachineState [state-atom max-energy energy-use-rate]
   IMachineState
   (is-active? [_]
-    (:active @state-atom))
+    (get-in @state-atom [:active] false))
   
   (set-active! [_ active]
     (swap! state-atom assoc :active active))
   
-  (get-energy [_]
-    (:energy @state-atom))
-  
-  (add-energy! [_ amount]
-    (swap! state-atom update :energy 
-           #(min (+ % amount) max-energy)))
-  
-  (use-energy! [_ amount]
-    (when (>= (:energy @state-atom) amount)
-      (swap! state-atom update :energy - amount)
-      true))
-  
   (can-work? [this]
     (and (is-active? this)
-         (>= (get-energy this) work-energy-rate)))
+         (has-energy? this energy-use-rate)))
   
-  (tick-machine! [this]
-    (when (can-work? this)
-      (use-energy! this work-energy-rate)
-      true))
+  (consume-energy! [this amount]
+    (use-energy! this amount))
+  
+  energy/IEnergyStorage
+  (get-stored-energy [_]
+    (get-in @state-atom [:energy] 0))
+  
+  (get-max-energy [_]
+    max-energy)
+  
+  (receive-energy! [_ amount simulate]
+    (let [space (- max-energy (get-in @state-atom [:energy] 0))
+          transfer (min amount space)]
+      (when-not simulate
+        (swap! state-atom update :energy 
+               #(min (+ (or % 0) transfer) max-energy)))
+      transfer))
+  
+  (extract-energy! [_ amount simulate]
+    (let [stored (get-in @state-atom [:energy] 0)
+          transfer (min amount stored)]
+      (when-not simulate
+        (swap! state-atom update :energy 
+               #(max (- (or % 0) transfer) 0)))
+      transfer)))
 
-  base/IMultiblockMember
-  (get-multiblock-data [_]
-    {:energy (get-energy this)
-     :active (is-active? this)})
-  
-  (load-data [_ data]
-    (reset! state-atom 
-            {:energy (or (:energy data) 0)
-             :active (or (:active data) false)}))
-  
-  (save-data [_]
-    @state-atom))
+(defn create-machine-state
+  "Create a new machine state instance"
+  ([max-energy]
+   (create-machine-state max-energy 20))
+  ([max-energy energy-use-rate]
+   (->MachineState (atom {:energy 0
+                         :active false})
+                   max-energy
+                   energy-use-rate)))

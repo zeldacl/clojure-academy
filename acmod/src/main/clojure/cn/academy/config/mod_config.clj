@@ -1,6 +1,5 @@
 (ns cn.academy.config.mod-config
-  (:require [mcmod.config :as config])
-  (:import [net.minecraftforge.fml.config ModConfig$Type ConfigBuilder]))
+  (:require [mcmod.config :as config]))
 
 (def default-config
   {:wireless-matrix

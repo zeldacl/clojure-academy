@@ -1,19 +1,19 @@
 (ns cn.academy.examples.energy-relay
   (:require [mcmod.protocols :refer :all]
             [mcmod.capabilities :as cap]
-            [cn.academy.api.public :as api])
-  (:import [net.minecraft.block.material Material]))
+            [mcmod.block :as block]
+            [cn.academy.api.public :as api]))
 
 (defrecord EnergyRelay []
   IBlock
   (get-properties [this]
-    {:material Material/IRON
+    {:material :iron
      :hardness 3.0
      :resistance 15.0
      :light-level 4})
   
   (get-material [this]
-    Material/IRON)
+    :iron)
   
   (get-hardness [this]
     3.0)
@@ -26,7 +26,7 @@
   
   cap/ICapabilityProvider
   (has-capability? [this capability-type side]
-    (= (.getName capability-type) "forge:energy"))
+    (= (cap/get-name capability-type) "forge:energy"))
   
   (get-capability [this capability-type side]
     (when (has-capability? this capability-type side)

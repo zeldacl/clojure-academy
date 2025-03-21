@@ -1,31 +1,31 @@
 (ns cn.academy.energy.impl.wireless-world-data
   (:require [cn.academy.energy.impl.wireless-net :as wireless-net]
-            [cn.academy.energy.api.wireless :as wireless])
-  (:import [net.minecraft.world.storage WorldSavedData]
-           [net.minecraft.nbt NBTTagCompound NBTTagList]
-           [net.minecraft.world World]))
+            [cn.academy.energy.api.wireless :as wireless]
+            [mcmod.world :as world]
+            [mcmod.nbt :as nbt]))
 
 (defrecord WirelessWorldData [world networks node-lookup matrix-lookup]
-  WorldSavedData
-  (writeToNBT [this tag]
-    (let [nets-tag (NBTTagList.)]
+  world/IWorldSavedData
+  (write-data [this]
+    (let [tag (nbt/create-compound)
+          nets-tag (nbt/create-list)]
       (doseq [[ssid net] @networks]
-        (let [net-tag (NBTTagCompound.)]
-          (.setString net-tag "ssid" ssid)
-          (.setTag net-tag "data" (wireless/save-to-nbt net))
-          (.appendTag nets-tag net-tag)))
-      (.setTag tag "networks" nets-tag)
+        (let [net-tag (nbt/create-compound)]
+          (nbt/put-string net-tag "ssid" ssid)
+          (nbt/put-tag net-tag "data" (wireless/save-to-nbt net))
+          (nbt/add-to-list nets-tag net-tag)))
+      (nbt/put-tag tag "networks" nets-tag)
       tag))
   
-  (readFromNBT [this tag]
+  (load-data [this tag]
     (reset! networks {})
     (reset! node-lookup {})
     (reset! matrix-lookup {})
-    (let [nets-tag (.getTag tag "networks")]
-      (doseq [i (range (.tagCount nets-tag))]
-        (let [net-tag (.getCompoundTagAt nets-tag i)
-              ssid (.getString net-tag "ssid")
-              net-data (.getTag net-tag "data")
+    (let [nets-tag (nbt/get-tag tag "networks")]
+      (doseq [i (range (nbt/get-list-size nets-tag))]
+        (let [net-tag (nbt/get-compound-at nets-tag i)
+              ssid (nbt/get-string net-tag "ssid")
+              net-data (nbt/get-tag net-tag "data")
               matrix (wireless/find-matrix world net-data)
               net (wireless-net/create-network this matrix ssid "")]
           (wireless/load-from-nbt! net net-data)
@@ -34,7 +34,7 @@
           (doseq [node (wireless/get-nodes net)]
             (swap! node-lookup assoc node net)))))))
 
-(defn create-world-data [^World world]
+(defn create-world-data [world]
   (->WirelessWorldData 
     world
     (atom {}) ; networks by SSID

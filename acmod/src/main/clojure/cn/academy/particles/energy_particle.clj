@@ -1,22 +1,24 @@
 (ns cn.academy.particles.energy-particle
-  (:import [net.minecraft.client.particle IParticleRenderType SpriteTexturedParticle]
-           [net.minecraft.client.world ClientWorld]
-           [net.minecraft.util.math.vector Vector3d]))
+  (:require [mcmod.particles :as particles]
+            [mcmod.world :as world]))
 
 (defn create-energy-particle [world x y z vx vy vz]
-  (proxy [SpriteTexturedParticle] [world x y z vx vy vz]
-    (getRenderType []
-      (IParticleRenderType/PARTICLE_SHEET_TRANSLUCENT))
-    
-    (tick []
-      (if (> (.age this) 20)
-        (.remove this)
-        (do
-          (.setPos this 
-                   (+ (.x this) (.xd this))
-                   (+ (.y this) (.yd this))
-                   (+ (.z this) (.zd this)))
-          (set! (.age this) (inc (.age this))))))))
+  (particles/create-particle
+    :energy
+    world
+    {:position [x y z]
+     :velocity [vx vy vz]
+     :lifetime 20
+     :render-type :translucent
+     :behavior (fn [particle]
+                 (let [{:keys [position velocity age]} particle
+                       [x y z] position
+                       [vx vy vz] velocity]
+                   (if (> age 20)
+                     (assoc particle :alive false)
+                     (assoc particle
+                            :position [(+ x vx) (+ y vy) (+ z vz)]
+                            :age (inc age)))))}))
 
 (defn spawn-particles [world pos count]
   (dotimes [_ count]

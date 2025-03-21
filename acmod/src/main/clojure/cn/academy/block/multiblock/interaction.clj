@@ -1,7 +1,26 @@
 (ns cn.academy.block.multiblock.interaction
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.api.block :as block-api])
-  (:import [net.minecraft.util Direction]))
+            [mcmod.direction :as dir]))
+
+(defprotocol IMultiblockInteraction
+  "Protocol for interacting with multiblock structures"
+  (can-interact? [this side] "Check if interaction is possible from side")
+  (interact [this player side] "Handle player interaction from side")
+  (get-interaction-type [this side] "Get type of interaction available"))
+
+(defn get-interaction-handler
+  "Get interaction handler for a multiblock part"
+  [block side]
+  (when-let [controller (base/get-controller block)]
+    (when (satisfies? IMultiblockInteraction controller)
+      (when (can-interact? controller (dir/from-index side))
+        controller))))
+
+(defn handle-interaction
+  "Handle player interaction with multiblock structure"
+  [block player side]
+  (when-let [handler (get-interaction-handler block side)]
+    (interact handler player (dir/from-index side))))
 
 (defn find-connected-blocks
   "Find all blocks connected to the given position"
@@ -23,7 +42,7 @@
                                        (satisfies? base/IMultiblockMember 
                                                  neighbor-te)
                                        (base/can-connect? current-te 
-                                                        neighbor-te))]
+                                                        neighbor-te))] 
                           neighbor-pos)]
             (recur (into (disj to-check current) 
                         (remove checked neighbors))

@@ -2,10 +2,12 @@
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.multiblock.multiblock-helper :as helper]
             [cn.academy.block.core :as core]
-            [cn.academy.api.block :as block-api]))
+            [cn.academy.api.block :as block-api]
+            [mcmod.protocols :refer [IMultiblock]]))
 
 (defrecord MultiblockController [state-atom validator]
-  base/IMultiblockController
+  ;; Implement mcmod's IMultiblock protocol
+  IMultiblock
   (is-complete? [this]
     (let [{:keys [members]} @state-atom]
       (validator members)))
@@ -13,8 +15,10 @@
   (get-blocks [this]
     (:members @state-atom))
   
-  (get-master [this]
-    (:controller-pos @state-atom))
+  (get-controller [this]
+    (block-api/get-tile-entity 
+      (block-api/get-world this) 
+      (:controller-pos @state-atom)))
   
   (validate-structure [this]
     (when-let [world (block-api/get-world this)]
@@ -33,6 +37,24 @@
              :active false
              :members #{})))
 
+  ;; Add method to get master position for internal use
+  base/IMultiblockMember
+  (get-controller [this]
+    (get-controller this))
+  
+  (set-controller [this controller]
+    (when controller
+      (swap! state-atom assoc :controller-pos (base/get-controller controller))))
+  
+  (can-connect? [this other]
+    true)
+  
+  (on-connection [this other]
+    (swap! state-atom update :members conj (block-api/get-position other)))
+  
+  (get-multiblock-data [this]
+    @state-atom)
+
   core/IBlockEntity
   (load-data [this data]
     (reset! state-atom (base/map->MultiblockState data)))
@@ -42,7 +64,7 @@
   
   (get-capabilities [this]
     ;; Return capabilities based on structure completion
-    (when (base/is-complete? this)
+    (when (is-complete? this)
       (:capabilities @state-atom)))
   
   (mark-dirty [this]

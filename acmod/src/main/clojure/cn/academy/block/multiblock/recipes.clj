@@ -1,6 +1,7 @@
 (ns cn.academy.block.multiblock.recipes
-  (:require [cn.academy.block.multiblock.machine-state :as machine])
-  (:import [net.minecraft.item ItemStack]))
+  (:require [cn.academy.block.multiblock.machine-state :as machine]
+            [mcmod.item :as item]
+            [mcmod.inventory :as inv]))
 
 (defprotocol IRecipeHandler
   (can-process? [this recipe] "Check if recipe can be processed")
@@ -24,53 +25,78 @@
                              (* (:process-time recipe)
                                 (:energy-per-tick recipe)))
          (every? (fn [[slot required]]
-                  (let [actual (.getStackInSlot inventory slot)]
-                    (and (= (.getItem required) (.getItem actual))
-                         (>= (.getCount actual) (.getCount required)))))
+                  (let [actual (inv/get-stack-in-slot inventory slot)]
+                    (and (= (item/get-item required) (item/get-item actual))
+                         (>= (item/get-count actual) (item/get-count required)))))
                  (:inputs recipe))
          (every? (fn [[slot output]]
-                  (let [actual (.getStackInSlot inventory slot)]
-                    (or (.isEmpty actual)
-                        (and (= (.getItem output) (.getItem actual))
-                             (<= (+ (.getCount actual) 
-                                   (.getCount output))
-                                 (.getMaxStackSize actual))))))
+                  (let [actual (inv/get-stack-in-slot inventory slot)]
+                    (or (item/is-empty? actual)
+                        (and (= (item/get-item output) (item/get-item actual))
+                             (<= (+ (item/get-count actual) 
+                                   (item/get-count output))
+                                 (item/get-max-stack-size actual))))))
                  (:outputs recipe))))
   
   (start-recipe! [this recipe]
     (when (can-process? this recipe)
       (doseq [[slot input] (:inputs recipe)]
-        (let [stack (.getStackInSlot inventory slot)]
-          (.shrink stack (.getCount input))))
+        (let [stack (inv/get-stack-in-slot inventory slot)]
+          (item/shrink stack (item/get-count input))))
       (reset! state-atom
               {:current-recipe recipe
                :progress 0})))
   
   (process-tick! [this]
     (when-let [recipe (:current-recipe @state-atom)]
-      (when (and (can-process? this recipe)
-                 (machine/use-energy! machine 
-                                    (:energy-per-tick recipe)))
-        (swap! state-atom update :progress inc)
-        (when (= (:progress @state-atom) 
-                 (:process-time recipe))
-          (finish-recipe! this)))))
+      (when (can-process? this recipe)
+        (if (machine/consume-energy! machine (:energy-per-tick recipe))
+          (let [progress (inc (:progress @state-atom))]
+            (if (>= progress (:process-time recipe))
+              (do (finish-recipe! this)
+                  (reset! state-atom nil))
+              (swap! state-atom assoc :progress progress)))))))
   
-  (finish-recipe! [_]
-    (when-let [recipe (:current-recipe @state-atom)]
-      (doseq [[slot output] (:outputs recipe)]
-        (let [stack (.getStackInSlot inventory slot)]
-          (if (.isEmpty stack)
-            (.setStackInSlot inventory slot (.copy output))
-            (.grow stack (.getCount output)))))
-      (reset! state-atom nil)))
+  (finish-recipe! [_ recipe]
+    (doseq [[slot output] (:outputs recipe)]
+      (let [stack (inv/get-stack-in-slot inventory slot)]
+        (if (item/is-empty? stack)
+          (inv/set-stack-in-slot inventory slot (item/copy output))
+          (item/grow stack (item/get-count output))))))
   
   (get-progress [_]
-    (when-let [recipe (:current-recipe @state-atom)]
-      (/ (:progress @state-atom)
-         (:process-time recipe)))))
+    (get-in @state-atom [:progress] 0)))
 
-(defn create-recipe-handler
+(defn create-handler
   "Create a new recipe handler for a multiblock machine"
   [machine inventory]
   (->MultiblockRecipeHandler machine (atom nil) inventory))
+
+(defprotocol IRecipeRegistry
+  (register-recipe! [this recipe] "Register a new recipe")
+  (get-recipes [this] "Get all registered recipes")
+  (find-recipe [this inputs] "Find matching recipe for inputs"))
+
+(defrecord RecipeRegistry [recipes-atom]
+  IRecipeRegistry
+  (register-recipe! [_ recipe]
+    (swap! recipes-atom conj recipe))
+  
+  (get-recipes [_]
+    @recipes-atom)
+  
+  (find-recipe [_ inputs]
+    (first
+     (filter (fn [{recipe-inputs :inputs}]
+               (every? (fn [[slot stack]]
+                        (when-let [required (get recipe-inputs slot)]
+                          (and (= (item/get-item required) (item/get-item stack))
+                               (>= (item/get-count stack) 
+                                   (item/get-count required)))))
+                     inputs))
+            @recipes-atom))))
+
+(defn create-registry
+  "Create a new recipe registry"
+  []
+  (->RecipeRegistry (atom [])))

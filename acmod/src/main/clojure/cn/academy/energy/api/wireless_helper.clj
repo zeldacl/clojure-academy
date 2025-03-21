@@ -2,9 +2,10 @@
   (:require [cn.academy.api.energy :as energy]
             [cn.academy.energy.impl.wireless-world-data :as world-data]
             [cn.academy.energy.impl.node-connection :as node-conn]
-            [cn.academy.energy.api.wireless-events :as events])
-  (:import [net.minecraft.tileentity TileEntity]
-           [net.minecraft.util.math BlockPos]))
+            [cn.academy.energy.api.wireless-events :as events]
+            [mcmod.tile-entity :as tile]
+            [mcmod.world :as world]
+            [mcmod.position :as position]))
 
 (defprotocol IWirelessNode
   (get-node-name [this])
@@ -22,14 +23,14 @@
 (defn get-wireless-net
   "Get the wireless network associated with a matrix or node"
   ([matrix]
-   (when-let [tile ^TileEntity matrix]
+   (when-let [tile-entity matrix]
      (world-data/get-network-by-matrix 
-       (world-data/get (.getWorld tile))
+       (world-data/get (tile/get-world tile-entity))
        matrix)))
   ([node]
-   (when-let [tile ^TileEntity node]
+   (when-let [tile-entity node]
      (world-data/get-network-by-node
-       (world-data/get (.getWorld tile))
+       (world-data/get (tile/get-world tile-entity))
        node))))
 
 (defn is-node-linked? [node]
@@ -41,14 +42,14 @@
 (defn get-node-conn
   "Get the node connection for a node or user"
   ([node]
-   (when-let [tile ^TileEntity node]
+   (when-let [tile-entity node]
      (world-data/get-connection-by-node
-       (world-data/get (.getWorld tile))
+       (world-data/get (tile/get-world tile-entity))
        node)))
   ([user]
-   (when-let [tile ^TileEntity user]
+   (when-let [tile-entity user]
      (world-data/get-connection-by-user
-       (world-data/get (.getWorld tile))
+       (world-data/get (tile/get-world tile-entity))
        user))))
 
 (defn is-receiver-linked? [receiver]
@@ -59,15 +60,15 @@
 
 (defn get-nodes-in-range [world pos]
   (let [range 20.0]
-    (->> (world-data/get-blocks-in-range world (.getX pos) (.getY pos) (.getZ pos) range)
-         (filter #(instance? TileEntity %))
+    (->> (world-data/get-blocks-in-range world (:x pos) (:y pos) (:z pos) range)
+         (filter #(tile/is-tile-entity? %))
          (filter #(satisfies? wireless/IWirelessNode %))
          (filter (fn [node]
                   (let [conn (get-node-conn node)
-                        node-pos (.getPos ^TileEntity node)
-                        dist-sq (+ (Math/pow (- (.getX pos) (.getX node-pos)) 2)
-                                 (Math/pow (- (.getY pos) (.getY node-pos)) 2)
-                                 (Math/pow (- (.getZ pos) (.getZ node-pos)) 2))
+                        node-pos (tile/get-position node)
+                        dist-sq (+ (Math/pow (- (:x pos) (:x node-pos)) 2)
+                                 (Math/pow (- (:y pos) (:y node-pos)) 2)
+                                 (Math/pow (- (:z pos) (:z node-pos)) 2))
                         range (.getRange node)]
                     (and (<= dist-sq (* range range))
                          (< (.getLoad conn) (.getCapacity conn)))))))))

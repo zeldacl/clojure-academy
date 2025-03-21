@@ -1,20 +1,21 @@
 (ns cn.academy.examples.energy-relay-te
   (:require [mcmod.protocols :refer :all]
             [mcmod.capabilities :as cap]
+            [mcmod.nbt :as nbt]
+            [mcmod.world :as world]
             [cn.academy.api.public :as api]
-            [mcmod.logging :as log])
-  (:import [net.minecraft.nbt CompoundNBT]))
+            [mcmod.logging :as log]))
 
 (defrecord EnergyRelayTE []
   ITileEntity
   (tick [this]
     (let [energy-storage (:energy-storage this)
-          world (:world this)
+          world-obj (:world this)
           pos (:pos this)]
-      (when (and (not (.isClientSide world))
+      (when (and (not (world/is-client-side? world-obj))
                  (> (cap/get-energy-stored energy-storage) 0))
         ;; Use API to find and transfer energy to nearby blocks
-        (doseq [target-te (api/find-energy-receivers world pos 3)]
+        (doseq [target-te (api/find-energy-receivers world-obj pos 3)]
           (when-let [transferred (api/transfer-energy this target-te 500)]
             (log/debug "Relay transferred %d energy to target at [%d,%d,%d]"
                       transferred
@@ -23,9 +24,9 @@
                       (-> target-te :pos :z)))))))
   
   (save [this]
-    (let [tag (CompoundNBT.)]
+    (let [tag (nbt/create-compound)]
       (when-let [energy-storage (:energy-storage this)]
-        (.putInt tag "energy" (cap/get-energy-stored energy-storage)))
+        (nbt/put-int tag "energy" (cap/get-energy-stored energy-storage)))
       tag))
   
   (load [this data]
@@ -34,15 +35,15 @@
                           :capacity 50000
                           :max-receive 500
                           :max-extract 500)]
-      (when (.contains nbt "energy")
+      (when (nbt/contains? nbt "energy")
         (cap/receive-energy energy-storage 
-                           (.getInt nbt "energy")
+                           (nbt/get-int nbt "energy")
                            false))
       (assoc this :energy-storage energy-storage)))
   
   cap/ICapabilityProvider
   (has-capability? [this capability-type side]
-    (= (.getName capability-type) "forge:energy"))
+    (= (cap/get-name capability-type) "forge:energy"))
   
   (get-capability [this capability-type side]
     (when (has-capability? this capability-type side)

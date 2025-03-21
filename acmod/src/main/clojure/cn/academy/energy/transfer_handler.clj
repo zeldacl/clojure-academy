@@ -1,8 +1,7 @@
 (ns cn.academy.energy.transfer-handler
   (:require [mcmod.capabilities :as cap]
-            [cn.academy.config.mod-config :as config])
-  (:import [net.minecraft.util Direction]
-           [net.minecraft.tileentity TileEntity]))
+            [mcmod.world :as world]
+            [cn.academy.config.mod-config :as config]))
 
 (defn find-nearby-energy-tiles [world pos range]
   (for [x (range (- range) (inc range))
@@ -12,10 +11,7 @@
                            (update :x + x)
                            (update :y + y)
                            (update :z + z))
-              tile (.getTileEntity world 
-                                 (:x check-pos) 
-                                 (:y check-pos) 
-                                 (:z check-pos))]
+              tile (world/get-tile-entity world check-pos)]
         :when (and tile
                   (not= [(:x pos) (:y pos) (:z pos)]
                         [(:x check-pos) (:y check-pos) (:z check-pos)])

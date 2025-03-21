@@ -1,8 +1,7 @@
 (ns cn.academy.energy.capability.wireless-node-capability
-  (:require [cn.academy.energy.api.wireless :as wireless])
-  (:import [net.minecraftforge.common.capabilities Capability CapabilityManager ICapabilitySerializable]
-           [net.minecraft.nbt NBTTagCompound]
-           [net.minecraft.util Direction]))
+  (:require [cn.academy.energy.api.wireless :as wireless]
+            [mcmod.capabilities :as cap]
+            [mcmod.nbt :as nbt]))
 
 (def ^:private WIRELESS-NODE-CAPABILITY (atom nil))
 
@@ -28,19 +27,19 @@
     (and (wireless/is-wireless-node? other)
          (< @energy @max-energy)))
   
-  ICapabilitySerializable
-  (serializeNBT [_]
-    (doto (NBTTagCompound.)
-      (.setDouble "energy" @energy)
-      (.setDouble "maxEnergy" @max-energy)
-      (.setDouble "range" @range)
-      (.setInteger "maxConnections" @max-connections)))
+  cap/INBTSerializable
+  (write-nbt [_]
+    (doto (nbt/create-compound)
+      (nbt/put-double "energy" @energy)
+      (nbt/put-double "maxEnergy" @max-energy)
+      (nbt/put-double "range" @range)
+      (nbt/put-int "maxConnections" @max-connections)))
   
-  (deserializeNBT [_ nbt]
-    (reset! energy (.getDouble nbt "energy"))
-    (reset! max-energy (.getDouble nbt "maxEnergy"))
-    (reset! range (.getDouble nbt "range"))
-    (reset! max-connections (.getInteger nbt "maxConnections"))))
+  (read-nbt [_ nbt]
+    (reset! energy (nbt/get-double nbt "energy"))
+    (reset! max-energy (nbt/get-double nbt "maxEnergy"))
+    (reset! range (nbt/get-double nbt "range"))
+    (reset! max-connections (nbt/get-int nbt "maxConnections"))))
 
 (defn create-storage [max-energy range max-connections]
   (->WirelessNodeStorage 
@@ -50,18 +49,17 @@
     (atom max-connections)))
 
 (defn register! []
-  (CapabilityManager/INSTANCE.register
+  (cap/register-capability 
     wireless/IWirelessNode
-    (reify Capability$IStorage
-      (writeNBT [_ capability instance side]
-        (.serializeNBT instance))
-      (readNBT [_ capability instance side nbt]
-        (.deserializeNBT instance nbt)))
+    (reify cap/ICapabilityStorage
+      (write-nbt [_ capability instance side]
+        (cap/write-nbt instance))
+      (read-nbt [_ capability instance side nbt]
+        (cap/read-nbt instance nbt)))
     #(create-storage 100000.0 20.0 4))
   
   (reset! WIRELESS-NODE-CAPABILITY
-    (.. (CapabilityManager/INSTANCE)
-        (get wireless/IWirelessNode))))
+    (cap/get-capability-type wireless/IWirelessNode)))
 
 (defn get-capability []
   @WIRELESS-NODE-CAPABILITY)

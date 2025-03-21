@@ -2,10 +2,10 @@
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.multiblock.interaction :as interaction]
             [cn.academy.block.multiblock.capabilities :as caps]
-            [cn.academy.api.block :as block-api])
-  (:import [net.minecraft.util Direction]
-           [net.minecraftforge.common.capabilities Capability CapabilityInject]
-           [net.minecraftforge.energy IEnergyStorage]))
+            [cn.academy.api.block :as block-api]
+            [mcmod.direction :as dir]
+            [mcmod.capability :as cap]
+            [mcmod.energy :as energy]))
 
 (defrecord EnergyPortBlock []
   block-api/IBlock
@@ -42,4 +42,46 @@
     @state-atom)
   
   (get-capabilities [_]
-    {IEnergyStorage energy-handler}))
+    {energy/ENERGY_CAPABILITY energy-handler}))
+
+(defrecord MultiblockEnergyHandler [multiblock max-transfer]
+  energy/IEnergyStorage
+  (receive-energy [_ amount simulate]
+    (if-let [controller (base/get-controller multiblock)]
+      (let [space (- (energy/get-max-energy controller)
+                     (energy/get-stored-energy controller))
+            transfer (min amount max-transfer space)]
+        (when-not simulate
+          (energy/add-energy! controller transfer))
+        transfer)
+      0))
+  
+  (extract-energy [_ amount simulate]
+    (if-let [controller (base/get-controller multiblock)]
+      (let [stored (energy/get-stored-energy controller)
+            transfer (min amount max-transfer stored)]
+        (when-not simulate
+          (energy/extract-energy! controller transfer))
+        transfer)
+      0))
+  
+  (get-energy-stored [_]
+    (if-let [controller (base/get-controller multiblock)]
+      (energy/get-stored-energy controller)
+      0))
+  
+  (get-max-energy-stored [_]
+    (if-let [controller (base/get-controller multiblock)]
+      (energy/get-max-energy controller)
+      0))
+  
+  (can-receive [_] true)
+  (can-extract [_] true))
+
+(defn create-energy-handler [multiblock max-transfer]
+  (->MultiblockEnergyHandler multiblock max-transfer))
+
+(defn create-energy-port []
+  (->EnergyPortTile 
+    (atom {:controller nil})
+    (create-energy-handler nil 1000)))

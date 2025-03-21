@@ -1,14 +1,13 @@
 (ns cn.academy.energy.impl.wireless-system
   (:require [cn.academy.energy.impl.wireless-world-data :as world-data]
-            [cn.academy.energy.api.wireless-events :as events])
-  (:import [net.minecraftforge.event TickEvent$ServerTickEvent TickEvent$Phase]
-           [net.minecraftforge.eventbus.api IEventBus]
-           [net.minecraft.world World]))
+            [cn.academy.energy.api.wireless-events :as events]
+            [mcmod.event :as event]
+            [mcmod.world :as world]))
 
 (def ^:private instance (atom nil))
 
 (defprotocol IWirelessSystem
-  (register-event-bus! [this event-bus])
+  (register-event-handlers! [this])
   (on-server-tick [this event])
   (on-create-network [this event])
   (on-destroy-network [this event])
@@ -20,59 +19,74 @@
 
 (defrecord WirelessSystem []
   IWirelessSystem
-  (register-event-bus! [_ event-bus]
-    (.addListener event-bus 
-      (proxy [Consumer] []
-        (accept [event]
-          (when (instance? TickEvent$ServerTickEvent event)
-            (on-server-tick this event))))))
+  (register-event-handlers! [this]
+    (event/register-handler 
+      {:server-tick (fn [e] (on-server-tick this e))
+       :create-network (fn [e] (on-create-network this e))
+       :destroy-network (fn [e] (on-destroy-network this e))
+       :link-node (fn [e] (on-link-node this e))
+       :unlink-node (fn [e] (on-unlink-node this e))
+       :link-user (fn [e] (on-link-user this e))
+       :unlink-user (fn [e] (on-unlink-user this e))
+       :change-password (fn [e] (on-change-password this e))}))
 
   (on-server-tick [_ event]
-    (when (= (.phase event) TickEvent$Phase/END)
-      (doseq [world (.getWorlds (MinecraftServer/getInstance))]
-        (when-let [data (world-data/get-non-create world)]
+    (when (event/is-end-phase? event)
+      (doseq [world-obj (world/get-all-server-worlds)]
+        (when-let [data (world-data/get-non-create world-obj)]
           (.tick data)))))
   
   (on-create-network [_ event]
-    (let [world (.getWorld (.tile event))
-          data (world-data/get world)]
-      (when-not (world-data/create-network! data (.matrix event) (.ssid event) (.password event))
-        (.setCanceled event true))))
+    (let [world-obj (world/get-world (events/get-tile event))
+          data (world-data/get world-obj)]
+      (when-not (world-data/create-network! 
+                  data 
+                  (events/get-matrix event) 
+                  (events/get-ssid event) 
+                  (events/get-password event))
+        (events/cancel! event))))
   
   (on-destroy-network [_ event]
-    (when-let [network (.network event)]
+    (when-let [network (events/get-network event)]
       (.dispose network)
-      (.markDirty (.world-data network))))
+      (world-data/mark-dirty! (:world-data network))))
   
   (on-link-node [_ event]
-    (let [network (.network event)]
-      (when-not (.addNode network (.node event) (.password event))
-        (.setCanceled event true))))
+    (let [network (events/get-network event)]
+      (when-not (.addNode network 
+                        (events/get-node event) 
+                        (events/get-password event))
+        (events/cancel! event))))
   
   (on-unlink-node [_ event]
-    (let [network (.network event)]
-      (.removeNode network (.node event))))
+    (let [network (events/get-network event)]
+      (.removeNode network (events/get-node event))))
   
   (on-link-user [_ event]
-    (let [node (.node event)
-          data (world-data/get (.getWorld (.tile event)))]
+    (let [node (events/get-node event)
+          world-obj (world/get-world (events/get-tile event))
+          data (world-data/get world-obj)]
       (when-let [conn (world-data/get-or-create-connection data node)]
-        (.addUser conn (.user event)))))
+        (.addUser conn (events/get-user event)))))
   
   (on-unlink-user [_ event]
-    (let [user (.user event)
-          world (.getWorld (.tile event))
-          data (world-data/get world)]
+    (let [user (events/get-user event)
+          world-obj (world/get-world (events/get-tile event))
+          data (world-data/get world-obj)]
       (when-let [conn (world-data/get-connection-by-user data user)]
         (.removeUser conn user))))
   
   (on-change-password [_ event]
-    (let [network (.network event)]
-      (when-not (.resetPassword network (.oldPass event) (.newPass event))
-        (.setCanceled event true)))))
+    (let [network (events/get-network event)]
+      (when-not (.resetPassword network 
+                             (events/get-old-password event) 
+                             (events/get-new-password event))
+        (events/cancel! event)))))
 
 (defn init! []
-  (reset! instance (->WirelessSystem)))
+  (let [system (->WirelessSystem)]
+    (register-event-handlers! system)
+    (reset! instance system)))
 
 (defn get-instance []
   @instance)

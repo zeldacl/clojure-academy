@@ -2,9 +2,10 @@
   (:require [cn.academy.core.util.logging :refer [log-error log-debug]]
             [cn.academy.core.util.monitoring :as monitoring]
             [cn.academy.core.util.profiling :as profiling]
+            [mcmod.core :as mccore]
             [clojure.string :as str])
   (:import [java.io StringWriter PrintWriter File]
-           [java.util.concurrent ConcurrentLinkedQueue]))
+           [java.util.concurrent.ConcurrentLinkedQueue]))
 
 (def ^:private diagnostic-events (ConcurrentLinkedQueue.))
 (def ^:private max-events 1000)
@@ -17,10 +18,7 @@
    :processors (.availableProcessors (Runtime/getRuntime))
    :total-memory (.totalMemory (Runtime/getRuntime))
    :max-memory (.maxMemory (Runtime/getRuntime))
-   :minecraft-version (try
-                       (.getVersion (Class/forName "net.minecraft.client.Minecraft"))
-                       (catch Exception _
-                         "Unknown"))})
+   :minecraft-version (mccore/get-minecraft-version)})
 
 (defn record-diagnostic-event! [type data]
   (while (> (.size diagnostic-events) max-events)
@@ -83,7 +81,7 @@
                                (.format (java.text.SimpleDateFormat. "HH:mm:ss")
                                       (java.util.Date. (:timestamp event)))
                                (:type event)
-                               (pr-str (:data event))))))))
+                               (pr-str (:data event)))))))
     :ok
     (catch Exception e
       (log-error e "Failed to write diagnostic report")

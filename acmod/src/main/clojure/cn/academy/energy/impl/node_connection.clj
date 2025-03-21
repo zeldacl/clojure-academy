@@ -1,7 +1,7 @@
 (ns cn.academy.energy.impl.node-connection
   (:require [cn.academy.energy.api.wireless :as wireless]
-            [cn.lambdalib2.util.math :as math])
-  (:import [net.minecraft.nbt NBTTagCompound]))
+            [cn.lambdalib2.util.math :as math]
+            [mcmod.nbt :as nbt]))
 
 (defprotocol INodeConnection
   (get-node [this])
@@ -68,26 +68,26 @@
          (every? wireless/is-wireless-user? (get-users this))))
   
   (save-to-nbt [this]
-    (let [tag (NBTTagCompound.)
-          node-tag (NBTTagCompound.)]
+    (let [tag (nbt/create-compound)
+          node-tag (nbt/create-compound)]
       (wireless/save-node-to-nbt! (get-node this) node-tag)
-      (.setTag tag "node" node-tag)
+      (nbt/put-tag tag "node" node-tag)
       ;; Save users list
-      (let [users-tag (NBTTagCompound.)]
+      (let [users-tag (nbt/create-compound)]
         (doseq [[idx user] (map-indexed vector (get-users this))]
-          (let [user-tag (NBTTagCompound.)]
+          (let [user-tag (nbt/create-compound)]
             (wireless/save-user-to-nbt! user user-tag)
-            (.setTag users-tag (str idx) user-tag)))
-        (.setTag tag "users" users-tag))
+            (nbt/put-tag users-tag (str idx) user-tag)))
+        (nbt/put-tag tag "users" users-tag))
       tag))
   
   (load-from-nbt! [this tag]
-    (reset! node (wireless/load-node-from-nbt! (.getTag tag "node")))
-    (let [users-tag (.getTag tag "users")]
+    (reset! node (wireless/load-node-from-nbt! (nbt/get-tag tag "node")))
+    (let [users-tag (nbt/get-tag tag "users")]
       (reset! users
         (into #{}
-          (for [idx (range (.getSize users-tag))]
-            (wireless/load-user-from-nbt! (.getTag users-tag (str idx)))))))))
+          (for [idx (range (nbt/get-size users-tag))]
+            (wireless/load-user-from-nbt! (nbt/get-tag users-tag (str idx)))))))))
 
 (defn create [world-data node]
   (->NodeConnection 

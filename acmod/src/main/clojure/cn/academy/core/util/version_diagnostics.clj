@@ -1,20 +1,14 @@
 (ns cn.academy.core.util.version-diagnostics
   (:require [cn.academy.core.util.logging :refer [log-debug log-warn]]
-            [cn.academy.core.util.diagnostics :as diag])
-  (:import [net.minecraftforge.fml.common Loader]))
+            [cn.academy.core.util.diagnostics :as diag]
+            [mcmod.core :as mccore]))
 
 (defn get-forge-version []
-  (try
-    (.getVersion (Class/forName "net.minecraftforge.common.ForgeVersion"))
-    (catch Exception _
-      "Unknown")))
+  (mccore/get-forge-version))
 
 (defn get-mod-list []
   (try
-    (for [mod-container (.getActiveModList (Loader/instance))]
-      {:id (.getModId mod-container)
-       :version (.getVersion mod-container)
-       :name (.getName mod-container)})
+    (mccore/get-active-mods)
     (catch Exception _
       [])))
 
@@ -39,22 +33,18 @@
 
 (defn check-api-compatibility []
   (let [api-classes
-        ["net.minecraftforge.energy.IEnergyStorage"
-         "net.minecraftforge.energy.CapabilityEnergy"
-         "net.minecraft.tileentity.TileEntity"
-         "net.minecraft.util.math.BlockPos"]
+        ["energy-storage" ; Abstracted reference to IEnergyStorage
+         "energy-capability" ; Abstracted reference to CapabilityEnergy
+         "tile-entity" ; Abstracted reference to TileEntity
+         "block-position"] ; Abstracted reference to BlockPos
         missing (filter
-                 (fn [class-name]
-                   (try
-                     (Class/forName class-name)
-                     false
-                     (catch ClassNotFoundException _
-                       true)))
+                 (fn [api-name]
+                   (not (mccore/is-api-available? api-name)))
                  api-classes)]
     (when (seq missing)
       (log-warn "Missing required API classes:" (pr-str missing)))
     {:compatible? (empty? missing)
-     :missing-classes missing}))
+     :missing-apis missing}))
 
 (defn validate-runtime-environment! []
   (let [version-info (record-version-info!)

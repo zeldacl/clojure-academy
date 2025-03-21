@@ -1,7 +1,7 @@
 (ns cn.academy.gui.wireless-matrix-container
   (:require [mcmod.gui :as gui]
-            [mcmod.capabilities :as cap])
-  (:import [net.minecraft.entity.player PlayerEntity]))
+            [mcmod.entity :as entity]
+            [mcmod.capabilities :as cap]))
 
 (defrecord WirelessMatrixContainer [tile-entity player inv]
   gui/IContainer
@@ -11,9 +11,9 @@
   
   (can-interact-with [this player]
     ;; Check if player is within range
-    (let [pos (.getPos tile-entity)
-          player-pos (.getPosition player)]
-      (< (.distanceSq pos player-pos) 64.0)))
+    (let [pos (:pos tile-entity)
+          player-pos (entity/get-position player)]
+      (< (entity/distance-sq pos player-pos) 64.0)))
   
   (get-slot-count [this]
     0)  ; No inventory slots

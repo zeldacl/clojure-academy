@@ -1,112 +1,84 @@
 (ns cn.academy.block.multiblock.validation
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.multiblock-helper :as helper]
-            [cn.academy.api.block :as block-api]
-            [cn.academy.block.multiblock.pattern :as pattern])
-  (:import [net.minecraft.util.math BlockPos]
-           [net.minecraft.world World]))
+            [cn.academy.block.multiblock.pattern :as pattern]
+            [mcmod.block :as block]
+            [mcmod.position :as position]))
 
 (defprotocol IStructureValidator
-  "Protocol for validating multiblock structures"
-  (validate [this blocks] "Validate the structure formed by blocks")
-  (get-requirements [this] "Get block type requirements")
-  (get-error [this blocks] "Get error message if invalid"))
+  "Protocol for structure validation"
+  (validate [this blocks] "Validate block structure")
+  (get-requirements [this] "Get structure requirements")
+  (get-patterns [this] "Get valid structure patterns"))
 
-(defrecord StructureValidator [requirements validator]
+(defrecord StructureValidator [requirements patterns]
   IStructureValidator
   (validate [_ blocks]
-    (validator blocks))
+    (and (<= (count blocks) base/MAX_BLOCKS)
+         (check-block-counts blocks requirements)
+         (some #(pattern/matches-pattern? % blocks) patterns)))
   
   (get-requirements [_]
     requirements)
   
-  (get-error [_ blocks]
-    (let [block-types (frequencies 
-                       (map base/get-member-type blocks))] 
-      (when-not (= (count blocks)
-                   (apply + (vals requirements)))
-        "Wrong number of blocks")
-      (when-let [[type count] (first
-                               (filter (fn [[type req-count]]
-                                       (not= req-count
-                                            (get block-types type 0)))
-                                     requirements))] 
-        (format "Expected %d blocks of type %s, found %d"
-                count type (get block-types type 0))))))
+  (get-patterns [_]
+    patterns))
+
+(defn check-block-counts
+  "Check if block counts match requirements"
+  [blocks requirements]
+  (let [counts (frequencies 
+                (map base/get-member-type 
+                     (filter base/is-multiblock-part? blocks)))]
+    (every? (fn [[type required]]
+              (>= (get counts type 0) required))
+            requirements)))
 
 (defn create-validator
   "Create a new structure validator"
-  [requirements validator]
-  (->StructureValidator requirements validator))
+  ([requirements]
+   (create-validator requirements []))
+  ([requirements patterns]
+   (->StructureValidator requirements patterns)))
 
-(defn check-block-types
-  "Helper to validate block type counts"
-  [blocks requirements]
-  (let [block-types (frequencies 
-                     (map base/get-member-type blocks))]
-    (every? (fn [[type count]]
-              (= count (get block-types type 0)))
-            requirements)))
+(defn add-pattern
+  "Add a valid structure pattern"
+  [validator pattern]
+  (update validator :patterns conj pattern))
 
-(defn check-dimensions
-  "Validate structure dimensions"
-  [blocks min-size max-size]
-  (let [positions (map (fn [pos]
-                        [(.-x pos) (.-y pos) (.-z pos)])
-                      blocks)
-        min-pos (map #(apply min %) (apply map vector positions))
-        max-pos (map #(apply max %) (apply map vector positions))
-        dimensions (map - max-pos min-pos)]
-    (every? #(<= %1 %2 %3) min-size dimensions max-size)))
+(defn remove-pattern
+  "Remove a structure pattern"
+  [validator pattern]
+  (update validator :patterns 
+          (fn [patterns]
+            (remove #(= % pattern) patterns))))
 
-(defn check-pattern
-  "Validate structure matches pattern"
-  [world blocks pattern]
-  (let [positions (set blocks)]
-    (every? (fn [{:keys [pos type]}]
-              (when-let [te (block-api/get-tile-entity world pos)]
-                (= (base/get-member-type te) type)))
-            pattern)))
+(defn check-block-positions
+  "Validate relative block positions"
+  [blocks]
+  (let [positions (map :pos blocks)
+        [min-x min-y min-z] (map #(apply min %) 
+                                (apply map vector positions))
+        [max-x max-y max-z] (map #(apply max %)
+                                (apply map vector positions))]
+    (and (<= (- max-x min-x) 5)
+         (<= (- max-y min-y) 5)
+         (<= (- max-z min-z) 5))))
 
-(defprotocol IMultiblockValidator
-  (validate-at [this world pos] "Validate multiblock structure at given position")
-  (get-size [this] "Get size requirements [width height depth]")
-  (get-required-blocks [this] "Get map of required block types and counts"))
-
-(defrecord MultiblockValidator [pattern size required-blocks]
-  IMultiblockValidator
-  (validate-at [_ world pos]
-    (let [[width height depth] size
-          blocks (for [x (range width)
-                      y (range height) 
-                      z (range depth)]
-                  (let [check-pos (-> pos
-                                    (.add x y z))
-                        block (.getBlockState world check-pos)]
-                    [x y z block]))]
-      (pattern/matches-pattern? pattern blocks)))
-      
-  (get-size [_] size)
-  
-  (get-required-blocks [_] required-blocks))
-
-(defn create-validator
-  "Create new multiblock validator from pattern"
-  [pattern]
-  (let [size (pattern/get-size pattern)
-        required (pattern/get-required-blocks pattern)]
-    (->MultiblockValidator pattern size required)))
-
-(defn find-complete-structure
-  "Search for complete multiblock structure around position"
-  [validator world pos]
-  (let [[width height depth] (get-size validator)]
-    (first
-     (for [x (range (- width) 1)
-           y (range (- height) 1)
-           z (range (- depth) 1)
-           :let [check-pos (-> pos
-                             (.add x y z))
-                 valid? (validate-at validator world check-pos)]
-           :when valid?]
-       check-pos))))
+(defn check-connected
+  "Check if blocks form connected structure"
+  [blocks]
+  (let [positions (set (map :pos blocks))]
+    (loop [to-check #{(first positions)}
+           checked #{}]
+      (if (empty? to-check)
+        (= checked positions)
+        (let [current (first to-check)
+              neighbors (for [offset [[1 0 0] [-1 0 0] 
+                                    [0 1 0] [0 -1 0]
+                                    [0 0 1] [0 0 -1]]
+                            :let [pos (position/add current offset)]
+                            :when (positions pos)]
+                        pos)]
+          (recur (into (disj to-check current)
+                      (remove checked neighbors))
+                 (conj checked current)))))))
