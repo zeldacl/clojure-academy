@@ -5,7 +5,9 @@
             [cn.academy.blocks.block_matrix.wireless-matrix :as wireless-matrix]
             [cn.academy.blocks.block_matrix.events :as events]
             [cn.academy.blocks.block_matrix.energy :as energy]
+            [cn.academy.blocks.block_matrix.commands :as commands]
             [cn.academy.tech-system.energy-system.api :as energy-api]
+            [mcmod.commands :as cmd-registry]
             [clojure.tools.logging :as log]))
 
 ;; Matrix initialization
@@ -22,6 +24,10 @@
       {:max-energy (-> matrix-config :energy :base-capacity)
        :bandwidth (-> matrix-config :network :base-bandwidth)
        :range (-> matrix-config :network :base-range)})
+    
+    ;; Register matrix commands
+    (cmd-registry/register-command! (commands/->CheckEnergyCommand))
+    (cmd-registry/register-command! (commands/->SetEnergyCommand))
     
     (log/info "Wireless Matrix Block initialized")))
 
