@@ -112,6 +112,7 @@ See individual protocol files for full documentation.
 - [Adapter Development](doc/ADAPTER_DEVELOPMENT.md)
 - [Protocol Specification](doc/PROTOCOL_SPEC.md)
 - [Tech System Energy Architecture](doc/TECH_SYSTEM_ENERGY.md)
+- [Dependency Rules](doc/DEPENDENCY_RULES.md)
 - [Update to 1.14](doc/updateto1.14.md)
 
 ## Contributing
