@@ -2,6 +2,9 @@
   (:require [mcmod.protocols :refer :all]
             [cn.academy.core :as core]
             [cn.academy.blocks.block-node.config :as config]
+            [cn.academy.tech-system.energy-system.api :as energy-api]
+            [cn.academy.tech-system.energy-system.registry :as energy-registry]
+            [cn.academy.tech-system.energy-system.network.handler :as network]
             [clojure.tools.logging :as log]))
 
 (defrecord WirelessNode [node-type properties]
@@ -20,27 +23,10 @@
   IWirelessCapability
   (get-capability [this cap dir]
     (when (instance? IEnergyStorage cap)
-      (reify IEnergyStorage
-        (receive-energy [_ amount simulate]
-          (if-let [te (get-tile-entity (get-world this) (get-position this))]
-            (receive-energy te amount simulate)
-            0))
-        (extract-energy [_ amount simulate]  
-          (if-let [te (get-tile-entity (get-world this) (get-position this))]
-            (extract-energy te amount simulate)
-            0))
-        (get-energy-stored [_]
-          (if-let [te (get-tile-entity (get-world this) (get-position this))]
-            (get-energy te)
-            0))
-        (get-max-energy-stored [_]
-          (config/get-node-property node-type :max-energy))
-        (can-receive? [_] true)
-        (can-extract? [_] true))))
-
-  (invalidate-caps [this]
-    (when-let [te (get-tile-entity (get-world this) (get-position this))]
-      (invalidate-capabilities te))))
+      (energy-api/create-energy-storage 
+        (energy-registry/get-node-type-property node-type :max-energy)
+        #(get-in @(:state this) [:energy])
+        #(swap! (:state this) assoc :energy %)))))
 
 (defn create-node [node-type]
   (->WirelessNode node-type

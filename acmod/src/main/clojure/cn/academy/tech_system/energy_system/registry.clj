@@ -30,5 +30,4 @@
   (transfer/init!)
   (handler/init!)
   
-  (log/info "Energy system registry initialized with"
-            (count @node-types-registry) "node types"))
+  (log/info "Energy system registry initialized"))
