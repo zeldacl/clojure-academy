@@ -1,16 +1,14 @@
 (ns cn.academy.block.event
-  (:require [cn.academy.block.network.core :as network]
-            [cn.academy.block.gui.core :as gui]
-            [mcmod.protocols :refer [IEventHandler IEventBus]]
+  (:require [mcmod.protocols :refer [IEventBus]]
             [clojure.tools.logging :as log]))
 
-;; Event bus implementation
+;; Event bus instance
 (def event-bus
   (let [handlers (atom {})]
     (reify IEventBus
       (register-handler [_ event-type handler]
         (swap! handlers update event-type 
-               (fn [existing] (conj (or existing #{}) handler))))
+               (fnil conj #{}) handler))
       
       (post-event [_ event]
         (when-let [handlers (get @handlers (:type event))]
@@ -20,92 +18,45 @@
               (catch Exception e
                 (log/error "Error in event handler:" (.getMessage e))))))))))
 
-;; Block event handling
-(defn handle-block-activated [block world pos player hand]
-  (let [event {:type :block-activated
-               :block block
-               :world world
-               :pos pos
-               :player player
-               :hand hand}]
-    (.post-event event-bus event)
-    (gui/open-gui! (:type block) player block world)))
+;; Event posting helpers
+(defn post-machine-event!
+  "Post machine-related event"
+  [type machine & [data]]
+  (.post-event event-bus
+    (merge {:type type
+            :machine machine
+            :timestamp (System/currentTimeMillis)}
+           data)))
 
-(defn handle-block-broken [block world pos]
-  (let [event {:type :block-broken
-               :block block 
-               :world world
-               :pos pos}]
-    (.post-event event-bus event)
-    (when-let [state (:state block)]
-      (network/send-message! :block-destroyed block))))
+(defn post-structure-event!
+  "Post multiblock structure event"
+  [type controller & [data]]
+  (.post-event event-bus
+    (merge {:type type
+            :controller controller
+            :timestamp (System/currentTimeMillis)}
+           data)))
 
-(defn handle-neighbor-changed [block world pos neighbor-pos]
-  (let [event {:type :neighbor-changed
-               :block block
-               :world world
-               :pos pos
-               :neighbor-pos neighbor-pos}]
-    (.post-event event-bus event)))
-
-;; Machine event handling
-(defn handle-energy-changed [block old-energy new-energy]
-  (let [event {:type :energy-changed
-               :block block
-               :old-value old-energy
-               :new-value new-energy}]
-    (.post-event event-bus event)
-    (network/send-message! :update-energy block new-energy)))
-
-(defn handle-progress-changed [block old-progress new-progress]
-  (let [event {:type :progress-changed
-               :block block
-               :old-value old-progress
-               :new-value new-progress}]
-    (.post-event event-bus event)
-    (network/send-message! :update-progress block new-progress)))
-
-(defn handle-recipe-completed [block recipe]
-  (let [event {:type :recipe-completed
-               :block block
-               :recipe recipe}]
-    (.post-event event-bus event)))
-
-;; Multiblock event handling
-(defn handle-structure-formed [controller members]
-  (let [event {:type :structure-formed
-               :controller controller
-               :members members}]
-    (.post-event event-bus event)
-    (network/send-message! :multiblock-formed controller members)))
-
-(defn handle-structure-broken [controller members]
-  (let [event {:type :structure-broken
-               :controller controller
-               :members members}]
-    (.post-event event-bus event)
-    (doseq [member members]
-      (network/send-message! :multiblock-broken member))))
-
-;; Register default handlers
-(defn init-event-handlers! []
-  (doto event-bus
-    (.register-handler :block-activated
-      (fn [{:keys [block]}]
-        (log/debug "Block activated:" (:type block))))
-    
-    (.register-handler :block-broken
-      (fn [{:keys [block]}]
-        (log/debug "Block broken:" (:type block))))
-    
-    (.register-handler :energy-changed
-      (fn [{:keys [block old-value new-value]}]
-        (log/debug "Energy changed for" (:type block) ":" old-value "->" new-value)))
-    
-    (.register-handler :progress-changed
-      (fn [{:keys [block old-value new-value]}]
-        (log/debug "Progress changed for" (:type block) ":" old-value "->" new-value)))
-    
-    (.register-handler :structure-formed
-      (fn [{:keys [controller]}]
-        (log/debug "Multiblock structure formed:" (:type controller))))))
+;; Standard event handlers
+(defn register-standard-handlers! []
+  ;; Machine events
+  (.register-handler event-bus :machine/created
+    (fn [{:keys [machine]}]
+      (log/debug "Machine created:" (mcmod.protocols/get-id machine))))
+  
+  (.register-handler event-bus :machine/destroyed
+    (fn [{:keys [machine]}]
+      (log/debug "Machine destroyed:" (mcmod.protocols/get-id machine))))
+  
+  (.register-handler event-bus :machine/error
+    (fn [{:keys [machine error]}]
+      (log/error "Machine error:" (mcmod.protocols/get-id machine) "-" error)))
+  
+  ;; Structure events  
+  (.register-handler event-bus :structure/formed
+    (fn [{:keys [controller members]}]
+      (log/debug "Structure formed with" (count members) "members")))
+  
+  (.register-handler event-bus :structure/broken
+    (fn [{:keys [controller]}]
+      (log/debug "Structure broken"))))

@@ -1,33 +1,37 @@
 (ns cn.academy.block.impl.multiblock
   (:require [cn.academy.block.multiblock.core :as multiblock]
+            [cn.academy.block.multiblock.pattern :as pattern]
+            [cn.academy.block.multiblock.registry :as registry]
+            [cn.academy.block.multiblock.multiblock-member :as member]
             [cn.academy.block.properties :as props]
-            [cn.academy.block.behavior :as behavior]
             [cn.academy.block.blocks :as blocks]))
 
-;; Define multiblock structure types
-(def structure-types
-  {"processing_machine" {:validator (fn [blocks]
-                                    (let [counts (frequencies (map :type blocks))]
-                                      (and (= (get counts :controller 0) 1)
-                                           (>= (get counts :casing 0) 8)
-                                           (= (get counts :energy-port 0) 1))))
-                        :controller-type :processor
-                        :member-types #{:controller :casing :energy-port}}})
+;; Define standard multiblock patterns
+(def structure-patterns
+  {"processing_machine" 
+   (pattern/create-pattern "processing_machine"
+     :blocks [:controller :casing :casing :casing :casing
+              :casing :casing :casing :casing :energy-port]
+     :positions [[0 0 0] [1 0 0] [-1 0 0] [0 1 0] [0 -1 0]
+                 [0 0 1] [0 0 -1] [1 1 0] [-1 1 0] [0 1 1]]
+     :validation #(every? (fn [block]
+                          (contains? #{:controller :casing :energy-port}
+                                    (:type block)))
+                        %))})
 
-;; Register all multiblock structures
-(doseq [[id config] structure-types]
-  (multiblock/register-structure!
-    (multiblock/create-multiblock id config)))
+;; Register patterns
+(doseq [[id pattern] structure-patterns]
+  (registry/register-pattern! pattern))
 
 ;; Create multiblock member blocks
 (defn create-multiblock-member [member-type]
   (let [base-props (props/get-default-properties :machine)
-        state (atom {:controller nil})
-        member (multiblock/create-member member-type state)]
+        valid-connections (member/get-valid-connections member-type)]
     {:properties base-props
-     :member member}))
+     :member (member/create-member member-type 
+                                 :valid-connections valid-connections)}))
 
-;; Register multiblock member blocks
+;; Register block types
 (def member-blocks
   {"mb_controller" :controller
    "mb_casing" :casing

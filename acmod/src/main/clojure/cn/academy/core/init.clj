@@ -1,56 +1,120 @@
 (ns cn.academy.core.init
-  (:require [cn.academy.api.block :as block-api]
-            [cn.academy.api.energy :as energy-api]
-            [cn.academy.core.util.logging :refer [log-info log-error with-logging]]
-            [cn.academy.core.util.diagnostics :as diag]
-            [cn.academy.core.util.version-diagnostics :as vdiag]
-            [cn.academy.core.util.monitoring :as monitoring]
-            [cn.academy.core.util.profiling :as profiling])
-  (:import [java.io File]))
+  (:require [mcmod.protocols :refer [ILifecycle]]
+            [cn.academy.block.multiblock.core :as multiblock]
+            [cn.academy.block.machine.core :as machine]
+            [cn.academy.block.resource.core :as resource]
+            [cn.academy.block.render.core :as render]
+            [cn.academy.block.error :as error]
+            [cn.academy.block.event :as event]
+            [cn.academy.block.api :as api]
+            [clojure.tools.logging :as log]))
 
-(defn register-block-factory! [forge-factory]
-  (block-api/set-forge-factory! forge-factory))
+;; System initialization order
+(def init-order
+  [{:id :diagnostics
+    :start init-diagnostics!
+    :desc "Diagnostics system"}
+   
+   {:id :monitoring
+    :start init-monitoring!
+    :desc "Monitoring system"}
+   
+   {:id :error
+    :start error/init-error-system!
+    :desc "Error handling system"}
+   
+   {:id :event
+    :start event/register-standard-handlers!
+    :desc "Event system"}
+   
+   {:id :render
+    :start render/init-render-system!
+    :desc "Rendering system"}
+   
+   {:id :resource
+    :start resource/init-resource-system!
+    :desc "Resource system"}
+   
+   {:id :machine
+    :start machine/init-machines!
+    :desc "Machine system"}
+   
+   {:id :multiblock
+    :start multiblock/init-multiblock!
+    :desc "Multiblock system"}
+   
+   {:id :api
+    :start api/init-api!
+    :desc "Public API"}])
 
-(defn register-energy-impl! [energy-impl]
-  (energy-api/set-energy-impl! energy-impl))
-
-(defn init! [forge-factory energy-impl]
-  (register-block-factory! forge-factory)
-  (register-energy-impl! energy-impl))
-
+;; Diagnostics initialization
 (defn init-diagnostics! []
-  (with-logging "Initializing diagnostics"
-    (diag/register-error-handler!)
-    (vdiag/validate-runtime-environment!)
-    (monitoring/reset-metrics!)
+  (log/info "Initializing diagnostics system")
+  ;; Initialize performance monitoring
+  (doseq [[category threshold] 
+          {"energy-transfer" 50
+           "network-update" 100
+           "world-tick" 50
+           "render-update" 16}]
+    (monitoring/set-threshold! category threshold))
+  
+  ;; Start profiling key subsystems
+  (doseq [category ["energy" "network" "world" "render"]]
+    (profiling/start-profiling! category))
     
-    ;; Start profiling key subsystems
-    (doseq [category ["energy" "network" "world"]]
-      (profiling/start-profiling! category))
-    
-    ;; Schedule periodic diagnostic report generation
-    (future
-      (try
-        (while true
-          (Thread/sleep (* 30 60 1000)) ; Every 30 minutes
-          (diag/write-diagnostic-report!
-            (File. "logs/academy-diagnostics.log")))
-        (catch InterruptedException _)))))
+  ;; Schedule periodic diagnostic reports
+  (future
+    (try
+      (while true
+        (Thread/sleep (* 30 60 1000)) ; Every 30 minutes
+        (diagnostics/write-report! "logs/academy-diagnostics.log"))
+      (catch InterruptedException _)))
+  true)
 
+;; Performance monitoring initialization  
 (defn init-monitoring! []
-  (with-logging "Initializing monitoring"
-    ;; Set performance thresholds
-    (monitoring/set-threshold! "energy-transfer" 50)
-    (monitoring/set-threshold! "network-update" 100)
-    (monitoring/set-threshold! "world-tick" 50)))
+  (log/info "Initializing monitoring system")
+  (monitoring/reset-metrics!)
+  (monitoring/start-metrics-collection!)
+  true)
 
-(defn initialize! []
-  (try
-    (log-info "Initializing Academy Core...")
-    (init-diagnostics!)
-    (init-monitoring!)
-    (log-info "Academy Core initialization complete")
-    :ok
-    (catch Throwable t
-      (log-error t "Failed to initialize Academy Core")
-      :error)))
+;; Initialization
+(defn init-subsystem!
+  "Initialize a single subsystem"
+  [{:keys [id start desc]}]
+  (log/info "Initializing" desc)
+  (try 
+    (start)
+    (log/info desc "initialized successfully")
+    true
+    (catch Exception e
+      (log/error "Failed to initialize" desc ":" (.getMessage e))
+      false)))
+
+(defn init-all!
+  "Initialize all subsystems in order"
+  []
+  (log/info "Starting AcademyCraft initialization")
+  (let [results (map init-subsystem! init-order)
+        success (every? true? results)]
+    (if success
+      (do
+        (log/info "AcademyCraft initialized successfully")  
+        (diagnostics/write-startup-report!))
+      (log/error "AcademyCraft initialization failed"))
+    success))
+
+;; Lifecycle implementation  
+(extend-type cn.academy.core.init
+  ILifecycle
+  (start [_]
+    (init-all!))
+  
+  (stop [_]
+    (log/info "Shutting down AcademyCraft")
+    (profiling/stop-all-profiling!)
+    (monitoring/stop-metrics-collection!)
+    (diagnostics/write-shutdown-report!)))
+
+;; Register for lifecycle management
+(mcmod.lifecycle/register-lifecycle *ns*)

@@ -1,42 +1,57 @@
 (ns cn.academy.block.multiblock.multiblock-member
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.core :as core]
-            [cn.academy.api.block :as block-api]))
+            [cn.academy.api.block :as block-api]
+            [mcmod.protocols :refer [IBlockEntity]]))
 
-(defprotocol IMultiblockMemberData
-  (get-valid-connections [this] "Get valid connection types")
-  (get-member-type [this] "Get member block type"))
-
-(defrecord MultiblockMember [state-atom member-data]
+(defrecord MultiblockMember [state-atom member-type]
   base/IMultiblockMember
-  (get-controller [this]
+  (get-controller [_]
     (:controller @state-atom))
   
   (set-controller [this controller]
     (swap! state-atom assoc :controller controller)
     (block-api/mark-dirty! this))
   
-  (can-connect? [this other]
-    (let [valid-types (get-valid-connections member-data)]
-      (when-let [other-type (get-member-type (:member-data other))]
-        (contains? valid-types other-type))))
+  (can-connect? [_ other]
+    (contains? (:valid-connections @state-atom) 
+              (base/get-member-type other)))
+  
+  (get-member-type [_]
+    member-type)
   
   (on-connection [this other]
-    ;; Handle any special connection logic
-    nil)
-  
-  (get-multiblock-data [this]
-    member-data)
+    (when-let [controller (get-controller other)]
+      (set-controller this controller)))
 
-  core/IBlockEntity
-  (load-data [this data]
-    (reset! state-atom {:controller (:controller data)}))
+  IBlockEntity 
+  (load-data [_ data]
+    (reset! state-atom (merge {:valid-connections #{}} data)))
   
-  (save-data [this]
-    {:controller (:controller @state-atom)})
+  (save-data [_]
+    @state-atom)
   
   (get-capabilities [this]
-    ;; Return capabilities if part of complete structure
     (when-let [controller (get-controller this)]
-      (when (base/is-complete? controller)
+      (when (mcmod.protocols/is-complete? controller)
         (:capabilities @state-atom)))))
+
+(defn create-member
+  "Create a new multiblock member"
+  [member-type & {:keys [valid-connections capabilities]}]
+  (->MultiblockMember 
+    (atom {:controller nil
+           :valid-connections (or valid-connections #{})
+           :capabilities (or capabilities {})})
+    member-type))
+
+;; Member registration
+(def member-types
+  {"controller" #{:casing :energy-port}
+   "casing" #{:controller :casing :energy-port}
+   "energy-port" #{:controller :casing}})
+
+(defn get-valid-connections
+  "Get valid connection types for a member type"
+  [member-type]
+  (get member-types member-type #{}))

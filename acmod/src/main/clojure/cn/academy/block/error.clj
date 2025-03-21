@@ -1,101 +1,81 @@
 (ns cn.academy.block.error
   (:require [mcmod.protocols :refer [IErrorHandler]]
+            [cn.academy.block.event :as event]
             [clojure.tools.logging :as log]))
 
-;; Error state tracking
+;; Error tracking state
 (def error-state
-  (atom {:active-errors {}
-         :error-history []}))
+  (atom {:active {}
+         :history []}))
 
 ;; Error handler implementation
-(defrecord BlockErrorHandler [block]
+(defrecord ErrorTracker [id]
   IErrorHandler
-  (handle-error! [_ error]
-    (let [error-id (str (random-uuid))
-          error-data {:id error-id
-                     :block-id (:id block)
-                     :type (:type error)
-                     :message (:message error)
-                     :timestamp (System/currentTimeMillis)}]
-      (swap! error-state assoc-in [:active-errors error-id] error-data)
-      (swap! error-state update :error-history conj error-data)
-      (log/error "Block error:" (:message error))
-      error-id))
+  (add-error! [_ error]
+    (swap! error-state update-in [:active id]
+           (fnil conj #{}) error)
+    (swap! error-state update :history conj 
+           {:id id
+            :error error
+            :timestamp (System/currentTimeMillis)}))
   
-  (clear-error! [_ error-id]
-    (swap! error-state update :active-errors dissoc error-id))
+  (clear-errors! [_]
+    (swap! error-state update :active dissoc id))
   
   (get-active-errors [_]
-    (filter #(= (:block-id %) (:id block))
-           (vals (:active-errors @error-state))))
+    (get-in @error-state [:active id] #{}))
   
   (has-errors? [this]
-    (not (empty? (.get-active-errors this)))))
+    (not (empty? (get-active-errors this)))))
 
-;; Error construction
-(defn create-error
-  ([type message]
-   {:type type
-    :message message
-    :timestamp (System/currentTimeMillis)})
-  ([type message cause]
-   (assoc (create-error type message)
-          :cause cause)))
+;; Error management functions
+(defn get-error-tracker
+  "Get or create error tracker for ID"
+  [id]
+  (->ErrorTracker id))
 
-;; Error categories
-(def error-types
-  {:validation "Validation Error"
-   :resource "Resource Error" 
-   :network "Network Error"
-   :state "State Error"
-   :operation "Operation Error"})
+(defn set-error!
+  "Set error for component"
+  [id error]
+  (let [tracker (get-error-tracker id)]
+    (.add-error! tracker error)
+    (event/post-machine-event! :machine/error
+                              (mcmod.protocols/get-machine id)
+                              {:error error})))
 
-;; Error handling macro
-(defmacro with-error-handling [error-type & body]
+(defn clear-errors!
+  "Clear errors for component"
+  [id]
+  (.clear-errors! (get-error-tracker id)))
+
+(defn get-active-errors
+  "Get active errors for component"
+  [id]
+  (.get-active-errors (get-error-tracker id)))
+
+;; Error execution wrapper
+(defmacro with-error-handling
+  "Execute body with error handling for component"
+  [id error-type & body]
   `(try
      ~@body
      (catch Exception e#
-       (log/error "Error during" ~error-type ":" (.getMessage e#))
-       (create-error ~error-type (.getMessage e#) e#))))
+       (let [error# {:type ~error-type
+                     :message (.getMessage e#)}]
+         (set-error! ~id error#)
+         (log/error "Error in" ~error-type ":" (.getMessage e#))
+         nil))))
 
-;; Safe execution wrapper
-(defmacro with-safe-execution [block-id category & body]
-  `(try
-     ~@body
-     (catch Exception e#
-       (let [error# (create-error ~category (.getMessage e#) e#)]
-         (log/error "Error in block" ~block-id ":" (.getMessage e#))
-         (when-let [handler# (mcmod.block/get-error-handler ~block-id)]
-           (.handle-error! handler# error#))))))
-
-;; Error monitoring
-(defn get-error-count [block-id]
-  (count (filter #(= (:block-id %) block-id)
-                (vals (:active-errors @error-state)))))
-
-(defn get-error-history [block-id]
-  (filter #(= (:block-id %) block-id)
-          (:error-history @error-state)))
-
-;; Error cleanup
-(defn clear-old-errors! []
-  (let [current-time (System/currentTimeMillis)
-        timeout (* 5 60 1000)] ; 5 minutes
-    (swap! error-state update :active-errors
-           #(into {} (filter (fn [[_ error]]
-                              (< (- current-time (:timestamp error))
-                                 timeout))
-                            %)))))
-
-;; Common error messages
-(def error-messages
-  {:insufficient-energy "Insufficient energy"
-   :invalid-upgrade "Invalid upgrade type"
-   :missing-resources "Missing required resources"
-   :invalid-state "Invalid machine state"
-   :network-disconnected "Network connection lost"})
+;; Error reporting
+(defn get-error-history
+  "Get error history for time period"
+  [start-time end-time]
+  (->> (:history @error-state)
+       (filter #(and (>= (:timestamp %) start-time)
+                    (<= (:timestamp %) end-time)))
+       (sort-by :timestamp)))
 
 ;; Initialize error system
-(defn init-errors! []
-  (reset! error-state {:active-errors {}
-                       :error-history []}))
+(defn init-error-system! []
+  (reset! error-state {:active {}
+                       :history []}))

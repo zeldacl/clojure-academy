@@ -1,60 +1,75 @@
 (ns cn.academy.block.multiblock.registry
-  (:require [mcmod.protocols :refer [ILifecycle]]
-            [mcmod.lifecycle :as lifecycle]
-            [mcmod.logging :as log]
+  (:require [cn.academy.block.multiblock.pattern :as pattern]
             [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.multiblock-helper :as helper]))
+            [cn.academy.block.multiblock.multiblock-controller :as controller]
+            [mcmod.protocols :refer [ILifecycle]]
+            [mcmod.lifecycle :as lifecycle]
+            [clojure.tools.logging :as log]))
 
-;; Registry of multiblock structure validators
-(def structure-validators (atom {}))
+;; Registry state
+(def registry-state
+  (atom {:patterns {}
+         :active-structures {}}))
 
-;; Registry of active multiblock structures
-(def active-structures (atom {}))
+;; Pattern registration
+(defn register-pattern!
+  "Register a new multiblock pattern"
+  [pattern]
+  (swap! registry-state assoc-in [:patterns (:id pattern)] pattern))
 
-(defn register-structure-type!
-  "Register a new multiblock structure type with validation"
-  [type-id validator]
-  (swap! structure-validators assoc type-id validator))
+(defn get-pattern
+  "Get registered pattern by ID"
+  [id]
+  (get-in @registry-state [:patterns id]))
 
-(defn get-structure-validator
-  "Get validator function for structure type"
-  [type-id]
-  (get @structure-validators type-id))
-
+;; Structure registration and tracking
 (defn register-active-structure!
   "Register an active multiblock structure"
   [controller]
-  (let [pos (base/get-master controller)]
-    (swap! active-structures assoc pos controller)))
+  (let [pos (mcmod.protocols/get-position controller)]
+    (swap! registry-state assoc-in [:active-structures pos] controller)))
 
 (defn unregister-active-structure!
   "Unregister an active multiblock structure"
   [controller]
-  (let [pos (base/get-master controller)]
-    (swap! active-structures dissoc pos)))
+  (let [pos (mcmod.protocols/get-position controller)]
+    (swap! registry-state update :active-structures dissoc pos)))
 
 (defn get-active-structure
   "Get active structure at position"
   [pos]
-  (get @active-structures pos))
+  (get-in @registry-state [:active-structures pos]))
 
-(defn validate-and-register!
-  "Validate structure and register if valid"
-  [world pos type-id]
-  (when-let [validator (get-structure-validator type-id)]
-    (when-let [structure (helper/validate-structure world pos validator)]
-      (register-active-structure! structure)
-      structure)))
+;; Structure validation and creation
+(defn validate-and-create!
+  "Validate structure and create controller if valid"
+  [world pos pattern-id]
+  (when-let [pattern (get-pattern pattern-id)]
+    (when (pattern/validate-structure pattern world pos)
+      (let [controller (controller/->MultiblockController 
+                        (atom {:active false
+                              :members #{}})
+                        #(pattern/matches-pattern? pattern %))]
+        (register-active-structure! controller)
+        controller))))
 
+;; Registry lifecycle management
 (extend-type clojure.lang.Atom
   ILifecycle
   (start [this]
     (log/info "Starting multiblock registry")
-    (reset! this {}))
+    (reset! this {:patterns {}
+                  :active-structures {}}))
   
   (stop [this]
     (log/info "Stopping multiblock registry")
-    (reset! this {})))
+    (reset! this {:patterns {}
+                  :active-structures {}})))
 
 ;; Register for lifecycle management
-(lifecycle/register-lifecycle active-structures)
+(lifecycle/register-lifecycle registry-state)
+
+;; Initialize with default patterns
+(defn init-registry! []
+  ;; Add default patterns here if needed
+  (log/info "Initialized multiblock registry"))

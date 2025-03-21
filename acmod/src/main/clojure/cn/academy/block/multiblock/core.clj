@@ -1,49 +1,65 @@
 (ns cn.academy.block.multiblock.core
-  (:require [cn.academy.block.behavior :as behavior]
+  (:require [cn.academy.block.multiblock.registry :as registry]
+            [cn.academy.block.multiblock.pattern :as pattern]
+            [cn.academy.block.multiblock.interaction :as interaction]
+            [cn.academy.block.multiblock.multiblock-base :as base]
+            [mcmod.protocols :refer [ILifecycle]]
             [clojure.tools.logging :as log]))
 
-;; Multiblock structure management
-(defn create-multiblock
-  "Create a new multiblock structure definition"
-  [id {:keys [validator controller-type member-types]}]
-  {:id id
-   :validator validator
-   :controller-type controller-type
-   :member-types member-types})
+;; Public API for structure management
+(defn register-pattern!
+  "Register a new multiblock structure pattern"
+  [id blocks positions & {:keys [validation]}]
+  (let [pattern (pattern/create-pattern id 
+                  :blocks blocks
+                  :positions positions
+                  :validation validation)]
+    (registry/register-pattern! pattern)
+    pattern))
 
-(defn register-structure!
-  "Register a multiblock structure type"
-  [structure-def]
-  (mcmod.multiblock/register-structure! structure-def))
-
-;; Multiblock member creation helpers
-(defn create-member
-  "Create a multiblock member with basic functionality"
-  [member-type state-atom]
-  {:type member-type
-   :state-atom state-atom
-   :behaviors (behavior/combine-behaviors :multiblock-member)})
-
-(defn create-controller
-  "Create a multiblock controller with validation and management capabilities"
-  [structure-id state-atom]
-  {:type :controller
-   :structure-id structure-id
-   :state-atom state-atom
-   :behaviors (behavior/combine-behaviors :multiblock-member :machine)})
-
-;; Structure validation and management
 (defn validate-structure
-  "Validate a multiblock structure configuration"
-  [world pos structure-id]
-  (mcmod.multiblock/validate-structure world pos structure-id))
+  "Validate multiblock structure at position"
+  [world pos pattern-id]
+  (when-let [pattern (registry/get-pattern pattern-id)]
+    (pattern/validate-structure pattern world pos)))
 
-(defn update-structure!
-  "Update a multiblock structure state"
-  [world pos state-update-fn]
-  (mcmod.multiblock/update-structure! world pos state-update-fn))
+(defn try-form-structure!
+  "Attempt to form multiblock structure at position"
+  [world pos pattern-id]
+  (registry/validate-and-create! world pos pattern-id))
 
-;; Export common multiblock behaviors
-(def handle-block-broken mcmod.multiblock/handle-block-broken)
-(def handle-block-placed mcmod.multiblock/handle-block-placed)
-(def handle-block-activated mcmod.multiblock/handle-block-activated)
+;; Public API for block interaction
+(defn handle-block-activation
+  "Handle block right-click activation"
+  [world pos player hand]
+  (interaction/handle-block-activation world pos player hand))
+
+(defn handle-block-broken
+  "Handle block being broken"
+  [world pos]
+  (interaction/handle-block-broken world pos))
+
+;; Public API for block implementation
+(defn get-controller
+  "Get controller for block"
+  [block]
+  (base/get-controller block))
+
+(defn is-multiblock-complete?
+  "Check if multiblock structure is complete"
+  [controller]
+  (when (satisfies? mcmod.protocols/IMultiblock controller)
+    (mcmod.protocols/is-complete? controller)))
+
+;; System lifecycle
+(extend-type cn.academy.block.multiblock.core
+  ILifecycle
+  (start [_]
+    (log/info "Starting multiblock system")  
+    (registry/init-registry!))
+  
+  (stop [_]
+    (log/info "Stopping multiblock system")))
+
+;; Register for lifecycle management
+(mcmod.lifecycle/register-lifecycle *ns*)
