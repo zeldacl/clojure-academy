@@ -234,3 +234,49 @@ Remember to run these checks:
 - Before merging changes
 - During continuous integration
 - When refactoring dependencies
+
+## Block System Organization
+
+### Updated Block Structure
+
+As of March 21, 2025, blocks should be organized following this structure:
+
+- `cn.academy.blocks.[block_name].*` - Individual block implementations 
+  - Example: `cn.academy.blocks.block_matrix.*` for the Wireless Matrix block
+
+This structure offers better organization and separation of concerns compared to the legacy structure (`cn.academy.block.*`).
+
+### Block to System Dependencies
+
+Blocks should depend on underlying systems, not the other way around. For example:
+
+✅ CORRECT:
+```
+[cn.academy.tech-system.energy-system.*]
+        ^
+        |
+[cn.academy.blocks.block_matrix.*]
+```
+
+❌ INCORRECT:
+```
+[cn.academy.blocks.block_matrix.*]
+        ^
+        |
+[cn.academy.tech-system.energy-system.*]
+```
+
+### Adapter Pattern for Block-System Integration
+
+To maintain clean separation between blocks and systems, use the adapter pattern:
+
+```
+[System Core Implementation]
+        ^
+        |
+[Block Adapter] <--- [Block Implementation]
+```
+
+Example from the Wireless Matrix:
+- `cn.academy.tech-system.energy-system.network.distribution` - Core energy network system
+- `cn.academy.blocks.block_matrix.network` - Adapter that connects the Matrix block to the energy system
