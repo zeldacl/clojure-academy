@@ -1,5 +1,5 @@
 (ns cn.li.mcmod.ui
-  (:require [cn.li.mcmod.utils :refer [defclass get-fullname with-prefix construct]]
+  (:require [cn.li.mcmod.utils :refer [defclass get-fullname with-prefix construct update-map-keys gen-method]]
             [clojure.tools.logging :as log]
     ;[cn.li.mcmod.core :refer [defclass]]
             [clojure.string :as str])
@@ -96,7 +96,14 @@
         prefix (str name "-")
         name-ns (get blockdata :ns *ns*)
         fullname (get-fullname name-ns class-name)
-        this-sym (with-meta 'this {:tag fullname})]
+        this-sym (with-meta 'this {:tag fullname})
+        overrides (:overrides blockdata)
+        overrides (update-map-keys gen-method overrides)
+        overrides (map (fn [override]
+                         `(defn ~(key override) [~'this ~'& ~'args]
+                            (apply ~(val override) ~'args))) overrides)
+
+        ]
     `(do
        (gen-class
          :name ~fullname
@@ -124,6 +131,9 @@
             ;(.setRegistryName ~'obj ~registry-name)
            ))
          )
+       ~(if overrides
+          `(with-prefix ~(str name "-")
+             ~@overrides))
        )))
 
 (defn create-container-type [container ^ResourceLocation registry-name]

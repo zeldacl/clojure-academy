@@ -121,8 +121,13 @@
   ;(.register ^DeferredRegister *deferred-register-dimensions* (.getModEventBus (FMLJavaModLoadingContext/get)))
   )
 
+
+
 (defn get-instance [type registry-name]
   (get-in @*deferred-registers* [type :registers registry-name]))
+
+(defn get-block-instance [registry-name]
+  (get-instance :block registry-name))
 
 (defn register-to-deferred [deferred-register name fn]
   (.register

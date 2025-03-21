@@ -93,7 +93,7 @@
         fullname (get-fullname name-ns class-name)
         this-sym (with-meta 'this {:tag fullname})
         overrides (update-map-keys gen-method overrides)
-        _ (println overrides)
+        ;_ (println overrides)
         ;_ (println (map (fn [k]
         ;                  (let [key-name (name (key k))
         ;                        supper-name (apply str "supper" (str/capitalize (first key-name)) (rest key-name))
@@ -104,7 +104,7 @@
                                               supper-name (apply str "supper" (str/capitalize (first key-name)) (rest key-name))
                                               ]
                                           (vector (key k) (symbol supper-name)))) overrides))
-        _ (println exposes-methods)
+        ;_ (println exposes-methods)
         overrides (map (fn [override]
                          `(defn ~(key override) [~'this ~'& ~'args]
                             (apply ~(val override) ~'args))) overrides)

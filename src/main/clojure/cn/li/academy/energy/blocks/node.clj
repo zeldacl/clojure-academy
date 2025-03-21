@@ -6,9 +6,10 @@
             [cn.li.mcmod.tileentity :refer [deftilerntity]]
             [cn.li.mcmod.ui :refer [defblockcontainer defcontainertype slot-inv]]
             [cn.li.academy.energy.slots :refer [slot-ifitem]]
+            [cn.li.mcmod.registry :refer [get-block-instance]]
             ;[cn.li.academy.ac-blocks :refer [block-node-instance]]
             [cn.li.academy.energy.utils :refer [imag-energy-item? make-transfer-rules make-energy-transfer-stack-in-slot-fn]])
-  (:import (net.minecraft.block Block BlockState)
+  (:import (net.minecraft.block Block BlockRenderType BlockState)
            (net.minecraft.block.material Material)
            (net.minecraft.item ItemStack)
            (net.minecraft.entity LivingEntity)
@@ -17,7 +18,7 @@
            (net.minecraft.entity.player PlayerEntity PlayerInventory)
            (net.minecraft.util Hand IWorldPosCallable)
     ;(cn.li.mcmod.blocks Ddd)
-           (net.minecraftforge.items ItemStackHandler)
+           (net.minecraftforge.items CapabilityItemHandler ItemStackHandler)
            (net.minecraft.tileentity TileEntity)
            (cn.li.academy.api.energy.capability WirelessNode)
            (cn.li.academy.api.energy ImagEnergyItem)
@@ -66,24 +67,25 @@
                                   (when-let [tile (get-tile-entity-at-world worldIn pos)]
                                     (set-placer tile placer)))
               ;onReplaced
-              :onRemove       (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
+              :onRemove         (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^BlockState newState isMoving]
                                   (when-not (same-block? state newState)
-                                    (let [this this]
+                                    (let [^BlockNode this this]
                                       (drop-inventory-items worldIn pos this)
                                       (.supperOnRemove this state worldIn pos newState isMoving))))
               :onBlockActivated (fn [this ^BlockState state, ^World worldIn, ^BlockPos pos, ^PlayerEntity player, ^Hand handIn, ^BlockRayTraceResult hit]
-                                  ;(let [this ^Block this
-                                  ;      container-provider (reify INamedContainerProvider
-                                  ;                           (getDisplayName [this]
-                                  ;                             (TranslationTextComponent. "screen.mytutorial.firstbloc" []))
-                                  ;                           (createMenu [this i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
-                                  ;                             (create-container )))]
-                                  ;  (open-gui player container-provider pos))
+                                  (let [this ^Block this
+                                        container-provider (reify INamedContainerProvider
+                                                             (getDisplayName [this]
+                                                               (TranslationTextComponent. "screen.mytutorial.firstbloc" []))
+                                                             (createMenu [this i playerInventory playerEntity]
+                                                               (create-container )))]
+                                    (open-gui player container-provider pos))
                                   )
               ;:getContainer     (fn [^BlockState state, ^World worldIn, ^BlockPos pos]
               ;                    3)
               :hasTileEntity    (constantly true)
               :createTileEntity (fn [this ^BlockState state, ^IBlockReader world] (construct tile-node))
+              :getRenderType    (constantly BlockRenderType/MODEL)
               }
 
   ;:creative-tab CreativeTabs/tabBlock
@@ -252,38 +254,45 @@
            :slots         nil
            }
   :post-init (fn [this &args]
-               (assoc! this :slots (->LazyOptional (constantly (create-slots this 2))))
-               (assoc! this :wireless-node (->LazyOptional (constantly (create-wireless-node this)))))
+               (assoc! this :slots (create-slots this 2))
+               (assoc! this :wireless-node (create-wireless-node this)))
   :overrides {
-              :tick       (fn [this]
-                            (let [slots ^ItemStackHandler (.orElse ^LazyOptional (:slots this) nil)
-                                  wireless-node (.orElse ^LazyOptional (:wireless-node this) nil)]
-                              (when (and slots wireless-node)
-                                (update-charge-in! (.getStackInSlot slots 0) wireless-node)
-                                (update-charge-out! (.getStackInSlot slots 1) wireless-node)
-                                (rebuild-block-state (.world this) (.getPos this) wireless-node))))
-              :createMenu (fn [this, i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
-                            (construct container-node i playerInventory playerEntity))
+              :tick          (fn [this]
+                               (let [slots ^ItemStackHandler (:slots this)
+                                     wireless-node (:wireless-node this)]
+                                 (when (and slots wireless-node)
+                                   (update-charge-in! (.getStackInSlot slots 0) wireless-node)
+                                   (update-charge-out! (.getStackInSlot slots 1) wireless-node)
+                                   (rebuild-block-state (.world this) (.getPos this) wireless-node))))
+              :getCapability (fn [this cap side]
+                               (cond
+                                 (= cap CapabilityItemHandler/ITEM_HANDLER_CAPABILITY) (->LazyOptional (constantly (:slots this)))
+                                 :else (.superGetCapability this)
+                                 ))
+              ;:createMenu (fn [this, i, ^PlayerInventory playerInventory, ^PlayerEntity playerEntity]
+              ;              (construct container-node i playerInventory playerEntity))
               })
 
 (defn set-placer [tile-entity placer]
-  (when (instance? PlayerEntity placer) nil)
-  (throw "err"))
+  (when (instance? PlayerEntity placer)
+    (let [wireless-node ^WirelessNode (:wireless-node tile-entity)]
+      (.setPlacerName wireless-node (.getName ^PlayerEntity placer)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; blockcontainer
 
 (defblockcontainer container-node
   :overrides {
-              :transferStackInSlot (make-energy-transfer-stack-in-slot-fn
+              :quickMoveStack (make-energy-transfer-stack-in-slot-fn
                                      [(make-transfer-rules slot-ifitem slot-inv)
                                       (make-transfer-rules slot-inv slot-ifitem imag-energy-item?)])
               :canInteractWith     (fn [this ^PlayerEntity playerIn]
-                                     (let [^container-node this this
+                                     (let [^ContainerNode this this
                                            ^TileEntity tileentity (:tileentity @(.-data this))]
-                                       (Container/isWithinUsableDistance
-                                         ^IWorldPosCallable (IWorldPosCallable/of (.getWorld tileentity) (.getPos tileentity))
-                                         ^PlayerEntity playerIn ^Block block-node-instance))
+                                       (Container/stillValid
+                                         ^IWorldPosCallable (IWorldPosCallable/create (.getLevel tileentity) (.getBlockPos tileentity))
+                                         ^PlayerEntity playerIn ^Block (get-block-instance block-node))
+                                       )
                                      )
               })
 
