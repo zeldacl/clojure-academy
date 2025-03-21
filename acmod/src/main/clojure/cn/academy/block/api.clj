@@ -1,43 +1,24 @@
-(ns cn.academy.block.api)
+(ns cn.academy.block.api
+  (:require [clojure.tools.logging :as log]))
 
-(defprotocol IBlockProperties
-  "Protocol for block property management"
-  (create-boolean-property [this name]
-    "Create a boolean property with given name")
-  (create-integer-property [this name min max]
-    "Create an integer property with given name and range")
-  (get-block-material [this name]
-    "Get block material by name"))
+;; Block creation helpers
+(defn create-block-state [id properties]
+  {:id id
+   :properties properties})
 
-(defprotocol IBlockState
-  "Protocol for block state management"
-  (with-property [this property value]
-    "Add or update a property value")
-  (get-property [this property]
-    "Get value of a property")
-  (get-default-state [this]
-    "Get default state"))
+;; Re-export commonly used functions from mcmod
+(def set-block-property! mcmod.block/set-block-property!)
+(def get-block-property mcmod.block/get-block-property)
+(def create-block! mcmod.block/create-block!)
+(def register-block! mcmod.block/register-block!)
+(def get-block mcmod.block/get-block)
 
-(defprotocol IBlockContainer
-  "Protocol for block container functionality"
-  (set-hardness! [this hardness]
-    "Set block hardness")
-  (set-harvest-level! [this tool-class level]
-    "Set required tool and level for harvesting")
-  (create-tile-entity [this world meta]
-    "Create a tile entity for this block")
-  (on-block-placed [this world pos state player stack]
-    "Handle block placement")
-  (get-actual-state [this world pos]
-    "Get actual block state at position"))
+;; Block state management helpers
+(defn update-block-state! [world pos state-fn]
+  (when-let [block (get-block world pos)]
+    (let [current-state (get-block-property block)
+          new-state (state-fn current-state)]
+      (set-block-property! block new-state))))
 
-(defprotocol IForgeBlockFactory
-  "Protocol for creating Forge block components"
-  (create-block-properties [this]
-    "Create block properties instance")
-  (create-block-container [this material]
-    "Create block container with given material") 
-  (create-block-pos [this x y z]
-    "Create block position")
-  (create-item-stack [this block count meta]
-    "Create item stack for block"))
+(defn with-block-state [block property value]
+  (assoc-in block [:properties property] value))
