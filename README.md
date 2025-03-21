@@ -107,6 +107,13 @@ Generated files will be in `forge_1_16_5/src/generated/resources`.
 
 See individual protocol files for full documentation.
 
+## Documentation
+
+- [Adapter Development](doc/ADAPTER_DEVELOPMENT.md)
+- [Protocol Specification](doc/PROTOCOL_SPEC.md)
+- [Tech System Energy Architecture](doc/TECH_SYSTEM_ENERGY.md)
+- [Update to 1.14](doc/updateto1.14.md)
+
 ## Contributing
 
 1. Fork the repository

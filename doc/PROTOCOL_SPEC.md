@@ -125,6 +125,49 @@ Defines GUI behavior.
 - Resources properly managed
 - Thread-safe state access
 
+## Energy System Protocols
+
+### IWirelessNode
+Implemented by blocks that can participate in the wireless energy network.
+
+```clojure
+(defprotocol IWirelessNode
+  (get-node-type [this])
+  (get-energy [this])
+  (get-max-energy [this])
+  (get-bandwidth [this])
+  (get-range [this])
+  (get-capacity [this])
+  (connect [this other])
+  (disconnect [this other])
+  (can-connect? [this other]))
+```
+
+### IWirelessMatrix
+Implemented by blocks that can form and manage wireless energy networks.
+
+```clojure
+(defprotocol IWirelessMatrix
+  (create-network [this])
+  (get-network [this])
+  (get-network-name [this])
+  (set-network-name! [this name])
+  (get-range [this])
+  (get-capacity [this])
+  (get-bandwidth [this]))
+```
+
+### ICompressible
+Protocol for network traffic optimization.
+
+```clojure
+(defprotocol ICompressible
+  (compress [this])
+  (decompress [this data]))
+```
+
+For detailed implementation and usage examples, see [Tech System Energy Architecture](TECH_SYSTEM_ENERGY.md).
+
 ## Implementation Requirements
 
 1. All implementations must maintain these guarantees
