@@ -1,8 +1,7 @@
 (ns cn.academy.block.multiblock.example.controller-block
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.interaction :as interaction]
-            [cn.academy.block.multiblock.example.processing-machine :as machine]
-            [cn.academy.api.block :as block-api])
+            [cn.academy.block.multiblock.multiblock-member :as member]
+            [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.block Block BlockState]
            [net.minecraft.util math.BlockPos Direction]
            [net.minecraft.world World]

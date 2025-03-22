@@ -1,5 +1,6 @@
 (ns cn.academy.block.block.block-solar-gen
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
+            [cn.academy.energy.api :as energy]
             [clojure.tools.logging :as log]))
 
 ;; Define the solar generator block properties

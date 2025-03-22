@@ -1,6 +1,6 @@
 (ns cn.academy.block.tileentity.tile-solar-gen
-  (:require [cn.academy.api.block :as block-api]
-            [cn.academy.api.energy :as energy-api]
+  (:require [cn.academy.protocols.block :as block-api]
+            [cn.academy.energy.api :as energy]
             [clojure.tools.logging :as log]))
 
 ;; Solar Generator TileEntity constants

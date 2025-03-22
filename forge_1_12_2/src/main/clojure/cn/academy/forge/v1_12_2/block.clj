@@ -1,5 +1,5 @@
-(ns cn.academy.forge.v1_12_2.block
-  (:require [cn.academy.api.block :as api])
+(ns cn.academy.forge.v1-12-2.block
+  (:require [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.block.properties PropertyBool PropertyInteger]
            [net.minecraft.block.material Material]
            [net.minecraft.block Block BlockContainer]
@@ -10,7 +10,7 @@
            [net.minecraft.entity.player EntityPlayer]))
 
 (defrecord ForgeBlockProperties []
-  api/BlockProperties
+  block-api/BlockProperties
   (create-boolean-property [_ name]
     (PropertyBool/create name))
   
@@ -23,7 +23,7 @@
       (throw (IllegalArgumentException. (str "Unknown material: " name))))))
 
 (defrecord ForgeBlockState [^IBlockState state]
-  api/BlockState
+  block-api/BlockState
   (with-property [_ property value]
     (ForgeBlockState. (.withProperty state property value)))
   
@@ -34,7 +34,7 @@
     (ForgeBlockState. (.getDefaultState (.getBlock state)))))
 
 (defrecord ForgeBlockContainer [^BlockContainer container]
-  api/BlockContainer
+  block-api/BlockContainer
   (set-hardness! [_ hardness]
     (. container setHardness hardness))
   
@@ -53,7 +53,7 @@
         (.getDefaultState container) world pos))))
 
 (defrecord ForgeBlockFactory []
-  api/ForgeBlockFactory
+  block-api/ForgeBlockFactory
   (create-block-properties [_]
     (->ForgeBlockProperties))
   

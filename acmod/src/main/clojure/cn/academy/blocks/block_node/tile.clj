@@ -1,5 +1,5 @@
 (ns cn.academy.blocks.block-node.tile
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.blocks.block-node.config :as config]
             [mcmod.protocols :refer [ITileEntity IInventory IEnergyStorage]]

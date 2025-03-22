@@ -1,5 +1,5 @@
 (ns cn.academy.block.common.block-base
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
             [clojure.tools.logging :as log]))
 
 (defn create-block-property [block-properties name property-type & args]

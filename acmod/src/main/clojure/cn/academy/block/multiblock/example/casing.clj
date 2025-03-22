@@ -1,8 +1,8 @@
 (ns cn.academy.block.multiblock.example.casing
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.interaction :as interaction]
-            [cn.academy.api.block :as block-api]
-            [mcmod.block :as block]))
+            [cn.academy.block.multiblock.multiblock-member :as member]
+            [cn.academy.protocols.block :as block-api]
+            [clojure.tools.logging :as log]))
 
 (defrecord CasingBlock []
   block-api/IBlock

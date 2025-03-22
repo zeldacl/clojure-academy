@@ -1,12 +1,13 @@
 (ns cn.academy.core.test.property-test
   (:require [clojure.test :refer :all]
+            [expectations.clojure.test :refer :all]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.clojure-test :refer [defspec]]
             [cn.academy.core.util.serialization :as serial]
             [cn.academy.core.energy.chunk-cache :as cache]
-            [cn.academy.api.block :as block-api]))
+            [cn.academy.protocols.block :as block-api]))
 
 ;; Generate block position data structure instead of direct BlockPos
 (def gen-pos

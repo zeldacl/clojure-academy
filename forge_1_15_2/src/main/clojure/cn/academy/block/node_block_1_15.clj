@@ -1,6 +1,7 @@
 (ns cn.academy.block.node-block-1-15
-  (:require [cn.academy.block.block.block-node :as core]
-            [cn.academy.api.block :as block-api])
+  (:require [clojure.tools.logging :as log]
+            [cn.academy.block.block.block-node :as core]
+            [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.state.properties BooleanProperty IntegerProperty]
            [net.minecraft.state StateContainer$Builder]
            [net.minecraft.block BlockState]

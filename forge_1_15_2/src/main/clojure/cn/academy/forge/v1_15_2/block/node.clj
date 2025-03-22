@@ -1,5 +1,5 @@
 (ns cn.academy.forge.v1-15-2.block.node
-  (:require [cn.academy.api.block :as block-api])
+  (:require [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.block Block]
            [net.minecraft.block.material Material]
            [net.minecraft.state BooleanProperty IntegerProperty EnumProperty]

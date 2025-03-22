@@ -1,7 +1,8 @@
 (ns cn.academy.block.multiblock.multiblock-member
-  (:require [cn.academy.block.multiblock.multiblock-base :as base]
+  (:require [cn.academy.protocols.multiblock :as mb]
+            [cn.academy.protocols.block :as block-api]
+            [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.core :as core]
-            [cn.academy.api.block :as block-api]
             [mcmod.protocols :refer [IBlockEntity]]))
 
 (defrecord MultiblockMember [state-atom member-type]

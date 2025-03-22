@@ -1,5 +1,5 @@
 (ns cn.academy.forge-1-15.block
-  (:require [cn.academy.api.block :as block-api])
+  (:require [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.block.material Material]
            [net.minecraft.block Block AbstractBlock$Properties]
            [net.minecraft.util.text TranslationTextComponent]))

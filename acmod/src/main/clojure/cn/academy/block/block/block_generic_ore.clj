@@ -1,5 +1,5 @@
 (ns cn.academy.block.block.block-generic-ore
-  (:require [cn.academy.api.block :as block-api])
+  (:require [cn.academy.protocols.block :as block-api])
   (:import [java.util Random]))
 
 ;; Ore varieties

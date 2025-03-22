@@ -1,4 +1,7 @@
-(ns cn.academy.api.block)
+(ns cn.academy.protocols.block
+  "Core protocols for block behavior in the mod system. 
+   These protocols define the contract that all block implementations must follow,
+   providing a clean separation between block behavior definition and implementation.")
 
 (defprotocol BlockProperties
   "Protocol defining block property operations"

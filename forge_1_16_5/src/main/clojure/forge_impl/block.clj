@@ -1,5 +1,5 @@
 (ns forge-impl.block
-  (:require [mcmod.protocols :refer :all])
+  (:require [cn.academy.protocols.block :as block-api])
   (:import [net.minecraft.block Block]
            [net.minecraft.block.material Material]
            [net.minecraft.util.math BlockPos]

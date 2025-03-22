@@ -1,7 +1,7 @@
 (ns cn.academy.block.multiblock.multiblock-controller
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
             [cn.academy.block.core :as core]
-            [cn.academy.api.block :as block-api]
+            [cn.academy.protocols.block :as block-api]
             [mcmod.protocols :refer [IMultiblock IBlockEntity]]))
 
 (defrecord MultiblockController [state-atom validator]

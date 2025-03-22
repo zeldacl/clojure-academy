@@ -1,5 +1,5 @@
 (ns cn.academy.block.tileentity.tile-metal-former
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [clojure.tools.logging :as log]))
 

@@ -1,5 +1,5 @@
 (ns cn.academy.block.common.property
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
             [clojure.tools.logging :as log]))
 
 (defn create-property-manager [property-name]

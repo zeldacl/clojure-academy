@@ -1,11 +1,7 @@
 (ns cn.academy.block.multiblock.network-sync
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.machine-state :as machine]
-            [cn.academy.api.block :as block-api]
-            [cn.academy.network :as network]
-            [mcmod.protocols :refer :all]
-            [mcmod.network :as net]
-            [mcmod.position :as position]
+            [cn.academy.protocols.network :as net]
+            [cn.academy.protocols.block :as block-api]
             [clojure.tools.logging :as log]))
 
 (defprotocol INetworkSync

@@ -1,11 +1,9 @@
 (ns cn.academy.block.multiblock.example.energy-port
   (:require [cn.academy.block.multiblock.multiblock-base :as base]
-            [cn.academy.block.multiblock.interaction :as interaction]
-            [cn.academy.block.multiblock.capabilities :as caps]
-            [cn.academy.api.block :as block-api]
-            [mcmod.direction :as dir]
-            [mcmod.capability :as cap]
-            [mcmod.energy :as energy]))
+            [cn.academy.block.multiblock.multiblock-member :as member]
+            [cn.academy.energy.api :as energy]
+            [cn.academy.protocols.block :as block-api]
+            [clojure.tools.logging :as log]))
 
 (defrecord EnergyPortBlock []
   block-api/IBlock

@@ -1,5 +1,5 @@
 (ns cn.academy.block.tileentity.tile-cat-engine
-  (:require [cn.academy.api.block :as block-api]
+  (:require [cn.academy.protocols.block :as block-api]
             [cn.academy.api.energy :as energy-api]
             [cn.academy.energy.api.wireless :as wireless]
             [mcmod.nbt :as nbt]
