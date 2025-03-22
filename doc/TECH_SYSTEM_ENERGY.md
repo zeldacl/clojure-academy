@@ -54,6 +54,18 @@ The persistence framework saves and loads all system state across game sessions:
 
 A centralized configuration system that manages all energy system settings.
 
+### 7. API Module
+
+The API module (`api.clj`) provides a clean, stable interface for other mods to interact with the energy system. Key features include:
+
+- Energy storage creation and management
+- Energy transfer between tile entities
+- Network node discovery and management
+- Configuration access
+- Energy capability protocol implementation
+
+The API is designed to be backward compatible and provides clear documentation for all public functions.
+
 ## Initialization Sequence
 
 The energy system initializes in the following order:
@@ -92,12 +104,39 @@ The energy system has dependencies on the following core systems:
        ▼                  ▼                   ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   Nodes     │◄───┤   Network   │    │  Analytics  │
-└─────────────┘    └──────┬──────┘    └──────┬──────┘
-                          │                   │
-                          ▼                   ▼
-                   ┌─────────────┐    ┌─────────────┐
-                   │   Handler   │    │  Monitoring │
-                   └─────────────┘    └─────────────┘
+└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+       │                  │                   │
+       └──────────┐      │      ┌────────────┘
+                  ▼      ▼      ▼
+              ┌─────────────────────┐
+              │        API         │
+              └─────────────────────┘
+```
+
+## Usage Examples
+
+### Creating Energy Storage
+```clojure
+(require '[cn.academy.tech-system.energy-system.api :as energy])
+
+(def storage (energy/create-energy-storage
+              :capacity 50000
+              :max-receive 1000
+              :max-extract 1000))
+```
+
+### Finding and Transferring Energy
+```clojure
+(let [receivers (energy/find-energy-receivers world pos 16)
+      target (first receivers)]
+  (energy/transfer-energy source target 1000))
+```
+
+### Network Management
+```clojure
+(let [network-id (energy/create-network!)]
+  (energy/join-network! node-id network-id)
+  (energy/get-network-nodes network-id))
 ```
 
 ## State Management

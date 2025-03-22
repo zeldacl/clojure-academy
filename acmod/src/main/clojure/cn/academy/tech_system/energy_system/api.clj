@@ -1,7 +1,58 @@
 (ns cn.academy.tech-system.energy-system.api
-  (:require [cn.academy.core.energy.chunk-cache :as chunk-cache]
-            [cn.academy.core.config :as config]
-            [cn.academy.tech-system.energy-system.network.distribution :as distribution]))
+  "Public API for the Academy Mod Energy System"
+  (:require [cn.academy.tech-system.energy-system.core :as core]
+            [cn.academy.tech-system.energy-system.network.wireless :as wireless]
+            [cn.academy.tech-system.energy-system.config :as config]
+            [cn.academy.tech-system.energy-system.registry :as registry]))
+
+(defn create-energy-storage
+  "Create a new energy storage with specified capacity and transfer rates.
+   
+   Parameters:
+   - capacity: Maximum energy storage capacity in FE
+   - max-receive: Maximum energy receive rate per tick
+   - max-extract: Maximum energy extraction rate per tick
+   
+   Returns: An energy storage capability instance"
+  [& {:keys [capacity max-receive max-extract]
+      :or {capacity 10000
+           max-receive 1000
+           max-extract 1000}}]
+  (core/create-storage 
+    :capacity capacity
+    :max-receive max-receive
+    :max-extract max-extract))
+
+(defn find-energy-receivers
+  "Find all energy-capable tile entities within range of a position.
+   
+   Parameters:
+   - world: The world instance
+   - pos: Position map with :x :y :z keys
+   - range: Search radius in blocks
+   
+   Returns: Sequence of tile entities that can receive energy"
+  [world pos range]
+  (wireless/find-nearby-receivers world pos range))
+
+(defn transfer-energy
+  "Transfer energy between two tile entities.
+   
+   Parameters:
+   - source: Source tile entity with energy capability
+   - target: Target tile entity with energy capability
+   - amount: Maximum amount of energy to transfer
+   
+   Returns: Amount of energy actually transferred, or nil if transfer failed"
+  [source target amount]
+  (core/transfer-energy source target amount))
+
+(defn get-config
+  "Get energy system configuration values.
+   
+   Returns: Map of configuration values"
+  []
+  (config/get-wireless-config))
 
 (def ^:dynamic *energy-impl* nil)
 
