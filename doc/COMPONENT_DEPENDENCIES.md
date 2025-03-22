@@ -86,6 +86,31 @@ All components should interact with the energy system using the following API fu
 | `energy-api/leave-network!` | Remove a node from a network |
 | `energy-api/register-energy-node-type!` | Register an energy node type |
 
+## Module Optimization Guidelines
+
+When designing module components:
+
+1. **Centralize Configuration**: Use a dedicated config file for component properties
+   * See `block_node/config.clj` for a reference implementation
+   * Use constants for type-safe property access
+
+2. **Share Common UI Code**: Extract shared UI functionality
+   * Use a dedicated module like `ui-components.clj` for shared UI code
+   * Standardize property access and error handling
+
+3. **Use Data-Driven Approaches**: Prefer maps for configuration over hardcoded values
+   * Convert repetitive code patterns to data structures with processing functions
+   * Example: `NODE_TYPES` map in `registry.clj`
+
+4. **Consistent Error Handling**: Add proper error handling and logging
+   * Validate inputs at API boundaries
+   * Use informative error messages
+   * Add fallback behavior where appropriate
+
+5. **Functional Abstraction**: Create small helper functions for grouped functionality
+   * Divide complex functions into smaller, focused ones
+   * Use private helper functions to hide implementation details
+
 ## Resolving Dependency Conflicts
 
 If you encounter a dependency conflict between components:
@@ -107,3 +132,15 @@ grep -r "cn.academy.blocks.block_node" acmod/src/main/clojure/cn/academy/blocks/
 # Check for imports of energy system implementation details
 grep -r "cn.academy.tech-system.energy-system.network" acmod/src/main/clojure/cn/academy/blocks/
 ```
+
+## Reference Implementations
+
+For examples of optimized module implementations, see:
+
+1. **block_node**: Optimized wireless energy node implementation
+   * See the [Block Node Architecture](BLOCK_NODE_ARCHITECTURE.md) document for details
+   * Features shared UI components, data-driven registration, and standardized error handling
+
+2. **energy_system**: Core energy management system
+   * Clean API boundary with implementation details hidden
+   * Protocol-based design with flexible adapters

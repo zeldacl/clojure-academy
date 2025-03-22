@@ -5,8 +5,39 @@
             [mcmod.protocols :refer [ITileEntity IInventory IEnergyStorage]]
             [clojure.tools.logging :as log]))
 
+;; Node utility functions
+(defn clamp-energy
+  "Ensure energy amount is within valid range"
+  [amount min-value max-value]
+  (max min-value (min amount max-value)))
+
+(defn charge-node
+  "Add energy to a node with bandwidth limit check"
+  [state-atom max-energy-fn bandwidth-fn amount ignore-bandwidth?]
+  (let [state @state-atom
+        energy (:energy state)
+        max-energy (max-energy-fn state)
+        space (- max-energy energy)
+        bandwidth (if ignore-bandwidth? Double/MAX_VALUE (bandwidth-fn state))
+        charge-amount (min amount space bandwidth)]
+    (when (pos? charge-amount)
+      (swap! state-atom update :energy + charge-amount))
+    charge-amount))
+
+(defn discharge-node
+  "Remove energy from a node with bandwidth limit check"
+  [state-atom bandwidth-fn amount ignore-bandwidth?]
+  (let [state @state-atom
+        energy (:energy state)
+        bandwidth (if ignore-bandwidth? Double/MAX_VALUE (bandwidth-fn state))
+        discharge-amount (min amount energy bandwidth)]
+    (when (pos? discharge-amount)
+      (swap! state-atom update :energy - discharge-amount))
+    discharge-amount))
+
+;; Node state record
 (defrecord NodeState [energy active placer-id password-hash node-type node-name]
-  node-types/IWirelessNode
+  Object
   (get-node-type [_] node-type)
   (get-energy [_] energy)
   (get-max-energy [this]
@@ -16,32 +47,43 @@
   (get-range [this]
     (config/get-node-property node-type :range))
   (get-capacity [this]
-    (config/get-node-property node-type :max-connections))
-  (set-placer [this player]
-    (assoc this :placer-id (.getUniqueID player))))
+    (config/get-node-property node-type :max-connections)))
 
-(defn create-node-state [node-type]
+(defn create-node-state 
+  "Create a new node state with default values"
+  [node-type]
   (map->NodeState
     {:energy 0.0
      :active false
      :placer-id nil
      :password-hash ""
      :node-type node-type
-     :node-name ""}))
+     :node-name (str "Node " (name node-type))}))
 
-(defn tick-node [state]
+(defn tick-node 
+  "Handle node state updates during tick"
+  [state]
   (if (:active state)
     state
     state))
 
+;; Node tile entity protocol
 (defprotocol INodeTile
   (get-energy [this])
   (set-energy [this amount])
   (charge [this amount ignore-bandwidth?])
   (discharge [this amount ignore-bandwidth?])
   (can-charge? [this])
-  (can-discharge? [this]))
+  (can-discharge? [this])
+  (node? [this]))
 
+;; Default INodeTile implementation
+(defn node?
+  "Check if a tile entity is a node"
+  [tile]
+  (instance? INodeTile tile))
+
+;; Tile entity implementation
 (defrecord TileNode [state-atom inventory]
   ITileEntity
   (tick [this]
@@ -54,20 +96,20 @@
   
   (set-energy [_ amount]
     (swap! state-atom assoc :energy 
-           (node-types/clamp-energy amount 0 (config/get-node-property (:node-type @state-atom) :max-energy))))
+           (clamp-energy amount 0 (config/get-node-property (:node-type @state-atom) :max-energy))))
   
   (charge [this amount ignore-bandwidth?]
-    (node-types/charge-node state-atom
-                         #(config/get-node-property (:node-type %) :max-energy) 
-                         #(config/get-node-property (:node-type %) :bandwidth)
-                         amount 
-                         ignore-bandwidth?))
+    (charge-node state-atom
+                #(config/get-node-property (:node-type %) :max-energy) 
+                #(config/get-node-property (:node-type %) :bandwidth)
+                amount 
+                ignore-bandwidth?))
   
   (discharge [this amount ignore-bandwidth?]
-    (node-types/discharge-node state-atom
-                           #(config/get-node-property (:node-type %) :bandwidth)
-                           amount
-                           ignore-bandwidth?))
+    (discharge-node state-atom
+                   #(config/get-node-property (:node-type @state-atom) :bandwidth)
+                   amount
+                   ignore-bandwidth?))
   
   (can-charge? [this]
     (< (get-energy this) (config/get-node-property (:node-type @state-atom) :max-energy)))
@@ -75,7 +117,9 @@
   (can-discharge? [this]
     (> (get-energy this) 0))
   
-  ;; Add the standard IEnergyStorage protocol for consistency
+  (node? [_] true)
+  
+  ;; Standard IEnergyStorage protocol
   IEnergyStorage
   (get-energy-stored [this]
     (get-energy this))
@@ -107,19 +151,70 @@
   (can-extract? [this]
     (can-discharge? this)))
 
+;; Helper functions for property methods
+(defn- add-property-methods! [tile-entity state-atom]
+  (doseq [[method-name getter]
+          [["MaxEnergy" #(config/get-node-property (:node-type @state-atom) :max-energy)]
+           ["Bandwidth" #(config/get-node-property (:node-type @state-atom) :bandwidth)]
+           ["Range" #(config/get-node-property (:node-type @state-atom) :range)]
+           ["Capacity" #(config/get-node-property (:node-type @state-atom) :max-connections)]]]
+    (block-api/add-method! tile-entity (str "get" method-name) getter)))
+
+(defn- add-state-methods! [tile-entity state-atom]
+  (doseq [[property key-name]
+          [["PlacerId" :placer-id]
+           ["NodeName" :node-name]
+           ["PasswordHash" :password-hash]
+           ["Energy" :energy]
+           ["Active" :active]]]
+    (block-api/add-method! tile-entity (str "get" property) 
+                         #(get @state-atom key-name))
+    (block-api/add-method! tile-entity (str "set" property) 
+                         #(swap! state-atom assoc key-name %))))
+
+(defn- add-nbt-handlers! [tile-entity state-atom]
+  ;; Save NBT data
+  (block-api/on-save-nbt! 
+    tile-entity 
+    (fn [compound]
+      (let [state @state-atom]
+        (doto compound
+          (block-api/put-double! "energy" (:energy state))
+          (block-api/put-boolean! "active" (:active state))
+          (block-api/put-string! "placerId" (or (:placer-id state) ""))
+          (block-api/put-string! "password" (or (:password-hash state) ""))
+          (block-api/put-string! "nodeName" (or (:node-name state) ""))
+          (block-api/put-string! "nodeType" (name (:node-type state)))))))
+  
+  ;; Load NBT data
+  (block-api/on-load-nbt! 
+    tile-entity 
+    (fn [compound]
+      (reset! state-atom
+              (map->NodeState
+                {:energy (block-api/get-double compound "energy" 0.0)
+                 :active (block-api/get-boolean compound "active" false)
+                 :placer-id (block-api/get-string compound "placerId" "")
+                 :password-hash (block-api/get-string compound "password" "")
+                 :node-name (block-api/get-string compound "nodeName" "")
+                 :node-type (keyword (block-api/get-string compound "nodeType" "basic"))})))))
+
+;; Main tile entity creation function
 (defn create-node-tile [node-type]
   (let [factory @block-api/*forge-factory*
         tile-entity (block-api/create-tile-entity factory)
         state-atom (atom (create-node-state node-type))]
     
+    ;; Add capability provider for energy
     (block-api/add-capability-provider! 
       tile-entity 
       (energy-api/create-energy-storage 
         (config/get-node-property node-type :max-energy)
-        (fn [] (:energy @state-atom))
-        (fn [amount] (swap! state-atom assoc :energy amount))
-        (fn [] (config/get-node-property node-type :bandwidth))))
+        #(:energy @state-atom)
+        #(swap! state-atom assoc :energy %)
+        #(config/get-node-property node-type :bandwidth)))
     
+    ;; Add tick handler
     (block-api/on-tile-entity-tick! 
       tile-entity 
       (fn []
@@ -127,61 +222,22 @@
         (when (zero? (mod (block-api/get-world-time) 20))
           (block-api/mark-dirty! tile-entity))))
     
-    (block-api/on-save-nbt! 
-      tile-entity 
-      (fn [compound]
-        (let [state @state-atom]
-          (doto compound
-            (block-api/put-double! "energy" (:energy state))
-            (block-api/put-boolean! "active" (:active state))
-            (block-api/put-string! "placerId" (or (:placer-id state) ""))
-            (block-api/put-string! "password" (or (:password-hash state) ""))
-            (block-api/put-string! "nodeName" (or (:node-name state) ""))
-            (block-api/put-string! "nodeType" (name (:node-type state)))))))
+    ;; Add NBT handlers
+    (add-nbt-handlers! tile-entity state-atom)
     
-    (block-api/on-load-nbt! 
-      tile-entity 
-      (fn [compound]
-        (reset! state-atom
-                (map->NodeState
-                  {:energy (block-api/get-double compound "energy" 0.0)
-                   :active (block-api/get-boolean compound "active" false)
-                   :placer-id (block-api/get-string compound "placerId" "")
-                   :password-hash (block-api/get-string compound "password" "")
-                   :node-name (block-api/get-string compound "nodeName" "")
-                   :node-type (keyword (block-api/get-string compound "nodeType" "basic"))}))))
+    ;; Add property getters/setters
+    (add-property-methods! tile-entity state-atom)
+    (add-state-methods! tile-entity state-atom)
     
-    (block-api/add-method! tile-entity "getMaxEnergy" 
-                          (fn [] (config/get-node-property (:node-type @state-atom) :max-energy)))
-    (block-api/add-method! tile-entity "getBandwidth" 
-                          (fn [] (config/get-node-property (:node-type @state-atom) :bandwidth)))
-    (block-api/add-method! tile-entity "getRange" 
-                          (fn [] (config/get-node-property (:node-type @state-atom) :range)))
-    (block-api/add-method! tile-entity "getCapacity" 
-                          (fn [] (config/get-node-property (:node-type @state-atom) :max-connections)))
-    (block-api/add-method! tile-entity "getPlacerId" 
-                          (fn [] (:placer-id @state-atom)))
-    (block-api/add-method! tile-entity "setPlacerId" 
-                          (fn [id] (swap! state-atom assoc :placer-id id)))
-    (block-api/add-method! tile-entity "getNodeName" 
-                          (fn [] (:node-name @state-atom)))
-    (block-api/add-method! tile-entity "setNodeName" 
-                          (fn [name] (swap! state-atom assoc :node-name name)))
-    (block-api/add-method! tile-entity "getPasswordHash" 
-                          (fn [] (:password-hash @state-atom)))
-    (block-api/add-method! tile-entity "setPasswordHash" 
-                          (fn [pwd] (swap! state-atom assoc :password-hash pwd)))
-    (block-api/add-method! tile-entity "getEnergy" 
-                          (fn [] (:energy @state-atom)))
-    (block-api/add-method! tile-entity "setEnergy" 
-                          (fn [amount] (swap! state-atom assoc :energy amount)))
-    (block-api/add-method! tile-entity "isActive" 
-                          (fn [] (:active @state-atom)))
-    (block-api/add-method! tile-entity "setActive" 
-                          (fn [active] (swap! state-atom assoc :active active)))
-    
+    ;; Return the configured tile entity
     tile-entity))
 
+;; Factory methods for Java interop
+(defn tile-factory-createBasic [] (create-node-tile :basic))
+(defn tile-factory-createStandard [] (create-node-tile :standard))
+(defn tile-factory-createAdvanced [] (create-node-tile :advanced))
+
+;; Generate Java classes
 (gen-class
   :name cn.academy.blocks.block-node.TileNode$Factory
   :methods [^:static [createBasic [] Object]
@@ -189,11 +245,16 @@
             ^:static [createAdvanced [] Object]]
   :prefix "tile-factory-")
 
-(defn tile-factory-createBasic []
-  (create-node-tile :basic))
+;; Utility methods for external use
+(defn get-inventory [tile]
+  (.getInventory tile))
 
-(defn tile-factory-createStandard []
-  (create-node-tile :standard))
+(defn set-node-energy! [tile energy]
+  (.setEnergy tile energy))
 
-(defn tile-factory-createAdvanced []
-  (create-node-tile :advanced))
+(defn set-node-enabled! [tile enabled]
+  (.setActive tile enabled))
+
+(defn set-node-config! [tile name password]
+  (.setNodeName tile name)
+  (.setPasswordHash tile password))

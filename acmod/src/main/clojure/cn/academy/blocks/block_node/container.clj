@@ -1,8 +1,9 @@
 (ns cn.academy.blocks.block-node.container
   (:require [mcmod.protocols :refer :all]
-            [cn.academy.blocks.block-node.tile :as tile]))
+            [cn.academy.blocks.block-node.tile :as tile]
+            [cn.academy.blocks.block-node.ui-components :as ui]))
 
-;; Copy existing NodeContainer implementation with updated namespace references
+;; Simplified container implementation
 (defrecord NodeContainer [tile-entity player inventory]
   IContainer
   (get-slots [_]
@@ -21,10 +22,9 @@
     (let [slot (.getSlot inventory idx)
           stack (.getStack slot)]
       (when stack
-        ;; Handle shift-clicking logic for energy items
-        (let [remaining (.mergeItemStack inventory stack 0 9 false)]
-          (when (pos? remaining)
-            (.mergeItemStack inventory stack 9 36 false))))))
+        ;; Simplified merging logic
+        (or (.mergeItemStack inventory stack 0 9 false)
+            (.mergeItemStack inventory stack 9 36 false)))))
 
   (merge-stack [_ slot stack]
     (.mergeItemStack inventory stack 
@@ -35,38 +35,34 @@
   (detect-sync-changes [_]
     (.detectAndSendChanges inventory)))
 
-(defprotocol INodeContainer
-  (get-node [this])
-  (get-energy [this])
-  (get-max-energy [this])
-  (get-bandwidth [this])
-  (get-range [this])
-  (get-capacity [this]))
-
-(defrecord NodeContainerImpl [container tile]
-  INodeContainer
-  (get-node [_] tile)
+;; Single container implementation with both IContainer and node-specific functionality
+(defrecord NodeContainerImpl [inventory player tile-entity]
+  IContainer
+  (get-slots [_] (range (.getSizeInventory inventory)))
+  (get-slot [_ idx] (.getStackInSlot inventory idx))
+  (set-slot [_ idx stack] (.setInventorySlotContents inventory idx stack))
+  (can-interact-with [_ _] true)
+  (transfer-stack [this player idx] 
+    (when-let [stack (.getStack (.getSlot inventory idx))]
+      (or (.mergeItemStack inventory stack 0 9 false)
+          (.mergeItemStack inventory stack 9 36 false))))
+  (merge-stack [_ slot stack]
+    (.mergeItemStack inventory stack (.slotNumber slot) (inc (.slotNumber slot)) false))
+  (detect-sync-changes [_] (.detectAndSendChanges inventory))
   
-  (get-energy [_]
-    (tile/get-energy tile))
-  
-  (get-max-energy [_]
-    (tile/get-max-energy tile))
-  
-  (get-bandwidth [_]
-    (tile/get-bandwidth tile))
-  
-  (get-range [_]
-    (tile/get-range tile))
-  
-  (get-capacity [_]
-    (tile/get-capacity tile)))
+  ;; Additional node-specific functionality
+  Object
+  (getTileEntity [_] tile-entity)
+  (getPlayer [_] player)
+  (getEnergy [_] (ui/get-tile-property tile-entity :energy))
+  (getMaxEnergy [_] (ui/get-tile-property tile-entity :max-energy))
+  (getBandwidth [_] (ui/get-tile-property tile-entity :bandwidth))
+  (getRange [_] (ui/get-tile-property tile-entity :range)))
 
 ;; Factory function
 (defn create-container [tile player]
-  (let [inventory (tile/get-inventory tile)
-        container (->NodeContainer tile player inventory)]
-    (->NodeContainerImpl container tile)))
+  (let [inventory (tile/get-inventory tile)]
+    (->NodeContainerImpl inventory player tile)))
 
 ;; Export for Java interop
 (gen-class
@@ -81,8 +77,6 @@
 (defn container-init [tile player]
   [[] (create-container tile player)])
 
-(defn container-getTileEntity [this]
-  (get-node (.state this)))
-
-(defn container-getPlayer [this]
-  (:player (.state this)))
+;; Use the common Java interop accessors
+(ui/define-java-accessor "container" "getTileEntity" :tile-entity)
+(ui/define-java-accessor "container" "getPlayer" :player)
