@@ -1,4 +1,7 @@
-(ns cn.academy.api.render
+(ns cn.academy.protocols.render
+  "Core protocols for rendering in the mod system.
+   These protocols define the contract that all rendering implementations must follow,
+   providing a clean separation between rendering behavior definition and implementation."
   (:require [clojure.java.io :as io]))
 
 (defprotocol IModelLoader

@@ -1,5 +1,5 @@
 (ns cn.academy.forge-1-15.render
-  (:require [cn.academy.api.render :as render-api])
+  (:require [cn.academy.protocols.render :as render-api])
   (:import [com.mojang.blaze3d.matrix MatrixStack]
            [net.minecraft.client Minecraft]
            [net.minecraft.util ResourceLocation]

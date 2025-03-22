@@ -1,5 +1,5 @@
 (ns cn.academy.forge-1-12.render
-  (:require [cn.academy.api.render :as render-api])
+  (:require [cn.academy.protocols.render :as render-api])
   (:import [net.minecraft.client.renderer.texture TextureMap]
            [net.minecraft.client.renderer GlStateManager]
            [net.minecraft.util ResourceLocation]

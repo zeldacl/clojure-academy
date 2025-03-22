@@ -1,7 +1,9 @@
 (ns cn.academy.forge-1-12.init
-  (:require [cn.academy.core.init :as core-init]
+  (:require [clojure.tools.logging :as log]
+            [cn.academy.protocols.block :as block-api]
+            [cn.academy.protocols.render :as render-api]
+            [cn.academy.core.init :as core-init]
             [cn.academy.core.registry :as core-registry]
-            [cn.academy.api.render :as render-api]
             [cn.academy.forge-1-12.block :as forge-block]
             [cn.academy.forge-1-12.energy :as forge-energy]
             [cn.academy.forge-1-12.render :as forge-render]

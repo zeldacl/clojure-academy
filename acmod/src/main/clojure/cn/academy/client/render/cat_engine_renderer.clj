@@ -1,5 +1,5 @@
 (ns cn.academy.client.render.cat-engine-renderer
-  (:require [cn.academy.api.render :as render-api]
+  (:require [cn.academy.protocols.render :as render-api]
             [cn.academy.block.tileentity.tile-cat-engine :as tile-engine]
             [cn.lambdalib2.util.game-timer :as game-timer])
   (:import [org.lwjgl.opengl GL11]))
