@@ -1,61 +1,122 @@
-(ns cn.academy.blocks.block_matrix.state)
+(ns cn.academy.blocks.block-matrix.state
+  "Matrix state management with core functionality for the wireless matrix block."
+  (:require [cn.academy.blocks.block-matrix.protocols :refer [IMatrixState IMatrixSecurity]]
+            [cn.academy.blocks.block-matrix.utils :as utils]
+            [cn.academy.blocks.block-matrix.inventory :as inventory]
+            [clojure.tools.logging :as log]))
 
-(defprotocol IMatrixState
-  (initialize! [this])
-  (update! [this delta-time])
-  (is-formed? [this])
-  (try-form! [this])
-  (break! [this])
-  (get-core-level [this])
-  (get-plate-count [this])
-  (get-energy-stored [this])
-  (get-energy-capacity [this])
-  (get-network-id [this])
-  (handle-sync! [this data]))
-
-(defrecord MatrixState [matrix inventory network energy state-atom]
+;; State management implementation
+(defrecord MatrixState [config state-atom inventory]
   IMatrixState
-  (initialize! [_]
-    (reset! state-atom {:formed? false
-                       :last-update 0}))
-
-  (update! [_ delta-time]
-    (when (is-formed? _)
-      (swap! state-atom update :last-update + delta-time)))
+  (is-active? [_]
+    (:active @state-atom))
   
-  (is-formed? [_]
-    (:formed? @state-atom))
+  (set-active [_ active?]
+    (swap! state-atom assoc :active active?))
   
-  (try-form! [this]
-    (when (and (pos? (get-core-level this))
-               (>= (get-plate-count this) 3))
-      (swap! state-atom assoc :formed? true)
-      true))
-  
-  (break! [_]
-    (swap! state-atom assoc :formed? false))
-
   (get-core-level [_]
-    (get-in @state-atom [:core :level] 0))
+    (let [core-item (inventory/get-core-item inventory)]
+      (or (inventory/get-core-level core-item) 0)))
   
   (get-plate-count [_]
-    (count (get-in @state-atom [:plates] [])))
+    (inventory/get-plate-count inventory))
   
-  (get-energy-stored [_]
-    (get-in @state-atom [:energy :stored] 0))
+  (is-formed? [this]
+    (and (inventory/get-core-item inventory)
+         (pos? (get-plate-count this))))
   
-  (get-energy-capacity [_]
-    (get-in @state-atom [:energy :capacity] 0))
+  (can-form? [this]
+    (is-formed? this))
   
-  (get-network-id [_]
-    (get-in @state-atom [:network :id]))
+  (save-state [this]
+    (merge @state-atom
+           {:inventory (inventory/get-inventory-data inventory)}))
   
-  (handle-sync! [_ data]
-    (swap! state-atom merge (select-keys data [:formed? :core :plates :energy :network]))))
+  (load-state [this data]
+    (reset! state-atom (dissoc data :inventory))
+    (when-let [inv-data (:inventory data)]
+      (inventory/load-inventory-data! inventory inv-data)))
+  
+  ;; Security management
+  IMatrixSecurity
+  (get-owner [_]
+    (:owner @state-atom))
+  
+  (set-owner [_ owner-id]
+    (swap! state-atom assoc :owner owner-id))
+  
+  (can-interact? [this player]
+    (let [owner (get-owner this)]
+      (or (nil? owner) 
+          (= owner (.getName player))
+          (.isCreative player))))
+  
+  (set-password [_ password]
+    (swap! state-atom assoc :password password))
+  
+  (get-password [_]
+    (:password @state-atom))
+  
+  (validate-password [this password]
+    (let [stored-pwd (get-password this)]
+      (or (nil? stored-pwd)
+          (empty? stored-pwd)
+          (= stored-pwd password)))))
 
-(defn create-matrix-state [matrix config]
-  (->MatrixState matrix 
-                 (:inventory matrix)
-                 (:network matrix)
-                 (:energy matrix)
-                 (atom {})))
+;; State utility functions
+(defn update-network-state!
+  "Update matrix state with network information"
+  [state network-id connected?]
+  (swap! (:state-atom state) assoc 
+         :network-id network-id
+         :connected connected?))
+
+(defn on-tick!
+  "Process matrix state updates for each tick"
+  [state]
+  (when (is-formed? state)
+    (when-not (is-active? state)
+      (set-active state true))))
+
+(defn process-form-update!
+  "Process changes to the matrix formation state"
+  [state old-formed? new-formed?]
+  (cond
+    ;; Matrix became formed
+    (and (not old-formed?) new-formed?)
+    (utils/with-error-handling "Error processing matrix formation"
+      (set-active state true)
+      true)
+    
+    ;; Matrix became unformed
+    (and old-formed? (not new-formed?))
+    (utils/with-error-handling "Error processing matrix deformation"
+      (set-active state false)
+      true)
+    
+    :else false))
+
+;; Matrix state serialization
+(defn get-serialized-state
+  "Get serialized state data suitable for NBT storage"
+  [state]
+  (let [base-state (save-state state)]
+    {:active (:active base-state)
+     :owner (:owner base-state)
+     :password (:password base-state)
+     :network-id (:network-id base-state)
+     :connected (:connected base-state)
+     :inventory (:inventory base-state)}))
+
+;; Factory function
+(defn create-matrix-state
+  "Create a new matrix state manager"
+  [config]
+  (let [inv (inventory/create-inventory config)]
+    (->MatrixState config 
+                   (atom {:active false
+                          :owner nil
+                          :password ""
+                          :network-id nil
+                          :connected false})
+                   inv)))

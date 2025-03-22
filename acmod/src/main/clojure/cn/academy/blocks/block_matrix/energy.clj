@@ -1,64 +1,128 @@
-(ns cn.academy.blocks.block_matrix.energy
-  (:require [mcmod.protocols :refer [IEnergyStorage]]
-            [cn.academy.tech-system.energy-system.api :as energy-api]))
+(ns cn.academy.blocks.block-matrix.energy
+  "Energy management for the wireless matrix block."
+  (:require [cn.academy.blocks.block-matrix.protocols :refer [IMatrixEnergy]]
+            [cn.academy.blocks.block-matrix.utils :as utils]
+            [cn.academy.blocks.block-matrix.inventory :as inventory]
+            [mcmod.protocols :refer [IEnergyStorage]]
+            [clojure.tools.logging :as log]))
 
-(def ^:private DEFAULT_CAPACITY 100000)
-(def ^:private DEFAULT_TRANSFER 1000)
-(def ^:private CORE_MULTIPLIER 2.0)
-(def ^:private PLATE_MULTIPLIER 1.5)
-
-;; Use the standard IEnergyStorage protocol instead of a custom one
-(defrecord MatrixEnergy [matrix state energy-atom]
+;; Energy tracking implementation
+(defrecord MatrixEnergy [config state energy-atom]
+  ;; Implement energy protocol for matrix-specific operations
+  IMatrixEnergy
+  (get-energy [_]
+    (:current @energy-atom))
+  
+  (set-energy [_ amount]
+    (let [max-capacity (get-energy-capacity _)]
+      (swap! energy-atom assoc :current 
+             (max 0 (min amount max-capacity)))))
+  
+  (add-energy [this amount]
+    (let [current (get-energy this)
+          max-capacity (get-energy-capacity this)
+          space (- max-capacity current)
+          added (min amount space)]
+      (set-energy this (+ current added))
+      added))
+  
+  (remove-energy [this amount]
+    (let [current (get-energy this)
+          removed (min amount current)]
+      (set-energy this (- current removed))
+      removed))
+  
+  (get-energy-capacity [_]
+    (let [core-level (inventory/get-core-level (:core-item state))
+          plate-count (inventory/get-plate-count state)]
+      (if (and core-level plate-count)
+        (utils/calculate-energy-capacity 
+          (get-in @config [:energy :base-capacity])
+          (get-in @config [:energy :core-multiplier])
+          (get-in @config [:energy :plate-multiplier])
+          core-level 
+          plate-count)
+        0)))
+  
+  (get-transfer-rate [_]
+    (let [core-level (inventory/get-core-level (:core-item state))]
+      (if core-level
+        (utils/calculate-transfer-rate
+          (get-in @config [:energy :base-transfer])
+          (get-in @config [:energy :core-multiplier])
+          core-level)
+        0)))
+  
+  ;; Standard Forge energy capability implementation
   IEnergyStorage
-  (receive-energy [this amount simulate]
-    (when (:formed? @state)
-      (let [capacity (get-max-energy-stored this)
-            stored (get-energy-stored this)
-            space (- capacity stored)
-            accept-amount (min amount space)]
-        (when (pos? accept-amount)
-          (when-not simulate
-            (swap! energy-atom update :stored + accept-amount))
-          accept-amount))))
+  (getEnergyStored [this]
+    (get-energy this))
   
-  (extract-energy [this amount simulate]
-    (when (:formed? @state)
-      (let [stored (get-energy-stored this)
-            extract-amount (min amount stored)]
-        (when (pos? extract-amount)
-          (when-not simulate
-            (swap! energy-atom update :stored - extract-amount))
-          extract-amount))))
+  (getMaxEnergyStored [this]
+    (get-energy-capacity this))
   
-  (get-energy-stored [_]
-    (:stored @energy-atom))
+  (canExtract [this]
+    (> (get-energy this) 0))
   
-  (get-max-energy-stored [this]
-    (let [core-level (:core-level @state)
-          plate-count (:plate-count @state)]
-      (* DEFAULT_CAPACITY 
-         (Math/pow CORE_MULTIPLIER core-level)
-         (Math/pow PLATE_MULTIPLIER plate-count))))
+  (canReceive [this]
+    (< (get-energy this) (get-energy-capacity this)))
   
-  (can-receive? [_]
-    (:formed? @state))
+  (extractEnergy [this maxExtract simulate]
+    (if simulate
+      (min maxExtract (get-energy this))
+      (remove-energy this maxExtract)))
   
-  (can-extract? [_]
-    (:formed? @state)))
+  (receiveEnergy [this maxReceive simulate]
+    (if simulate
+      (let [current (get-energy this)
+            max-capacity (get-energy-capacity this)
+            space (- max-capacity current)]
+        (min maxReceive space))
+      (add-energy this maxReceive))))
 
-;; Additional matrix-specific energy functionality that extends the standard interface
-(defprotocol IMatrixEnergyExtension
-  (get-bandwidth [this]))
+;; Energy stats calculation
+(defn calculate-consumption
+  "Calculate the energy consumption for the matrix based on state"
+  [energy network-connections]
+  (let [base-consumption (get-in @(:config energy) [:energy :base-consumption])
+        multiplier (+ 1.0 (* 0.1 (count network-connections)))]
+    (* base-consumption multiplier)))
 
-(extend-type MatrixEnergy
-  IMatrixEnergyExtension
-  (get-bandwidth [this]
-    (* DEFAULT_TRANSFER 
-       (Math/pow CORE_MULTIPLIER (:core-level @(:state this))))))
+;; Energy utility functions
+(defn get-energy-percentage
+  "Get energy stored as a percentage of capacity"
+  [energy]
+  (let [current (get-energy energy)
+        capacity (get-energy-capacity energy)]
+    (if (pos? capacity)
+      (/ current capacity)
+      0.0)))
 
+(defn has-energy-for-operation?
+  "Check if the matrix has enough energy for an operation"
+  [energy amount]
+  (>= (get-energy energy) amount))
+
+(defn consume-operation-energy
+  "Try to consume energy for an operation, returns true if successful"
+  [energy amount]
+  (when (has-energy-for-operation? energy amount)
+    (remove-energy energy amount)
+    true))
+
+;; Factory function
 (defn create-energy
-  "Create new matrix energy handler"
-  [matrix state]
-  (->MatrixEnergy matrix
-                  state
-                  (atom {:stored 0})))
+  "Create a new matrix energy manager"
+  [config state]
+  (->MatrixEnergy config state (atom {:current 0})))
+
+;; Serialization helpers
+(defn get-energy-data
+  "Get energy data for serialization"
+  [energy]
+  {:current (get-energy energy)})
+
+(defn load-energy-data!
+  "Load energy data from serialized form"
+  [energy data]
+  (set-energy energy (:current data)))
