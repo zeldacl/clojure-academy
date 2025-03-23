@@ -1,7 +1,7 @@
 (ns cn.academy.block.node-block
   (:require [cn.academy.block.node :as node]
             [cn.academy.block.node-types :as types]
-            [cn.academy.block.tileentity.tile-node :as tile-node])
+            [cn.academy.blocks.block-node.tile :as tile-node])
   (:import [net.minecraft.block Block BlockStateContainer]
            [net.minecraft.block.properties PropertyBool PropertyInteger]
            [net.minecraft.block.state IBlockState]

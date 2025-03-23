@@ -4,7 +4,7 @@
             [cn.academy.block.block.block-node :as node]
             [mcmod.protocols :refer :all]
             [cn.academy.block.block-node :as block-node]
-            [cn.academy.block.tileentity.node-tile :as node-tile]))
+            [cn.academy.blocks.block-node.tile :as node-tile]))
 
 ;; Registry entries that will be used by all forge versions
 (def registry-entries

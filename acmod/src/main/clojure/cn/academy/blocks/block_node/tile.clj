@@ -5,6 +5,19 @@
             [mcmod.protocols :refer [ITileEntity IInventory IEnergyStorage]]
             [clojure.tools.logging :as log]))
 
+;; Function migrated from cn.academy.block.tileentity.node-tile
+(defn- calculate-connection-points 
+  "Calculate all possible connection points within the specified range from a position"
+  [pos range]
+  (let [[x y z] pos
+        radius range]
+    (for [dx (range (- radius) (inc radius))
+          dy (range (- radius) (inc radius))
+          dz (range (- radius) (inc radius))
+          :let [dist (Math/sqrt (+ (* dx dx) (* dy dy) (* dz dz)))]
+          :when (<= dist radius)]
+      [(+ x dx) (+ y dy) (+ z dz)])))
+
 ;; Node utility functions
 (defn clamp-energy
   "Ensure energy amount is within valid range"
@@ -36,7 +49,7 @@
     discharge-amount))
 
 ;; Node state record
-(defrecord NodeState [energy active placer-id password-hash node-type node-name]
+(defrecord NodeState [energy active placer-id password-hash node-type node-name connections]
   Object
   (get-node-type [_] node-type)
   (get-energy [_] energy)
@@ -58,13 +71,19 @@
      :placer-id nil
      :password-hash ""
      :node-type node-type
-     :node-name (str "Node " (name node-type))}))
+     :node-name (str "Node " (name node-type))
+     :connections #{}}))
 
 (defn tick-node 
   "Handle node state updates during tick"
   [state]
   (if (:active state)
-    state
+    ;; When node is active, distribute energy on some ticks
+    (if (and (> (:energy state) 0)
+             (pos? (count (:connections state)))
+             (zero? (mod (System/currentTimeMillis) 40)))
+      (assoc state :pending-distribute true)
+      state)
     state))
 
 ;; Node tile entity protocol
@@ -75,7 +94,13 @@
   (discharge [this amount ignore-bandwidth?])
   (can-charge? [this])
   (can-discharge? [this])
-  (node? [this]))
+  (node? [this])
+  (get-connections [this])
+  (get-position [this])
+  (can-connect? [this other])
+  (connect [this other])
+  (disconnect [this other])
+  (distribute-energy [this]))
 
 ;; Default INodeTile implementation
 (defn node?
@@ -87,9 +112,17 @@
 (defrecord TileNode [state-atom inventory]
   ITileEntity
   (tick [this]
-    (swap! state-atom tick-node)
-    (when (zero? (mod (block-api/get-world-time) 20))
-      (block-api/mark-dirty! this)))
+    (let [prev-state @state-atom
+          updated-state (swap! state-atom tick-node)]
+      
+      ;; If pending distribution, handle energy distribution
+      (when (:pending-distribute updated-state)
+        (distribute-energy this)
+        (swap! state-atom dissoc :pending-distribute))
+        
+      ;; Mark dirty to save state changes when needed
+      (when (zero? (mod (block-api/get-world-time) 20))
+        (block-api/mark-dirty! this))))
   
   INodeTile
   (get-energy [_] (:energy @state-atom))
@@ -118,6 +151,40 @@
     (> (get-energy this) 0))
   
   (node? [_] true)
+  
+  (get-connections [_]
+    (:connections @state-atom))
+    
+  (get-position [this]
+    (block-api/get-pos this))
+    
+  (can-connect? [this other]
+    (and (instance? TileNode other)
+         (< (count (:connections @state-atom)) 
+            (config/get-node-property (:node-type @state-atom) :max-connections))))
+    
+  (connect [this other]
+    (when (can-connect? this other)
+      (swap! state-atom update :connections conj (get-position other))
+      true))
+    
+  (disconnect [this other]
+    (swap! state-atom update :connections disj (get-position other))
+    true)
+    
+  (distribute-energy [this]
+    (let [connected-nodes (->> (get-connections this)
+                             (map #(get-tile-entity (block-api/get-world this) %))
+                             (filter identity))
+          total-nodes (inc (count connected-nodes))
+          energy-per-node (int (/ (get-energy this) total-nodes))]
+      (doseq [node connected-nodes]
+        (let [transferred (extract-energy this energy-per-node true)]
+          (when (> transferred 0)
+            (let [accepted (receive-energy node transferred true)]
+              (when (> accepted 0)
+                (extract-energy this accepted false)
+                (receive-energy node accepted false))))))))
   
   ;; Standard IEnergyStorage protocol
   IEnergyStorage
@@ -184,7 +251,8 @@
           (block-api/put-string! "placerId" (or (:placer-id state) ""))
           (block-api/put-string! "password" (or (:password-hash state) ""))
           (block-api/put-string! "nodeName" (or (:node-name state) ""))
-          (block-api/put-string! "nodeType" (name (:node-type state)))))))
+          (block-api/put-string! "nodeType" (name (:node-type state)))
+          (block-api/put-list! "connections" (:connections state) block-api/put-pos!)))))
   
   ;; Load NBT data
   (block-api/on-load-nbt! 
@@ -197,7 +265,8 @@
                  :placer-id (block-api/get-string compound "placerId" "")
                  :password-hash (block-api/get-string compound "password" "")
                  :node-name (block-api/get-string compound "nodeName" "")
-                 :node-type (keyword (block-api/get-string compound "nodeType" "basic"))})))))
+                 :node-type (keyword (block-api/get-string compound "nodeType" "basic"))
+                 :connections (set (block-api/get-pos-list compound "connections" #{}))})))))
 
 ;; Main tile entity creation function
 (defn create-node-tile [node-type]

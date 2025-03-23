@@ -3,7 +3,7 @@
             [mcmod.registry :as mcr]
             [mcmod.util :as util]
             [cn.academy.block.block-node :as block-node]
-            [cn.academy.block.tileentity.tile-node :as tile-node]
+            [cn.academy.blocks.block-node.tile :as tile-node]
             [clojure.tools.logging :as log]))
 
 (def MOD-ID "acmod")
