@@ -37,6 +37,17 @@ Key protocols include:
 - Clojure CLI tools
 - Gradle 7.x
 
+
+### Project Structure
+
+The mcmod project contains:
+
+- Core protocols and interfaces
+- Common utilities for logging, diagnostics, and profiling
+- Development tools and REPL integration
+- Forge modern compatibility layer
+- Data generation utilities
+
 ### Building
 
 ```bash

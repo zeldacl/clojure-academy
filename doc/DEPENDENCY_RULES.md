@@ -1,8 +1,14 @@
 # Project Dependency Rules
 
-## System Layer Structure
+## Project Structure
+The project is organized into two main components:
+- `mcmod`: Core protocols, interfaces, common utilities, and Forge compatibility layer
+- `acmod`: Implementation of core game logic using the protocols
 
+## System Layer Structure
 ```
+[cn.academy.core.util.*]                 <-- Common Utilities & Tools
+         ^        ^        ^
 [cn.academy.tech-system.energy-system]   <-- Core Energy Infrastructure
          ^        ^        ^
          |        |        |
@@ -11,7 +17,17 @@
 
 ## Fundamental Rules
 
-1. Core Energy System (tech-system.energy-system)
+1. Common Utilities (core.util)
+   - Provides shared functionality across all layers
+   - Includes logging, diagnostics, profiling, and development tools
+   - Must be dependency-free except for standard libraries
+   - Exports:
+     - Logging interfaces
+     - Monitoring tools
+     - Development utilities
+     - Data generation support
+
+2. Core Energy System (tech-system.energy-system)
    - Acts as foundational infrastructure
    - Provides core protocols and interfaces for energy handling
    - Must not depend on specific block implementations
@@ -21,7 +37,7 @@
      - Node registration interfaces
      - Core energy capabilities
 
-2. Block Node System (blocks.block-node)
+3. Block Node System (blocks.block-node)
    - Implements block-specific energy behaviors
    - MUST depend only on energy-system's public APIs
    - Provides concrete implementations of energy nodes
@@ -31,15 +47,20 @@
 
 ### Correct Flow Pattern
 ```
+[cn.academy.core.util.*]
+  - Logging, diagnostics, profiling
+  - Development tools
+  - Data generation utilities
+           ↑
 [cn.academy.tech-system.energy-system]
-  - Core protocols (IEnergyCapability, INetworkOptimizer)
+  - Core protocols
   - Registration interfaces
   - Network handling
            ↑
            |
 [cn.academy.blocks.block-node]
-  - Block-specific node implementations
-  - Concrete energy storage implementations
+  - Block-specific implementations
+  - Concrete storage implementations
   - Network message handlers
 ```
 

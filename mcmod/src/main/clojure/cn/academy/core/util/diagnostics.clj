@@ -1,6 +1,7 @@
 (ns cn.academy.core.util.diagnostics
   (:require [cn.academy.core.util.logging :refer [log-info log-error]]
-            [cn.academy.core.util.monitoring :as mon])
+            [cn.academy.core.util.monitoring :as mon]
+            [clojure.string :as str])
   (:import [java.util.concurrent ConcurrentHashMap]
            [java.lang.management ManagementFactory]))
 

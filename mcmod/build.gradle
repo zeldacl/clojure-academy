@@ -1,18 +1,26 @@
 plugins {
     id 'clojure'
     id 'java-library'
+    id "dev.clojurephant.clojure"
 }
 
 repositories {
     mavenCentral()
     maven { url = 'https://repo.clojars.org/' }
+    maven { url = 'https://maven.minecraftforge.net/' }
 }
 
 dependencies {
-    implementation 'org.clojure:clojure:1.11.1'
+    implementation 'org.clojure:clojure:1.12.0'
     implementation 'org.clojure:tools.logging:1.2.4'
+    implementation 'org.clojure:data.json:2.4.0'
+    compileOnly 'net.minecraftforge:forge:1.12.2-14.23.5.2855'
     testImplementation 'org.clojure:test.check:1.1.1'
 }
+
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+version = '1.0'
+group = 'cn.academy'
 
 sourceSets {
     main {
@@ -36,5 +44,16 @@ jar {
             'Implementation-Title': project.name,
             'Implementation-Version': project.version
         )
+    }
+}
+
+checkClojure.enabled = false
+clojure.builds {
+    main {
+        reflection = 'warn'
+        aotAll()
+        compiler {
+            directLinking = true
+        }
     }
 }
