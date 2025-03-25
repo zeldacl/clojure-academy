@@ -1,22 +1,25 @@
-plugins {
-    id 'dev.clojurephant.clojure' version '0.6.0' apply false
-}
-
 buildscript {
     repositories {
         maven { url = 'https://files.minecraftforge.net/maven' }
         mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+'
+        maven {
+            url "https://clojars.org/repo"
+        }
     }
 }
 
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+}
 
-group = 'cn.li.cljacademy' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+repositories {
+    mavenCentral()
+    maven { url "https://clojars.org/repo" }
+}
+
+group = 'cn.li.cljacademy'
 version = "${mod_ver}"
 
 // Define tasks to build specific versions with the exact requested naming
@@ -26,11 +29,11 @@ task forge__1_12_2 {
     description = 'Builds the mod for Minecraft Forge 1.12.2'
 }
 
-task forge__1_15_2 {
-    dependsOn ':forge_1_15_2:build'
-    group = 'forge'
-    description = 'Builds the mod for Minecraft Forge 1.15.2'
-}
+//task forge__1_15_2 {
+//    dependsOn ':forge_1_15_2:build'
+//    group = 'forge'
+//    description = 'Builds the mod for Minecraft Forge 1.15.2'
+//}
 
 task forge__1_16_2 {
     dependsOn ':forge_1_16_5:build'
@@ -40,7 +43,7 @@ task forge__1_16_2 {
 
 allprojects {
     apply plugin: 'java'
-    
+
     group = 'cn.academy'
     version = '1.0.0'
 
@@ -52,35 +55,48 @@ allprojects {
         maven { url = 'https://repo.clojars.org/' }
         maven { url = 'https://files.minecraftforge.net/maven' }
     }
-    
+
+    // Use a consistent approach across all projects - either toolchain or sourceCompatibility
+    // but not both. In this case, we'll use sourceCompatibility.
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+
+    // Remove Java toolchain configuration
+
+//    clojure {
+//        builds {
+//            main {
+//                aotNamespaces = ['*']
+//            }
+//        }
+//    }
 }
 
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'clojure'
     apply plugin: 'maven-publish'
-    
+
     compileJava.options.encoding = "UTF-8"
-    
+
     dependencies {
         implementation 'org.clojure:clojure:1.11.1'
         implementation 'org.clojure:tools.logging:1.2.4'
-        testImplementation 'org.clojure:test.check:1.1.1'
+//        testImplementation 'org.clojure:test.check:1.1.1'
         testImplementation 'com.github.seancorfield:expectations:2.0.160'
     }
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(8)
-        }
-    }
+    // Remove the Java toolchain configuration here
+    // java {
+    //     toolchain {
+    //         languageVersion = JavaLanguageVersion.of(8)
+    //     }
+    // }
+
+    // Keep these consistent with allprojects section
+    // The sourceCompatibility and targetCompatibility are already set in allprojects
+
     version = '1.0'
     group = 'cn.academy'
-
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
 
     tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
@@ -94,7 +110,7 @@ subprojects {
 
     test {
         useJUnitPlatform()
-        
+
         testLogging {
             events "passed", "skipped", "failed"
             exceptionFormat "full"
@@ -106,46 +122,27 @@ tasks.withType(JavaExec) {
     systemProperty 'modid', project.modid
 }
 
-project(':common') {
-    apply plugin: "dev.clojurephant.clojure"
-    
-    checkClojure.enabled = false
-    
-    clojure.builds {
-        main {
-            reflection = 'warn'
-            aotAll()
-            
-            compiler {
-                directLinking = true // defaults to false
-            }
-        }
-    }
-    
-    dependencies {
-        // Common dependencies for all versions
-    }
-}
-
 project(':forge_1_12_2') {
     dependencies {
-        implementation 'net.minecraftforge:forge:1.12.2-14.23.5.2855'
+        implementation project(':mcmod')
+        implementation project(':acmod')
+//        implementation 'net.minecraftforge:forge:1.12.2-14.23.5.2855'
     }
 }
 
-project(':forge_1_15_2') {
-    dependencies {
-        implementation 'net.minecraftforge:forge:1.15.2-31.2.0'
-    }
-}
+//project(':forge_1_15_2') {
+//    dependencies {
+//        implementation 'net.minecraftforge:forge:1.15.2-31.2.0'
+//    }
+//}
 
 project(':forge_1_16_5') {
     dependencies {
         implementation project(':mcmod')
         implementation project(':acmod')
-        implementation 'net.minecraftforge:forge:1.16.5-36.1.0'
-        implementation 'org.clojure:clojure:1.12.0'
-        implementation 'org.clojure:tools.logging:1.2.4'
+//        implementation 'net.minecraftforge:forge:1.16.5-36.1.0'
+//        implementation 'org.clojure:clojure:1.12.0'
+//        implementation 'org.clojure:tools.logging:1.2.4'
     }
 }
 
@@ -166,29 +163,37 @@ project(':acmod') {
 }
 
 // Common build configuration
-configure(subprojects) { project ->
-    apply plugin: "dev.clojurephant.clojure"
-    
-    clojure.builds {
-        main {
-            reflection = 'warn'
-            aotAll()
-            compiler {
-                directLinking = true
-            }
-        }
-    }
-}
+//configure(subprojects) { project ->
+//    apply plugin: "dev.clojurephant.clojure"
+//
+//    clojure.builds {
+//        main {
+//            reflection = 'warn'
+//            aotNamespaces = ['*']
+//            compiler {
+//                directLinking = true
+//            }
+//        }
+//    }
+//}
 
 // Main project configuration
 group = 'cn.li.cljacademy'
 version = '1.0.0'
 
-task clean(type: Delete) {
+// Replace the duplicate clean task with a custom one if needed
+// or simply remove it since the default clean task will handle most cases
+task cleanAll(type: Delete) {
     delete rootProject.buildDir
+    // Add any additional directories to clean if needed
 }
 
 // Ensure proper build order
 evaluationDependsOn(':mcmod')
 evaluationDependsOn(':acmod')
 evaluationDependsOn(':forge_1_16_5')
+
+dependencies {
+    // Root project dependencies if needed
+    // Don't include Forge here as it's specific to subprojects
+}

@@ -1,26 +1,42 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven { url = 'https://maven.minecraftforge.net/' }
-        maven { url = 'https://clojars.org/repo' }
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.namespace == 'net.minecraftforge') {
-                useModule("net.minecraftforge:forge:${requested.version}")
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
+        maven {
+            // RetroFuturaGradle
+            name 'GTNH Maven'
+            url 'https://nexus.gtnewhorizons.com/repository/public/'
+            mavenContent {
+                includeGroup 'com.gtnewhorizons'
+                includeGroup 'com.gtnewhorizons.retrofuturagradle'
             }
         }
+        maven {
+            name = 'clojars'
+            url = 'https://repo.clojars.org'
+        }
+        mavenCentral()
+        mavenLocal()
     }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
 
 rootProject.name = 'clojure-academy'
 
-include 'mcmod'
-include 'forge_1_16_5'
-include 'acmod'
-include 'common'
+// Include all subprojects
+include ':forge_1_12_2'
+include ':forge_1_16_5'
+include ':mcmod'
+include ':acmod'
 
-project(':mcmod').projectDir = file('mcmod')
+// Set the project directory for each subproject
+project(':forge_1_12_2').projectDir = file('forge_1_12_2')
 project(':forge_1_16_5').projectDir = file('forge_1_16_5')
+project(':mcmod').projectDir = file('common')
 project(':acmod').projectDir = file('acmod')
-project(':common').projectDir = file('common')
