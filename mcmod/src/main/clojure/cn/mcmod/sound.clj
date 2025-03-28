@@ -1,21 +1,6 @@
 (ns cn.mcmod.sound
-  (:require [cn.mcmod.protocols :refer [IResourceLocation ISoundCategory ISoundEvent]]))
-
-;; Add sound category protocol
-(defprotocol ISoundCategory
-  "Protocol for sound categories"
-  (get-category-name [this] "Get the sound category name"))
-
-;; Add ISoundEvent protocol
-(defprotocol ISoundEvent
-  "Protocol for sound events"
-  (get-location [this] "Get resource location for the sound event")
-  (get-category [this] "Get category for the sound event"))
-
-;; Protocol for objects that can emit sounds
-(defprotocol ISoundEmitter
-  "Protocol for objects that can emit sounds"
-  (play-sound [this sound-id pos data] "Play a sound at the given position"))
+  (:require [cn.mcmod.protocols :refer [IResourceLocation ISoundCategory ISoundEvent ISoundEmitter]]
+            [cn.mcmod.registry :as registry]))
 
 ;; Basic implementations of sound protocols
 (defrecord ResourceLocation [namespace path]

@@ -1,59 +1,85 @@
 (ns cn.mcmod.perf
-  (:require [cn.mcmod.logging :as log]
-            [clojure.string :as str])
-  (:import [java.util.concurrent ConcurrentHashMap]))
+  (:require [cn.mcmod.logging :as log])
+  (:import [java.io File PrintWriter]
+           [java.util Date]))
 
-(def metrics (ConcurrentHashMap.))
+;; Simple performance profiling utilities
 
-(defn start-timing [metric-name]
-  (.put metrics metric-name (System/nanoTime)))
+(def ^:private active-profiles (atom {}))
+(def ^:private profiling-enabled (atom false))
 
-(defn end-timing [metric-name]
-  (when-let [start-time (.get metrics metric-name)]
-    (let [duration (/ (- (System/nanoTime) start-time) 1000000.0)]
-      (.remove metrics metric-name)
-      duration)))
+(defn start-profiling! []
+  (reset! profiling-enabled true)
+  (reset! active-profiles {})
+  (log/info "Performance profiling started"))
 
-(defmacro with-timing 
-  "Execute body and log the time it took to execute.
-   Returns the result of body."
-  [metric-name & body]
-  `(try
-     (start-timing ~metric-name)
-     (let [result# (do ~@body)]
-       (let [duration# (end-timing ~metric-name)]
-         (log/debug "%s: %.2fms" ~metric-name duration#))
-       result#)
-     (catch Exception e#
-       (.remove metrics ~metric-name)
-       (log/error e# "Error during timed operation: %s" ~metric-name)
-       (throw e#))))
+(defn stop-profiling! []
+  (reset! profiling-enabled false)
+  (log/info "Performance profiling stopped")
+  @active-profiles)
 
-(defn get-all-metrics []
-  (into {} (map (fn [[k v]] 
-                  [k (/ (- (System/nanoTime) v) 1000000.0)]) 
-                (seq metrics))))
+(defn profile-fn 
+  "Profile a function call"
+  [name f]
+  (if @profiling-enabled
+    (fn [& args]
+      (let [start-time (System/nanoTime)
+            result (apply f args)
+            end-time (System/nanoTime)
+            elapsed (/ (- end-time start-time) 1000000.0)]
+        (swap! active-profiles update name 
+               (fn [prev] 
+                 (if prev
+                   (update prev :calls 
+                           (fn [calls] 
+                             (conj calls elapsed)))
+                   {:name name :calls [elapsed]})))
+        result))
+    f))
 
-;; Performance monitoring
-(defn start-profiling! [& categories]
-  (doseq [category (or (seq categories) ["energy" "network" "world"])]
-    (log/debug "Started profiling category: %s" category)
-    (start-timing (str "profile_" category))))
+(defmacro defn-profiled
+  "Define a profiled function"
+  [name args & body]
+  `(def ~name (profile-fn ~(str name) (fn ~args ~@body))))
 
-(defn stop-profiling! [& categories]
-  (doseq [category (or (seq categories) ["energy" "network" "world"])]
-    (let [metric-name (str "profile_" category)
-          duration (end-timing metric-name)]
-      (log/debug "Stopped profiling category: %s (%.2fms)" category duration))))
+(defn get-profile-report []
+  (let [profiles @active-profiles]
+    (into {} (map (fn [[name data]]
+                    [name {:call-count (count (:calls data))
+                           :avg-time (if (seq (:calls data))
+                                       (/ (reduce + (:calls data))
+                                          (count (:calls data)))
+                                       0)
+                           :min-time (if (seq (:calls data))
+                                       (apply min (:calls data))
+                                       0)
+                           :max-time (if (seq (:calls data))
+                                       (apply max (:calls data))
+                                       0)}])
+                 profiles))))
 
-(defmacro with-dev-profile 
-  "Profile the execution of body under the given category"
-  [category & body]
-  `(try
-     (start-profiling! ~category)
-     (let [result# (do ~@body)]
-       (stop-profiling! ~category)
-       result#)
-     (catch Exception e#
-       (stop-profiling! ~category)
-       (throw e#))))
+(defn report-profiles
+  "Generate and log a report of all profiled function calls"
+  []
+  (let [report (get-profile-report)]
+    (log/info "Performance Profile Report:")
+    (doseq [[name {:keys [call-count avg-time min-time max-time]}] 
+            (sort-by (fn [[_ data]] (:avg-time data)) > report)]
+      (log/info "%s: %d calls, avg: %.2fms, min: %.2fms, max: %.2fms" 
+                name call-count avg-time min-time max-time))))
+
+(defn save-profile-report 
+  "Save profile data to a file"
+  [file]
+  (let [report (get-profile-report)]
+    (with-open [writer (PrintWriter. file)]
+      (.println writer "=== Academy Mod Performance Profile ===")
+      (.println writer (str "Generated: " (Date.)))
+      (.println writer "")
+      
+      (.println writer "Function,Calls,Avg Time (ms),Min Time (ms),Max Time (ms)")
+      (doseq [[name {:keys [call-count avg-time min-time max-time]}] 
+              (sort-by (fn [[_ data]] (:avg-time data)) > report)]
+        (.println writer (format "%s,%d,%.2f,%.2f,%.2f" 
+                                name call-count avg-time min-time max-time))))
+    (log/info "Profile report saved to %s" (.getPath file))))

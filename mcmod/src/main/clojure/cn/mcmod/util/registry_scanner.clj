@@ -1,6 +1,7 @@
 (ns cn.mcmod.util.registry-scanner
   (:require [cn.mcmod.logging :as log]
-            [cn.mcmod.protocols :refer :all]))
+            [cn.mcmod.protocols :refer :all]
+            [cn.mcmod.util :as util]))
 
 (defn scan-namespace-for-blocks
   "Scan namespace for block definitions"
@@ -25,28 +26,37 @@
   [base-ns]
   (let [base-pattern (str "^" base-ns "\\.")
         ns-list (filter #(re-matches (re-pattern base-pattern) (str %))
-                       (all-ns))]
+                       (all-ns))
+        result (atom {:blocks {} :items {} :tile-entities {}})]
     (doseq [ns ns-list]
       (log/debug (str "Scanning namespace: " ns))
-      {:blocks (scan-namespace-for-blocks ns)
-       :items (scan-namespace-for-items ns)
-       :tile-entities (scan-namespace-for-tile-entities ns)})))
+      (let [blocks (scan-namespace-for-blocks ns)
+            items (scan-namespace-for-items ns)
+            tile-entities (scan-namespace-for-tile-entities ns)]
+        (swap! result update :blocks merge 
+               (into {} (map (fn [v] [(-> v meta :name) v]) blocks)))
+        (swap! result update :items merge 
+               (into {} (map (fn [v] [(-> v meta :name) v]) items)))
+        (swap! result update :tile-entities merge 
+               (into {} (map (fn [v] [(-> v meta :name) v]) tile-entities)))))
+    @result))
 
 (defn register-scanned-content!
   "Register all scanned content with a registry"
-  [registry content]
+  [registry mod-id content]
   (doseq [[name block] (:blocks content)]
-    (register-block! registry (str name) @block))
+    (util/register-mod-block registry mod-id (str name) @block))
   
   (doseq [[name item] (:items content)]
-    (register-item! registry (str name) @item))
+    (util/register-mod-item registry mod-id (str name) @item))
   
   (doseq [[name te] (:tile-entities content)]
-    (register-tile-entity! registry (str name) @te)))
+    (util/register-mod-tile-entity registry mod-id (str name) @te)))
 
 (defn scan-and-register-mod!
   "Scan and register all content from a mod's namespaces"
-  [registry mod-ns]
+  [registry mod-id mod-ns]
   (log/info (str "Scanning mod namespace: " mod-ns))
   (let [content (scan-mod-namespaces mod-ns)]
-    (register-scanned-content! registry content)))
+    (register-scanned-content! registry mod-id content)
+    content))

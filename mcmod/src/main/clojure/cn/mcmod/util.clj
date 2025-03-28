@@ -42,26 +42,21 @@
                  items))
          @(:mod-items registry)))
 
-;; Development utilities
+;; Development utilities - moved to cn.mcmod.dev.util
 (defn reload-mod! []
   (log/info "Reloading mod...")
-  ;; Reload logic is now in the cn.mcmod.dev.repl namespace
-  :reloaded)
+  (require 'cn.mcmod.dev.util :reload)
+  ((resolve 'cn.mcmod.dev.util/reload-mod!)))
 
 (defn dump-diagnostics!
   "Write diagnostic information to a log file"
   [& [custom-file]]
-  (let [file (or custom-file (File. "logs/academy-dev-diagnostics.log"))]
-    (log/info "Writing diagnostic report to %s" (.getPath file))
-    ;; Actual implementation moved to cn.mcmod.util.diagnostics
-    :diagnostics-written))
-
-;; Performance profiling functions moved to cn.mcmod.perf namespace
+  (require 'cn.mcmod.dev.util :reload)
+  ((resolve 'cn.mcmod.dev.util/dump-diagnostics!) custom-file))
 
 (defn clear-cache! []
-  ;; Clear caches - implemented in respective cache-using modules
-  (log/info "Cleared development caches")
-  :cleared)
+  (require 'cn.mcmod.dev.util :reload)
+  ((resolve 'cn.mcmod.dev.util/clear-cache!)))
 
 ;; Resource utilities
 (defn get-resource-path [mod-id resource-type path]

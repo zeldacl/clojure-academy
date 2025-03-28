@@ -1,6 +1,6 @@
-(ns cn.academy.dev.repl
-  (:require [cn.academy.core.util.logging :refer [log-info log-debug]]
-            [cn.academy.dev.util :as dev]
+(ns cn.mcmod.dev.repl
+  (:require [cn.mcmod.logging :as log]
+            [cn.mcmod.dev.util :as dev]
             [clojure.main :as main]
             [clojure.string :as str])
   (:import [java.io PushbackReader StringReader]))
@@ -10,7 +10,7 @@
 (defn create-dev-repl []
   (let [current-ns (ns-name *ns*)]
     (try
-      (in-ns 'cn.academy.dev.repl)
+      (in-ns 'cn.mcmod.dev.repl)
       (binding [*ns* *ns*]
         (let [input "(+ 1 2)"]
           (with-in-str input
@@ -20,7 +20,7 @@
                       (println "Type :help for available commands"))
               :prompt #(print "academy=> ")
               :caught (fn [e]
-                       (log-debug e "REPL Error")
+                       (log/debug e "REPL Error")
                        (println (str "Error: " (.getMessage e))))))))
       (finally
         (in-ns current-ns)))))
@@ -49,9 +49,9 @@
     nil))
 
 (defmacro with-dev-session [& body]
-  `(binding [*ns* (find-ns 'cn.academy.dev.repl)]
+  `(binding [*ns* (find-ns 'cn.mcmod.dev.repl)]
      ~@body))
 
 (defn start-dev-session! []
-  (log-info "Starting development session...")
+  (log/info "Starting development session...")
   (create-dev-repl))
