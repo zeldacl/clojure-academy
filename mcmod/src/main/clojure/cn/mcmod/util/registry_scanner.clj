@@ -1,31 +1,24 @@
-(ns mcmod.util.registry-scanner
-  (:require [mcmod.protocols :refer :all]
-            [clojure.tools.logging :as log])
-  (:import [java.util UUID]))
+(ns cn.mcmod.util.registry-scanner
+  (:require [cn.mcmod.logging :as log]
+            [cn.mcmod.protocols :refer :all]))
 
 (defn scan-namespace-for-blocks
-  "Scan a namespace for block definitions"
+  "Scan namespace for block definitions"
   [ns]
-  (filter (fn [[_ var]]
-            (and (var? var)
-                 (satisfies? IBlock @var)))
-          (ns-publics ns)))
+  (filter #(satisfies? IBlock (var-get %))
+          (vals (ns-publics ns))))
 
 (defn scan-namespace-for-items
-  "Scan a namespace for item definitions"
+  "Scan namespace for item definitions"
   [ns]
-  (filter (fn [[_ var]]
-            (and (var? var)
-                 (satisfies? IItem @var)))
-          (ns-publics ns)))
+  (filter #(satisfies? IItem (var-get %))
+          (vals (ns-publics ns))))
 
 (defn scan-namespace-for-tile-entities
-  "Scan a namespace for tile entity definitions"
+  "Scan namespace for tile entity definitions"
   [ns]
-  (filter (fn [[_ var]]
-            (and (var? var)
-                 (satisfies? ITileEntity @var)))
-          (ns-publics ns)))
+  (filter #(satisfies? IBlockEntity (var-get %))
+          (vals (ns-publics ns))))
 
 (defn scan-mod-namespaces
   "Scan all namespaces under a mod's base namespace"

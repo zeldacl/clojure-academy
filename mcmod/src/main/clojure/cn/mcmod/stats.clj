@@ -1,5 +1,5 @@
-(ns mcmod.stats
-  (:require [mcmod.logging :as log])
+(ns cn.mcmod.stats
+  (:require [cn.mcmod.logging :as log])
   (:import [java.util.concurrent ConcurrentHashMap]
            [java.util.concurrent.atomic AtomicLong]))
 
@@ -35,3 +35,26 @@
                  name amount (get-value stat)))
     (catch Exception e
       (log/error "Error tracking stat %s: %s" name (.getMessage e)))))
+
+(defn get-stat [name]
+  (try
+    (get-value (register-stat name))
+    (catch Exception e
+      (log/error "Error getting stat %s: %s" name (.getMessage e))
+      0)))
+
+(defn reset-stat [name]
+  (try
+    (reset-value (register-stat name))
+    (log/debug "Reset stat %s to 0" name)
+    (catch Exception e
+      (log/error "Error resetting stat %s: %s" name (.getMessage e)))))
+
+(defn get-all-stats []
+  (try
+    (into {} 
+      (map (fn [[k v]] [k (get-value v)]) 
+           (seq stats-registry)))
+    (catch Exception e
+      (log/error "Error getting all stats: %s" (.getMessage e))
+      {})))

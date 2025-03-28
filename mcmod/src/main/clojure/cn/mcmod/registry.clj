@@ -1,6 +1,6 @@
-(ns mcmod.registry
-  (:require [mcmod.protocols :refer :all]
-            [clojure.tools.logging :as log]))
+(ns cn.mcmod.registry
+  (:require [cn.mcmod.protocols :refer :all]
+            [cn.mcmod.logging :as log]))
 
 ;; Registry state
 (def ^:private registries (atom {}))
@@ -15,6 +15,13 @@
   (get-items [this] "Get all registered items") 
   (get-tile-entities [this] "Get all registered tile entities")
   (get-containers [this] "Get all registered containers"))
+
+;; Mod-specific registry functionality
+(defprotocol IModRegistry
+  (register-mod [this mod-id] "Register a new mod")
+  (get-mod-blocks [this mod-id] "Get blocks registered for a specific mod")
+  (get-mod-items [this mod-id] "Get items registered for a specific mod")
+  (get-mod-tile-entities [this mod-id] "Get tile entities registered for a specific mod"))
 
 ;; Base registry record implementing IRegistry
 (defrecord Registry [mod-id registry-data]
@@ -45,14 +52,31 @@
     @(:tile-entities registry-data))
   
   (get-containers [this]
-    @(:containers registry-data)))
+    @(:containers registry-data))
+    
+  IModRegistry
+  (register-mod [this mod-id]
+    (swap! registry-data update :mods conj mod-id))
+  
+  (get-mod-blocks [this mod-id]
+    (get-in @registry-data [:mod-blocks mod-id]))
+  
+  (get-mod-items [this mod-id]
+    (get-in @registry-data [:mod-items mod-id]))
+  
+  (get-mod-tile-entities [this mod-id]
+    (get-in @registry-data [:mod-tile-entities mod-id])))
 
 ;; Create a new registry instance for a mod
 (defn create-registry [mod-id]
   (let [registry-data {:blocks (atom {})
                       :items (atom {})
                       :tile-entities (atom {})
-                      :containers (atom {})}
+                      :containers (atom {})
+                      :mods #{}
+                      :mod-blocks {}
+                      :mod-items {}
+                      :mod-tile-entities {}}
         registry (->Registry mod-id registry-data)]
     (swap! registries assoc mod-id registry)
     registry))
@@ -89,10 +113,14 @@
                                 damage-value 0
                                 creative-tab :misc}}]
   (reify IItem
+    (get-properties [_]
+      {:max-stack max-stack
+       :damage-value damage-value
+       :creative-tab creative-tab})
+    
     (get-max-stack-size [_] max-stack)
-    (get-max-damage [_] damage-value)
-    (is-repairable [_] false)
+    (get-damage-value [_] damage-value)
     (get-creative-tab [_] creative-tab)
-    (on-item-use [_ world player hand] false)
-    (on-right-click [_ world player hand] false)
+    
+    (on-right-click [_ world player] false)
     (on-hit-entity [_ target attacker] false)))

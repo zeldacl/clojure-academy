@@ -1,49 +1,85 @@
 (ns cn.mcmod.logging
-  (:require [clojure.string :as str])
-  ;(:import [org.apache.logging.log4j LogManager])
-  )
+  (:import [org.apache.logging.log4j LogManager Level]
+           [java.util.function Supplier]))
 
-;; Replace direct initialization with an atom that can be set later
-(def logger (atom nil))
+(def ^:private logger (LogManager/getLogger "ClojureAcademy"))
 
-;; Function to initialize the logger from the Forge mod
-(defn set-logger! [log-instance]
-  (reset! logger log-instance))
+(defn- format-message [message & args]
+  (if (seq args)
+    (apply format message args)
+    message))
 
-;; Helper function to ensure we have a logger or provide a reasonable fallback
-(defn- get-logger []
-  (if-let [current-logger @logger]
-    current-logger
-    (do
-      (println "WARNING: Logger not initialized, using System.out as fallback")
-      (proxy [Object] []
-        (info [msg] (println "[INFO]" msg))
-        (warn [msg] (println "[WARN]" msg))
-        (debug [msg] (println "[DEBUG]" msg))
-        (error [msg] (println "[ERROR]" msg))))))
+(defn debug
+  "Log a debug message"
+  ([message]
+   (.debug logger message))
+  ([message & args]
+   (.debug logger ^String (format-message message args))))
 
-(defn format-msg [msg & args]
-  (if (empty? args)
-    msg
-    (apply format msg args)))
+(defn debug-ex
+  "Log a debug message with exception"
+  [exception message & args]
+  (.debug logger ^String (format-message message args) exception))
 
-(defn info [msg & args]
-  (.info (get-logger) (apply format-msg msg args)))
+(defn info
+  "Log an info message"
+  ([message]
+   (.info logger message))
+  ([message & args]
+   (.info logger ^String (format-message message args))))
 
-(defn warn [msg & args]
-  (.warn (get-logger) (apply format-msg msg args)))
+(defn info-ex
+  "Log an info message with exception"
+  [exception message & args]
+  (.info logger ^String (format-message message args) exception))
 
-(defn debug [msg & args]
-  (.debug (get-logger) (apply format-msg msg args)))
+(defn warn
+  "Log a warning message"
+  ([message]
+   (.warn logger message))
+  ([message & args]
+   (.warn logger ^String (format-message message args))))
 
-(defn error [msg & args]
-  (.error (get-logger) (apply format-msg msg args)))
+(defn warn-ex
+  "Log a warning message with exception"
+  [exception message & args]
+  (.warn logger ^String (format-message message args) exception))
 
-(defmacro with-error-logging [& body]
-  `(try
-     ~@body
-     (catch Exception e#
-       (error "Error occurred: %s\n%s"
-              (.getMessage e#)
-              (with-out-str (-> e# .getStackTrace)))
-       (throw e#))))
+(defn error
+  "Log an error message"
+  ([message]
+   (.error logger message))
+  ([message & args]
+   (.error logger ^String (format-message message args))))
+
+(defn error-ex
+  "Log an error message with exception"
+  [exception message & args]
+  (.error logger ^String (format-message message args) exception))
+
+(defn fatal
+  "Log a fatal message"
+  ([message]
+   (.fatal logger message))
+  ([message & args]
+   (.fatal logger ^String (format-message message args))))
+
+(defn fatal-ex
+  "Log a fatal message with exception"
+  [exception message & args]
+  (.fatal logger ^String (format-message message args) exception))
+
+(defn is-debug-enabled? []
+  (.isDebugEnabled logger))
+
+(defn is-info-enabled? []
+  (.isInfoEnabled logger))
+
+(defn set-level! [level]
+  (case level
+    :debug Level/DEBUG
+    :info Level/INFO
+    :warn Level/WARN
+    :error Level/ERROR
+    :fatal Level/FATAL
+    Level/INFO))

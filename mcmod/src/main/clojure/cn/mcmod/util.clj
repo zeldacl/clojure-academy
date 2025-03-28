@@ -1,6 +1,6 @@
 (ns cn.mcmod.util
   (:require [cn.mcmod.protocols :refer :all]
-            [cn.mcmod.mod-registry :as mr]
+            [cn.mcmod.registry :as registry]
             [cn.mcmod.logging :as log])
   (:import [java.io File]))
 
@@ -9,19 +9,19 @@
 (defn register-mod-block
   "Register a block with a specific mod ID"
   [registry mod-id block-id block]
-  (register-block registry block-id block)
+  (registry/register-block! registry block-id block)
   (swap! (:mod-blocks registry) update mod-id assoc block-id block))
 
 (defn register-mod-item
   "Register an item with a specific mod ID"
   [registry mod-id item-id item]
-  (register-item registry item-id item)
+  (registry/register-item! registry item-id item)
   (swap! (:mod-items registry) update mod-id assoc item-id item))
 
 (defn register-mod-tile-entity
   "Register a tile entity with a specific mod ID"
   [registry mod-id te-id te]
-  (register-tile-entity registry te-id te)
+  (registry/register-tile-entity! registry te-id te)
   (swap! (:mod-tile-entities registry) update mod-id assoc te-id te))
 
 (defn get-all-mod-blocks
@@ -42,47 +42,40 @@
                  items))
          @(:mod-items registry)))
 
-;; Development utilities (merged from dev/util.clj)
+;; Development utilities
 (defn reload-mod! []
   (log/info "Reloading mod...")
-  ;; Add reload logic here
+  ;; Reload logic is now in the cn.mcmod.dev.repl namespace
   :reloaded)
 
 (defn dump-diagnostics!
   "Write diagnostic information to a log file"
   [& [custom-file]]
   (let [file (or custom-file (File. "logs/academy-dev-diagnostics.log"))]
-    ;; Using logging directly since diagnostics module might not be available yet
     (log/info "Writing diagnostic report to %s" (.getPath file))
+    ;; Actual implementation moved to cn.mcmod.util.diagnostics
     :diagnostics-written))
 
-(defn start-profiling! [& categories]
-  (doseq [category (or (seq categories) ["energy" "network" "world"])]
-    (log/debug "Started profiling category: %s" category)))
-
-(defn stop-profiling! [& categories]
-  (doseq [category (or (seq categories) ["energy" "network" "world"])]
-    (log/debug "Stopped profiling category: %s" category)))
-
-(defmacro with-dev-profile [category & body]
-  `(try
-     (start-profiling! ~category)
-     (let [result# (do ~@body)]
-       (stop-profiling! ~category)
-       result#)
-     (catch Exception e#
-       (stop-profiling! ~category)
-       (throw e#))))
+;; Performance profiling functions moved to cn.mcmod.perf namespace
 
 (defn clear-cache! []
-  ;; Add cache clearing logic here
+  ;; Clear caches - implemented in respective cache-using modules
   (log/info "Cleared development caches")
   :cleared)
 
-;; Register additional development commands here
-(def dev-commands
-  {"reload" reload-mod!
-   "diag" dump-diagnostics!
-   "profile" start-profiling!
-   "unprofile" stop-profiling!
-   "clear" clear-cache!})
+;; Resource utilities
+(defn get-resource-path [mod-id resource-type path]
+  (str "assets/" mod-id "/" resource-type "/" path))
+
+(defn load-resource [path]
+  (-> (Thread/currentThread)
+      (.getContextClassLoader)
+      (.getResourceAsStream path)))
+
+;; String utilities
+(defn format-identifier [mod-id name]
+  (str mod-id ":" name))
+
+(defn parse-identifier [identifier]
+  (let [[mod-id name] (clojure.string/split identifier #":")]
+    {:mod-id mod-id :name name}))
