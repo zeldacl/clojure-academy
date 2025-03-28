@@ -1,4 +1,4 @@
-(ns mcmod.position)
+(ns cn.mcmod.position)
 
 (defprotocol IPosition
   "Protocol for position vectors"
@@ -39,7 +39,7 @@
   "Scale position by factor"
   [pos factor]
   (->Position (* (get-x pos) factor)
-              (* (get-y pos) factor) 
+              (* (get-y pos) factor)
               (* (get-z pos) factor)))
 
 (defn distance
@@ -48,7 +48,7 @@
   (let [dx (- (get-x pos1) (get-x pos2))
         dy (- (get-y pos1) (get-y pos2))
         dz (- (get-z pos1) (get-z pos2))]
-    (Math/sqrt (+ (* dx dx) 
+    (Math/sqrt (+ (* dx dx)
                   (* dy dy)
                   (* dz dz)))))
 

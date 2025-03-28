@@ -1,4 +1,4 @@
-(ns mcmod.config
+(ns cn.mcmod.config
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]))
 
@@ -7,7 +7,7 @@
 (defn load-config [file-path]
   (try
     (when (.exists (io/file file-path))
-      (reset! config-atom 
+      (reset! config-atom
               (edn/read-string (slurp file-path))))
     (catch Exception e
       (println "Error loading config:" (.getMessage e)))))
@@ -18,7 +18,7 @@
     (catch Exception e
       (println "Error saving config:" (.getMessage e)))))
 
-(defn get-config 
+(defn get-config
   ([] @config-atom)
   ([key] (get @config-atom key)))
 

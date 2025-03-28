@@ -1,5 +1,5 @@
-(ns mcmod.direction
-  (:require [mcmod.position :as pos]))
+(ns cn.mcmod.direction
+  (:require [cn.mcmod.position :as pos]))
 
 (def DIRECTIONS
   {:north [0 0 -1]
@@ -48,7 +48,7 @@
         new-z (+ (* x sin) (* z cos))]
     (cond
       (and (pos? new-x) (zero? new-z)) :east
-      (and (neg? new-x) (zero? new-z)) :west  
+      (and (neg? new-x) (zero? new-z)) :west
       (and (zero? new-x) (pos? new-z)) :south
       (and (zero? new-x) (neg? new-z)) :north
       :else direction)))
