@@ -5,7 +5,8 @@
             [cn.academy.forge.network :as network]
             [cn.academy.forge.gui :as gui]
             [cn.academy.forge.events :as events]
-            [cn.academy.forge.datagen.DataGenerators :as datagen])
+            [cn.academy.forge.datagen.DataGenerators :as datagen]
+            [cn.mcmod.logging :as mclog])
   (:import [net.minecraftforge.fml.common Mod]
            [net.minecraftforge.fml.event.lifecycle FMLCommonSetupEvent
                                                   FMLClientSetupEvent
@@ -29,6 +30,8 @@
 (def gui-handler (atom nil))
 
 (defn mod-init []
+  ;; Initialize the logger for Forge 1.16.5
+  (mclog/init-logger! "Forge-1.16.5")
   [[] (atom {})])
 
 (defn init-bridges! []
@@ -72,6 +75,7 @@
     ;; Register data generators
     (datagen/register-generators! mod-bus)))
 
+
 (defn mod-setup [this event]
   (setup-common! event))
 
@@ -88,11 +92,13 @@
       (when (instance? FMLCommonSetupEvent event)
         (mod-setup this event)))))
 
+
 (.addListener (FMLJavaModLoadingContext/get)
   (reify Consumer 
     (accept [this event]
       (when (instance? FMLClientSetupEvent event)
         (mod-client-setup this event)))))
+
 
 (.addListener (FMLJavaModLoadingContext/get)
   (reify Consumer
