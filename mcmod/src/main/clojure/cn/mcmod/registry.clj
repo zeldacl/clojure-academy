@@ -15,7 +15,7 @@
   (register-tile-entity! [this te-id te] "Register a tile entity")
   (register-container! [this container-id container] "Register a container")
   (get-blocks [this] "Get all registered blocks")
-  (get-items [this] "Get all registered items") 
+  (get-items [this] "Get all registered items")
   (get-tile-entities [this] "Get all registered tile entities")
   (get-containers [this] "Get all registered containers"))
 
@@ -32,41 +32,41 @@
   (register-block! [this block-id block]
     (swap! (:blocks registry-data) assoc block-id block)
     block)
-  
+
   (register-item! [this item-id item]
     (swap! (:items registry-data) assoc item-id item)
     item)
-  
+
   (register-tile-entity! [this te-id te]
     (swap! (:tile-entities registry-data) assoc te-id te)
     te)
-  
+
   (register-container! [this container-id container]
     (swap! (:containers registry-data) assoc container-id container)
     container)
-  
+
   (get-blocks [this]
     @(:blocks registry-data))
-  
+
   (get-items [this]
     @(:items registry-data))
-  
+
   (get-tile-entities [this]
     @(:tile-entities registry-data))
-  
+
   (get-containers [this]
     @(:containers registry-data))
-    
+
   IModRegistry
   (register-mod [this mod-id]
     (swap! registry-data update :mods conj mod-id))
-  
+
   (get-mod-blocks [this mod-id]
     (get-in @registry-data [:mod-blocks mod-id]))
-  
+
   (get-mod-items [this mod-id]
     (get-in @registry-data [:mod-items mod-id]))
-  
+
   (get-mod-tile-entities [this mod-id]
     (get-in @registry-data [:mod-tile-entities mod-id])))
 
@@ -113,30 +113,37 @@
        :hardness hardness
        :resistance resistance
        :light-level light-level})
-    
+
     (get-material [_] material)
     (get-hardness [_] hardness)
     (get-resistance [_] resistance)
     (get-light-level [_] light-level)
-    
-    (on-activated [_ pos data] false)
-    (on-placed [_ pos data] nil)
-    (on-removed [_ pos] nil)))
 
-;; Helper for creating common item types  
+    (on-activated [_ world pos player hand] false)
+    (on-placed [_ world pos placer] nil)
+    (on-broken [_ world pos] nil)
+    (on-removed [_ pos] nil)
+    (get-render-type [_] :solid)
+    (is-opaque? [_] true)))
+
+;; Helper for creating common item types
 (defn create-basic-item [& {:keys [max-stack damage-value creative-tab]
                            :or {max-stack 64
                                 damage-value 0
                                 creative-tab :misc}}]
   (reify IItem
-    (get-properties [_]
+    (get-item-properties [_]
       {:max-stack max-stack
        :damage-value damage-value
        :creative-tab creative-tab})
-    
+
     (get-max-stack-size [_] max-stack)
-    (get-damage-value [_] damage-value)
+    (get-max-damage [_] damage-value)
     (get-creative-tab [_] creative-tab)
-    
-    (on-right-click [_ world player] false)
+
+    (on-item-right-click [_ context] false)
+    (on-item-use [_ context] false)
+    (get-use-duration [_] 0)
+    (has-effect? [_ stack] false)
+    (is-repairable [_] false)
     (on-hit-entity [_ target attacker] false)))
