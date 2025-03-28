@@ -5,6 +5,9 @@
 ;; Registry state
 (def ^:private registries (atom {}))
 
+;; Global registry instance
+(def ^:private global-registry-instance (atom nil))
+
 ;; Core registry protocol
 (defprotocol IRegistry
   (register-block! [this block-id block] "Register a block")
@@ -79,11 +82,24 @@
                       :mod-tile-entities {}}
         registry (->Registry mod-id registry-data)]
     (swap! registries assoc mod-id registry)
+    ;; If this is the first registry, also set it as the global one
+    (when (and (= (count @registries) 1) (nil? @global-registry-instance))
+      (reset! global-registry-instance registry))
     registry))
 
 ;; Get an existing registry
 (defn get-registry [mod-id]
   (get @registries mod-id))
+
+;; Get or create the global registry
+(defn get-global-registry []
+  (if-let [registry @global-registry-instance]
+    registry
+    (do
+      (log/info "Creating global registry")
+      (let [registry (create-registry "global")]
+        (reset! global-registry-instance registry)
+        registry))))
 
 ;; Helper for creating common block types
 (defn create-basic-block [& {:keys [material hardness resistance light-level]

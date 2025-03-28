@@ -1,6 +1,6 @@
-(ns mcmod.dev
-  (:require [mcmod.protocols :refer :all]
-            [mcmod.registry :as registry]
+(ns cn.mcmod.dev
+  (:require [cn.mcmod.protocols :refer :all]
+            [cn.mcmod.registry :as registry]
             [clojure.pprint :refer [pprint]]))
 
 (defn debug-print [& args]

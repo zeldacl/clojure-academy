@@ -1,5 +1,5 @@
-(ns mcmod.mod-registry
-  (:require [mcmod.protocols :refer :all]))
+(ns cn.mcmod.mod-registry
+  (:require [cn.mcmod.protocols :refer :all]))
 
 (defprotocol IModRegistry
   "Mod-specific registry functionality"

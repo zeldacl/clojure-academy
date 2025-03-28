@@ -1,5 +1,5 @@
-(ns cn.academy.forge-modern.network
-  (:require [cn.academy.core.network.messages :as messages])
+(ns cn.mcmod.forge-modern.network
+  (:require [cn.mcmod.core.network.messages :as messages])
   (:import [net.minecraft.util ResourceLocation]
            [net.minecraftforge.fml.network NetworkRegistry NetworkDirection NetworkEvent$Context]
            [net.minecraftforge.fml.network.simple SimpleChannel]))
