@@ -1,5 +1,5 @@
-(ns mcmod.commands
-  (:require [mcmod.logging :as log]))
+(ns cn.mcmod.commands
+  (:require [cn.mcmod.logging :as log]))
 
 (defprotocol ICommand
   (get-name [this] "Get the command name")

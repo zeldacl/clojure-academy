@@ -10,11 +10,11 @@
 (defn inspect-registry [registry]
   (debug-print "\nRegistry Contents:")
   (debug-print "Blocks:")
-  (pprint (get-registered-blocks registry))
+  (pprint (registry/get-blocks registry))
   (debug-print "\nItems:")
-  (pprint (get-registered-items registry))
+  (pprint (registry/get-items registry))
   (debug-print "\nTile Entities:")
-  (pprint (get-registered-tile-entities registry)))
+  (pprint (registry/get-tile-entities registry)))
 
 (defmacro with-dev-context [& body]
   `(try

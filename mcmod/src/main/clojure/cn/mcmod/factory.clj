@@ -1,27 +1,31 @@
-(ns mcmod.factory
-  (:require [mcmod.protocols :refer :all]))
+(ns cn.mcmod.factory
+  (:require [cn.mcmod.protocols :refer :all]))
 
 (defn create-block
   "Create a block implementation with given properties"
   [props]
   (reify IBlock
-    (get-properties [_] props)
-    (get-material [_] (:material props))
-    (get-hardness [_] (:hardness props 3.0))
-    (get-resistance [_] (:resistance props 3.0))
-    (get-light-level [_] (:light-level props 0))
-    (on-activated [_ pos data] 
+    (get-position [this] (:position props))
+    (get-properties [this] props)
+    (get-material [this] (:material props))
+    (get-hardness [this] (:hardness props 3.0))
+    (get-resistance [this] (:resistance props 3.0))
+    (get-light-level [this] (:light-level props 0))
+    (on-activated [this world pos player hand]
       (when-let [handler (:on-activated props)]
-        (handler pos data)))
-    (on-placed [_ pos data]
+        (handler world pos player hand)))
+    (on-placed [this world pos placer]
       (when-let [handler (:on-placed props)]
-        (handler pos data)))
-    (on-removed [_ pos]
+        (handler world pos placer)))
+    (on-broken [this world pos]
+      (when-let [handler (:on-broken props)]
+        (handler world pos)))
+    (on-removed [this pos]
       (when-let [handler (:on-removed props)]
         (handler pos)))
-    (get-render-type [_]
+    (get-render-type [this]
       (:render-type props :solid))
-    (is-opaque? [_]
+    (is-opaque? [this]
       (:opaque? props true))))
 
 (defn create-item
@@ -48,16 +52,13 @@
   "Create a tile entity implementation with given properties"
   [props]
   (let [state (atom {})]
-    (reify ITileEntity
-      (tick [_]
-        (when-let [handler (:on-tick props)]
-          (handler state)))
+    (reify IBlockEntity
+      (load-data [_ tag]
+        (when-let [handler (:on-load props)]
+          (handler state tag)))
       
-      (save [_]
+      (save-data [_]
         (merge @state (:additional-data props)))
-      
-      (load [_ data]
-        (reset! state data))
       
       (get-update-packet [_]
         (when-let [handler (:get-update props)]
@@ -77,7 +78,32 @@
       
       (get-capability [_ cap side]
         (when-let [caps (:capabilities props)]
-          (get-in caps [cap side]))))))
+          (get-in caps [cap side])))
+          
+      (read-from-nbt [_ nbt]
+        (when-let [handler (:read-nbt props)]
+          (handler state nbt)))
+          
+      (write-to-nbt [_ nbt]
+        (when-let [handler (:write-nbt props)]
+          (handler state nbt)))
+          
+      (mark-dirty [_]
+        (when-let [handler (:mark-dirty props)]
+          (handler state)))
+          
+      (get-capabilities [_ side]
+        (when-let [caps (:capabilities props)]
+          (get caps side)))
+          
+      (get-position [_]
+        (:position props))
+        
+      (get-block-type [_]
+        (:block-type props))
+        
+      (get-block-state [_]
+        (:block-state props)))))
 
 (defn create-inventory
   "Create an inventory implementation with given size"
@@ -85,10 +111,10 @@
   (let [slots (atom (vec (repeat size nil)))]
     (reify IInventory
       (get-size [_] size)
-      
+
       (get-stack-in-slot [_ slot]
         (get @slots slot))
-      
+
       (remove-stack-in-slot [_ slot amount]
         (when-let [stack (get @slots slot)]
           (let [to-remove (min amount (:count stack))
@@ -98,11 +124,11 @@
                            nil)]
             (swap! slots assoc slot new-stack)
             (assoc stack :count to-remove))))
-      
+
       (set-inventory-slot [_ slot stack]
         (swap! slots assoc slot stack))
-      
+
       (is-empty? [_]
         (every? nil? @slots))
-      
+
       (mark-dirty [_]))))

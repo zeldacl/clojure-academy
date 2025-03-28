@@ -1,5 +1,5 @@
-(ns mcmod.gui
-  (:require [mcmod.protocols :refer :all]))
+(ns cn.mcmod.gui
+  (:require [cn.mcmod.protocols :refer :all]))
 
 (defprotocol IContainer
   "Protocol for GUI containers"

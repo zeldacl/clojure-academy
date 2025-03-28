@@ -4,6 +4,13 @@
   (:import [java.util.function BiConsumer Function]
            [java.nio ByteBuffer]))
 
+;; Dynamic binding to hold current forge version network implementation
+(def ^:dynamic *network-impl* nil)
+
+;; Set the appropriate network implementation
+(defn set-network-impl! [impl]
+  (alter-var-root #'*network-impl* (constantly impl)))
+
 (defprotocol INetworkChannel
   (register-message [this message-type id encoder decoder handler] "Register a message type with the channel")
   (send-to-server [this message] "Send a message to the server")
@@ -54,18 +61,18 @@
   
   (send-to-server [this message]
     (let [type-id (get-in @handler-registry [(.getClass message) :id])]
-      (when type-id
-        (send-to-forge-server channel-id message))))
+      (when (and type-id *network-impl*)
+        ((:send-to-server *network-impl*) channel-id message))))
   
   (send-to-client [this message player]
     (let [type-id (get-in @handler-registry [(.getClass message) :id])]
-      (when type-id
-        (send-to-forge-client channel-id message player))))
+      (when (and type-id *network-impl*)
+        ((:send-to-client *network-impl*) channel-id message player))))
   
   (send-to-all [this message]
     (let [type-id (get-in @handler-registry [(.getClass message) :id])]
-      (when type-id
-        (send-to-forge-all channel-id message)))))
+      (when (and type-id *network-impl*)
+        ((:send-to-all *network-impl*) channel-id message)))))
 
 ;; Forge version-specific adapters would go here
 ;; These are implemented in forge_modern.network and forge_legacy.network
@@ -81,10 +88,3 @@
 ;; Create a network channel with the specified ID
 (defn create-network-channel [channel-id]
   (->NetworkChannelImpl channel-id (atom {})))
-
-;; Dynamic binding to hold current forge version network implementation
-(def ^:dynamic *network-impl* nil)
-
-;; Set the appropriate network implementation
-(defn set-network-impl! [impl]
-  (alter-var-root #'*network-impl* (constantly impl)))

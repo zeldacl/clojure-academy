@@ -24,6 +24,7 @@
    (when @logger
      (.debug @logger ^String (format-message message args)))))
 
+
 (defn debug-ex
   "Log a debug message with exception"
   [exception message & args]
@@ -38,6 +39,7 @@
   ([message & args]
    (when @logger
      (.info @logger ^String (format-message message args)))))
+
 
 (defn info-ex
   "Log an info message with exception"
@@ -54,6 +56,7 @@
    (when @logger
      (.warn @logger ^String (format-message message args)))))
 
+
 (defn warn-ex
   "Log a warning message with exception"
   [exception message & args]
@@ -68,6 +71,7 @@
   ([message & args]
    (when @logger
      (.error @logger ^String (format-message message args)))))
+
 
 (defn error-ex
   "Log an error message with exception"
@@ -84,6 +88,7 @@
    (when @logger
      (.fatal @logger ^String (format-message message args)))))
 
+
 (defn fatal-ex
   "Log a fatal message with exception"
   [exception message & args]
@@ -97,6 +102,15 @@
 (defn is-info-enabled? []
   (when @logger
     (.isInfoEnabled @logger)))
+
+(defmacro with-error-logging
+  "Execute body and catch any exceptions, logging them as errors"
+  [& body]
+  `(try
+     ~@body
+     (catch Exception e#
+       (error-ex e# "Error in execution: %s" (.getMessage e#))
+       nil)))
 
 (defn set-level! [level]
   (case level

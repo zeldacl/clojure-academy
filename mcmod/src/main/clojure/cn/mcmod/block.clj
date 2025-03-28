@@ -84,7 +84,7 @@
   (let [state (->BlockState properties {})]
     (get-default-state state)))
 
-(defprotocol BlockProperties
+(defprotocol IBlockProperties
   "Protocol defining block property operations"
   (create-boolean-property [this name]
     "Create a boolean property with given name")
@@ -93,7 +93,7 @@
   (get-block-material [this name]
     "Get block material by name"))
 
-(defprotocol BlockState
+(defprotocol IBlockStateOps
   "Protocol defining block state operations"
   (with-property [this property value]
     "Update block state with given property value")
