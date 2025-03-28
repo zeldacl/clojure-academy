@@ -31,12 +31,14 @@ rootProject.name = 'clojure-academy'
 
 // Include all subprojects
 include ':forge_1_12_2'
+include ':forge_1_15_2'
 include ':forge_1_16_5'
 include ':mcmod'
 include ':acmod'
 
 // Set the project directory for each subproject
 project(':forge_1_12_2').projectDir = file('forge_1_12_2')
+project(':forge_1_15_2').projectDir = file('forge_1_15_2')
 project(':forge_1_16_5').projectDir = file('forge_1_16_5')
-project(':mcmod').projectDir = file('common')
+project(':mcmod').projectDir = file('mcmod')  // Fixed: point to mcmod folder, not common
 project(':acmod').projectDir = file('acmod')

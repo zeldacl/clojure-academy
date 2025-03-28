@@ -1,5 +1,5 @@
-(ns mcmod.capabilities
-  (:require [mcmod.protocols :refer :all]))
+(ns cn.mcmod.capabilities
+  (:require [cn.mcmod.protocols :refer :all]))
 
 (defprotocol ICapabilityProvider
   "Protocol for capability providers"
@@ -18,23 +18,23 @@
   IEnergyStorage
   (receive-energy [this max-receive simulate]
     (let [energy-stored (get-energy-stored this)
-          accept-amount (min max-receive 
-                           (- (get-max-energy-stored this) 
+          accept-amount (min max-receive
+                           (- (get-max-energy-stored this)
                               energy-stored))]
       (when-not simulate
         (swap! (:energy this) + accept-amount))
       accept-amount))
-  
+
   (extract-energy [this max-extract simulate]
     (let [energy-stored (get-energy-stored this)
           extract-amount (min max-extract energy-stored)]
       (when-not simulate
         (swap! (:energy this) - extract-amount))
       extract-amount))
-  
+
   (get-energy-stored [this]
     @(:energy this))
-  
+
   (get-max-energy-stored [this]
     capacity))
 

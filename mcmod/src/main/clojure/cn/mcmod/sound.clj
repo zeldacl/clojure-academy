@@ -1,5 +1,5 @@
-(ns mcmod.sound
-  (:require [mcmod.protocols :refer [IResourceLocation ISoundCategory ISoundEvent]]))
+(ns cn.mcmod.sound
+  (:require [cn.mcmod.protocols :refer [IResourceLocation ISoundCategory ISoundEvent]]))
 
 (defprotocol ISoundEmitter
   "Protocol for objects that can emit sounds"

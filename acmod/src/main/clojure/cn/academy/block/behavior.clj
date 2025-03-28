@@ -4,25 +4,25 @@
 ;; Common block behaviors that can be reused across different block types
 (def common-behaviors
   {:machine {:on-placed (fn [world pos state player]
-                         (when-let [tile (mcmod.block/get-tile-entity world pos)]
-                           (mcmod.block/mark-dirty! tile)))
-             
+                         (when-let [tile (cm.mcmod.block/get-tile-entity world pos)]
+                           (cm.mcmod.block/mark-dirty! tile)))
+
              :on-broken (fn [world pos]
                          (when-let [tile (mcmod.block/get-tile-entity world pos)]
                            (mcmod.block/cleanup-tile! tile)))
-             
+
              :on-activated (fn [world pos state player hand]
                            (when-not (.isSneaking player)
                              (mcmod.block/open-gui! player world pos)
                              true))}
-   
+
    :energy-producer (merge
                      {:check-power-connections (fn [world pos]
                                                (mcmod.energy/scan-network world pos))
                       :update-energy-state! (fn [tile amount]
                                             (mcmod.energy/update-energy! tile amount))}
                      (:machine common-behaviors))
-   
+
    :multiblock-member {:on-neighbor-changed (fn [world pos block neighbor-pos]
                                             (mcmod.multiblock/check-structure world pos))
                       :validate-placement (fn [world pos]

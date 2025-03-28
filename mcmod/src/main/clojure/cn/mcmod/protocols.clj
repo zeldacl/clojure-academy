@@ -1,4 +1,4 @@
-(ns mcmod.protocols)
+(ns cn.mcmod.protocols)
 
 ;; Block Protocols
 (defprotocol IBlock
@@ -23,7 +23,7 @@
 
 (defprotocol IItemRegistry
   "Item registration functionality"
-  (register-item! [this item-id item] "Register an item")) 
+  (register-item! [this item-id item] "Register an item"))
 
 (defprotocol IMultiblock
   "Multiblock structure functionality"
@@ -79,7 +79,7 @@
   (encode-message [this message buf] "Encode message to buffer"))
 
 (defprotocol IPacketDecoder
-  "Packet decoding functionality" 
+  "Packet decoding functionality"
   (decode-message [this buf] "Decode message from buffer"))
 
 (defprotocol IPacketHandler
@@ -169,7 +169,7 @@
   (get-tag [this] "Get NBT tag")
   (set-tag [this tag] "Set NBT tag"))
 
-(defprotocol ITileEntity 
+(defprotocol ITileEntity
   "Core tile entity functionality"
   (tick [this] "Update tile entity state")
   (save [this] "Save tile entity data")
@@ -222,7 +222,7 @@
   (get-client-gui [this player world pos] "Get client-side GUI")
   (get-server-container [this player world pos] "Get server-side container"))
 
-(defprotocol IGui 
+(defprotocol IGui
   "GUI functionality"
   (init [this] "Initialize GUI")
   (render [this mouse-x mouse-y partial-ticks] "Render GUI")
@@ -234,7 +234,7 @@
   (handle-mouse-click [this mouse-x mouse-y button] "Handle mouse click")
   (handle-key-press [this key scancode modifiers] "Handle key press"))
 
-(defprotocol IGuiComponent 
+(defprotocol IGuiComponent
   "GUI component functionality"
   (init-component [this] "Initialize component")
   (render [this x y partial-ticks] "Render component")
@@ -297,7 +297,7 @@
 (defprotocol IWorld
   "Core world functionality"
   (get-block [this pos] "Get block at position")
-  (set-block [this pos block] "Set block at position") 
+  (set-block [this pos block] "Set block at position")
   (get-tile-entity [this pos] "Get tile entity at position")
   (spawn-entity [this entity] "Spawn entity in world")
   (is-remote [this] "Check if world is client side")
@@ -359,7 +359,7 @@
   (get-screen-id [this] "Get unique screen identifier"))
 
 (defprotocol IContainerFactory
-  "Container factory functionality" 
+  "Container factory functionality"
   (create-container [this id player pos] "Create container instance")
   (get-container-id [this] "Get unique container identifier"))
 
@@ -382,7 +382,7 @@
 (defprotocol IEnergyStorage
   "Energy storage capability"
   (receive-energy [this max-receive simulate] "Receive energy")
-  (extract-energy [this max-extract simulate] "Extract energy") 
+  (extract-energy [this max-extract simulate] "Extract energy")
   (get-energy-stored [this] "Get stored energy")
   (get-max-energy-stored [this] "Get max energy capacity")
   (can-extract? [this] "Whether energy can be extracted")
@@ -428,7 +428,7 @@
   (get-inventory [this] "Get inventory interface")
   (get-item-handler [this side] "Get item handler for side"))
 
-;; Fluid handling capabilities  
+;; Fluid handling capabilities
 (defprotocol IFluidStorage
   "Fluid storage capability"
   (get-fluid [this] "Get stored fluid")
@@ -462,7 +462,7 @@
 (defprotocol INBTStorage
   "NBT data storage functionality"
   (put-value [this key value] "Store value with key")
-  (get-value [this key] "Get value by key") 
+  (get-value [this key] "Get value by key")
   (remove-value [this key] "Remove value by key")
   (get-all-keys [this] "Get all stored keys"))
 
@@ -509,7 +509,7 @@
   (register-texture [this texture-id texture] "Register a texture"))
 
 (defprotocol IModel
-  "Model functionality" 
+  "Model functionality"
   (render-part [this part-name] "Render specific model part")
   (get-texture [this] "Get model texture")
   (set-texture [this texture] "Set model texture"))
@@ -524,7 +524,7 @@
 (defprotocol IRenderState
   "Render state management"
   (push-matrix [this] "Push matrix stack")
-  (pop-matrix [this] "Pop matrix stack") 
+  (pop-matrix [this] "Pop matrix stack")
   (translate [this x y z] "Translate")
   (rotate [this angle x y z] "Rotate")
   (scale [this x y z] "Scale")
