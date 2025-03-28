@@ -1,20 +1,24 @@
 (ns cn.mcmod.docs
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
-            [cn.mcmod.registry :as registry])
+            [cn.mcmod.registry :as registry]
+            [cn.mcmod.protocols :refer :all]
+            [cn.mcmod.capabilities :as capabilities])
   (:import [java.io File]))
 
-(defn extract-block-docs [block]
-  {:id (registry/get-block-id block)
-   :properties {:hardness (get-hardness block)
-                :resistance (get-resistance block)
-                :light-level (get-light-level block)}
-   :capabilities (if (satisfies? cn.mcmod.capabilities/ICapabilityProvider block)
-                  (list "Energy Storage"))})
+(defn extract-block-docs [block-entry]
+  (let [[block-id block] block-entry]
+    {:id block-id
+     :properties {:hardness (get-hardness block)
+                  :resistance (get-resistance block)
+                  :light-level (get-light-level block)}
+     :capabilities (if (satisfies? capabilities/ICapabilityProvider block)
+                    (list "Energy Storage")
+                    [])}))
 
 (defn generate-block-docs [registry]
-  (for [block (registry/get-registered-blocks registry)]
-    (extract-block-docs block)))
+  (for [block-entry (registry/get-blocks registry)]
+    (extract-block-docs block-entry)))
 
 (defn save-docs [docs output-dir]
   (let [dir (io/file output-dir)]
